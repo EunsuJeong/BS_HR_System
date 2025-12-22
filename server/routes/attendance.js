@@ -416,7 +416,9 @@ router.post('/bulk', async (req, res) => {
           $gte: startDate,
           $lte: endDate,
         },
-      }).lean();
+      })
+        .select('employeeId date checkIn checkOut shiftType totalWorkMinutes overtimeHours holidayHours nightHours')
+        .lean();
 
       console.log(
         `[근태 대량 저장] ${monthlyAttendanceRecords.length}건의 근태 데이터로 통계 계산`
@@ -499,7 +501,10 @@ router.get('/monthly/:year/:month', async (req, res) => {
         $gte: startDate,
         $lte: endDate,
       },
-    }).sort({ employeeId: 1, date: 1 });
+    })
+      .select('employeeId date checkIn checkOut shiftType status totalWorkMinutes overtimeHours holidayHours nightHours')
+      .sort({ employeeId: 1, date: 1 })
+      .lean(); // 성능 최적화: Plain JavaScript 객체로 반환
 
     // 데이터 형식 통일: checkIn/checkOut이 객체면 문자열로 변환
     const normalizedRecords = attendanceRecords.map((record) => {
@@ -720,7 +725,9 @@ router.post('/recalculate-overtime', async (req, res) => {
         $gte: startDate,
         $lte: endDate,
       },
-    });
+    })
+      .select('employeeId date checkIn checkOut shiftType totalWorkMinutes overtimeHours holidayHours nightHours')
+      .lean();
 
     console.log(`[특근 재계산] ${attendanceRecords.length}건의 데이터 발견`);
 

@@ -24,7 +24,8 @@ router.get('/', async (req, res) => {
       .select('-password') // 비밀번호 제외
       .skip(skip)
       .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean(); // 성능 최적화: Plain JavaScript 객체로 반환
 
     const total = await Employee.countDocuments(filter);
 

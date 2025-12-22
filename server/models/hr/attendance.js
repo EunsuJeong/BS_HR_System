@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
 const attendanceSchema = new mongoose.Schema({
-  employeeId: { type: String, index: true },
-  date: { type: String, index: true },
+  employeeId: { type: String, required: true },
+  date: { type: String, required: true },
   checkIn: String,
   checkOut: String,
   shiftType: { type: String, enum: ["주간", "야간"] },
@@ -21,6 +21,11 @@ const attendanceSchema = new mongoose.Schema({
   autoDetermined: Boolean,
   createdAt: { type: Date, default: Date.now },
 }, { collection: 'attendance' });
+
+// 복합 인덱스 추가 (성능 최적화)
+attendanceSchema.index({ employeeId: 1, date: 1 }); // 특정 직원의 특정 날짜 조회
+attendanceSchema.index({ date: 1 }); // 날짜 범위 조회 (월별 조회)
+attendanceSchema.index({ date: -1 }); // 최신 날짜 우선 정렬
 
 const Attendance = mongoose.model("Attendance", attendanceSchema);
 module.exports = Attendance;
