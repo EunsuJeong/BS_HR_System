@@ -1,0 +1,306 @@
+const cron = require('node-cron');
+const { Employee, Notification } = require('../models');
+
+/**
+ * 연차 휴가 만료 알림 스케줄러
+ * - 매일 오전 8시에 실행
+ * - 각 직원의 연차 만료일 확인
+ * - DB에 알림 저장 및 소켓 전송
+ */
+
+// 연차 휴가 기간 계산
+function calculateAnnualLeavePeriod(employee) {
+  const hireDate = new Date(employee.hireDate || employee.joinDate);
+  if (isNaN(hireDate.getTime())) {
+    console.error('Invalid hire date for employee:', employee.name);
+    return null;
+  }
+
+  const today = new Date();
+  const currentYear = today.getFullYear();
+
+  // 올해 기준 연차 기간 계산
+  const annualStartThisYear = new Date(currentYear, hireDate.getMonth(), hireDate.getDate());
+  const annualEndThisYear = new Date(annualStartThisYear);
+  annualEndThisYear.setFullYear(annualEndThisYear.getFullYear() + 1);
+  annualEndThisYear.setDate(annualEndThisYear.getDate() - 1);
+
+  let annualStart, annualEnd;
+
+  if (today < annualStartThisYear) {
+    // 작년 연차 기간 사용
+    annualStart = new Date(annualStartThisYear);
+    annualStart.setFullYear(annualStart.getFullYear() - 1);
+    annualEnd = new Date(annualStart);
+    annualEnd.setFullYear(annualEnd.getFullYear() + 1);
+    annualEnd.setDate(annualEnd.getDate() - 1);
+  } else {
+    // 올해 연차 기간 사용
+    annualStart = annualStartThisYear;
+    annualEnd = annualEndThisYear;
+  }
+
+  // 근속연수 계산
+  const years = Math.floor((today - hireDate) / (365.25 * 24 * 60 * 60 * 1000));
+
+  // 연차 개수 계산
+  let totalAnnual = 15;
+  if (years >= 1 && years < 3) totalAnnual = 15;
+  else if (years >= 3 && years < 5) totalAnnual = 16;
+  else if (years >= 5 && years < 7) totalAnnual = 17;
+  else if (years >= 7 && years < 9) totalAnnual = 18;
+  else if (years >= 9 && years < 11) totalAnnual = 19;
+  else if (years >= 11 && years < 13) totalAnnual = 20;
+  else if (years >= 13 && years < 15) totalAnnual = 21;
+  else if (years >= 15 && years < 17) totalAnnual = 22;
+  else if (years >= 17 && years < 19) totalAnnual = 23;
+  else if (years >= 19 && years < 21) totalAnnual = 24;
+  else if (years >= 21) totalAnnual = 25;
+
+  return {
+    annualStart: annualStart.toISOString().split('T')[0],
+    annualEnd: annualEnd.toISOString().split('T')[0],
+    totalAnnual,
+    years
+  };
+}
+
+// 사용한 연차 계산 (Leave 모델 참조)
+async function calculateUsedAnnualLeave(employeeId, annualStart, annualEnd) {
+  const { Leave } = require('../models');
+
+  const approvedLeaves = await Leave.find({
+    employeeId: employeeId,
+    status: '승인',
+    $or: [
+      { startDate: { $gte: annualStart, $lte: annualEnd } },
+      { endDate: { $gte: annualStart, $lte: annualEnd } },
+      { $and: [
+        { startDate: { $lte: annualStart } },
+        { endDate: { $gte: annualEnd } }
+      ]}
+    ]
+  });
+
+  let usedDays = 0;
+  approvedLeaves.forEach(leave => {
+    if (leave.type === '연차') {
+      const start = new Date(Math.max(new Date(leave.startDate), new Date(annualStart)));
+      const end = new Date(Math.min(new Date(leave.endDate), new Date(annualEnd)));
+      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      usedDays += days;
+    } else if (leave.type === '반차(오전)' || leave.type === '반차(오후)') {
+      usedDays += 0.5;
+    }
+  });
+
+  return usedDays;
+}
+
+// 만료 알림 생성 함수
+async function createLeaveExpiryNotification(employee, annualData, daysUntilExpiry, notificationKey) {
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  let title, content, priority;
+
+  if (daysUntilExpiry === 180) {
+    // 6개월 전
+    title = `남은 연차 기간 만료 예정 알림 (6개월 전)`;
+    content = `${employee.name}님의 현재 연차가 6개월 후 만료 예정입니다. 기간 내 사용하시기 바랍니다.\n\n남은 연차 기간: ${annualData.annualStart} ~ ${annualData.annualEnd}\n총 연차: ${annualData.totalAnnual}일\n사용 연차: ${annualData.usedAnnual}일\n잔여 연차: ${annualData.remainAnnual}일`;
+    priority = 'LOW';
+  } else if (daysUntilExpiry === 90) {
+    // 3개월 전
+    title = `남은 연차 기간 만료 예정 알림 (3개월 전)`;
+    content = `${employee.name}님의 현재 연차가 3개월 후 만료 예정입니다. 만료 후 자동 소멸되므로 반드시 기간 내 사용하시기 바랍니다.\n연차 사용 계획을 세워주세요.\n\n남은 연차 기간: ${annualData.annualStart} ~ ${annualData.annualEnd}\n총 연차: ${annualData.totalAnnual}일\n사용 연차: ${annualData.usedAnnual}일\n잔여 연차: ${annualData.remainAnnual}일`;
+    priority = 'MEDIUM';
+  } else if (daysUntilExpiry === 30) {
+    // 30일 전
+    title = `남은 연차 기간 만료 예정 알림 (30일 전)`;
+    content = `${employee.name}님의 현재 연차가 1개월 후 만료 예정입니다. 기간 내 사용하시기 바랍니다.\n\n남은 연차 기간: ${annualData.annualStart} ~ ${annualData.annualEnd}\n총 연차: ${annualData.totalAnnual}일\n사용 연차: ${annualData.usedAnnual}일\n잔여 연차: ${annualData.remainAnnual}일`;
+    priority = 'MEDIUM';
+  } else if (daysUntilExpiry === 7) {
+    // 7일 전
+    title = `긴급 연차 기간 만료 예정 알림 (7일 전)`;
+    content = `${employee.name}님의 현재 연차가 7일 후 만료 예정입니다. 기간 내 사용하시기 바랍니다.\n\n남은 연차 기간: ${annualData.annualStart} ~ ${annualData.annualEnd}\n총 연차: ${annualData.totalAnnual}일\n사용 연차: ${annualData.usedAnnual}일\n잔여 연차: ${annualData.remainAnnual}일`;
+    priority = 'HIGH';
+  } else {
+    return null;
+  }
+
+  // DB에 저장 (중복 방지)
+  const notification = new Notification({
+    notificationType: '시스템',
+    title,
+    content,
+    message: content,
+    sender: '시스템',
+    priority,
+    recipients: {
+      type: '개인',
+      value: employee.name,
+      selectedEmployees: [employee.id]
+    },
+    related: {
+      entity: 'annualLeave',
+      refId: employee.id,
+      annualStart: annualData.annualStart,
+      annualEnd: annualData.annualEnd,
+      nextAnnualStart: (() => {
+        const nextStart = new Date(annualData.annualEnd);
+        nextStart.setDate(nextStart.getDate() + 1);
+        return nextStart.toISOString().split('T')[0];
+      })()
+    },
+    createdAt: new Date()
+  });
+
+  await notification.save();
+
+  return notification;
+}
+
+// 관리자에게 알림 생성
+async function createAdminNotification(employee, originalNotification) {
+  // 인사팀 관리자 찾기
+  const hrManager = await Employee.findOne({
+    department: '인사팀',
+    subDepartment: '인사관리',
+    role: '팀장'
+  });
+
+  // 경영진 관리자 찾기
+  const ceoManager = await Employee.findOne({
+    department: '경영진',
+    subDepartment: '경영관리',
+    role: '대표'
+  });
+
+  const adminList = [hrManager, ceoManager].filter(Boolean);
+
+  for (const admin of adminList) {
+    const adminNotif = new Notification({
+      ...originalNotification.toObject(),
+      _id: undefined,
+      recipients: {
+        type: '개인',
+        value: admin.name,
+        selectedEmployees: [admin.id]
+      },
+      createdAt: new Date()
+    });
+
+    await adminNotif.save();
+  }
+}
+
+// 실제 체크 함수
+async function checkAnnualLeaveExpiry(io) {
+  try {
+    console.log('✅ [연차만료알림] 연차 만료일 체크 시작...');
+
+    const today = new Date();
+    const year = today.getFullYear();
+
+    // 재직 중인 직원 조회
+    const employees = await Employee.find({ status: '재직' });
+
+    let notificationCount = 0;
+
+    for (const employee of employees) {
+      const annualPeriod = calculateAnnualLeavePeriod(employee);
+      if (!annualPeriod) continue;
+
+      const endDate = new Date(annualPeriod.annualEnd);
+      const daysUntilExpiry = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+      // 사용한 연차 계산
+      const usedAnnual = await calculateUsedAnnualLeave(
+        employee.id,
+        annualPeriod.annualStart,
+        annualPeriod.annualEnd
+      );
+
+      const annualData = {
+        ...annualPeriod,
+        usedAnnual,
+        remainAnnual: annualPeriod.totalAnnual - usedAnnual
+      };
+
+      // 남은 연차가 없으면 알림 불필요
+      if (annualData.remainAnnual <= 0) continue;
+
+      // 180일, 90일, 30일, 7일 전 알림
+      const notificationDays = [180, 90, 30, 7];
+
+      for (const days of notificationDays) {
+        if (daysUntilExpiry === days) {
+          const notificationKey = `leaveExpiry${days}_${employee.id}_${year}`;
+
+          // 오늘 이미 보낸 알림인지 체크 (DB에서 조회)
+          const todayStart = new Date(today);
+          todayStart.setHours(0, 0, 0, 0);
+          const todayEnd = new Date(today);
+          todayEnd.setHours(23, 59, 59, 999);
+
+          const existingNotif = await Notification.findOne({
+            'related.entity': 'annualLeave',
+            'related.refId': employee.id,
+            title: { $regex: `${days === 180 ? '6개월' : days === 90 ? '3개월' : days === 30 ? '30일' : '7일'} 전` },
+            createdAt: {
+              $gte: todayStart,
+              $lt: todayEnd
+            }
+          });
+
+          if (!existingNotif) {
+            // 알림 생성
+            const notification = await createLeaveExpiryNotification(
+              employee,
+              annualData,
+              days,
+              notificationKey
+            );
+
+            if (notification) {
+              // 관리자에게도 알림
+              await createAdminNotification(employee, notification);
+
+              // Socket.io를 통해 실시간 전송
+              if (io) {
+                io.emit('new-notification', {
+                  type: 'annualLeaveExpiry',
+                  employeeId: employee.id,
+                  notification: notification.toObject()
+                });
+              }
+
+              notificationCount++;
+            }
+          }
+        }
+      }
+    }
+
+    console.log(`✅ [연차만료알림] 체크 완료: ${notificationCount}건의 알림 생성`);
+  } catch (error) {
+    console.error('❌ [연차만료알림] 에러 발생:', error);
+  }
+}
+
+// 스케줄러 시작
+function startAnnualLeaveScheduler(io) {
+  console.log('🚀 [연차만료알림] 시작 - 매일 오전 8시 실행');
+
+  // 매일 오전 8시에 실행 (KST 기준)
+  cron.schedule('0 8 * * *', () => {
+    console.log(`✅ [연차만료알림] 스케줄 시작 - ${new Date().toLocaleString('ko-KR')}`);
+    checkAnnualLeaveExpiry(io);
+  }, {
+    timezone: "Asia/Seoul"
+  });
+
+  // 즉시 시작 시 테스트 용도로 바로 체크 (테스트 후 주석 처리 권장)
+  // checkAnnualLeaveExpiry(io);
+}
+
+module.exports = { startAnnualLeaveScheduler, checkAnnualLeaveExpiry };

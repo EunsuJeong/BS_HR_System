@@ -1,0 +1,75 @@
+const mongoose = require('mongoose');
+
+/**
+ * 출퇴근 기록 스키마
+ */
+const attendanceSchema = new mongoose.Schema(
+  {
+    employeeId: {
+      type: String,
+      required: true,
+      ref: 'Employee',
+    },
+
+    // 날짜
+    date: {
+      type: Date,
+      required: true,
+    },
+
+    // 출근 시간
+    checkIn: {
+      time: Date,
+      location: String,
+      ipAddress: String,
+    },
+
+    // 퇴근 시간
+    checkOut: {
+      time: Date,
+      location: String,
+      ipAddress: String,
+    },
+
+    // 근무 시간 (분 단위)
+    workMinutes: {
+      type: Number,
+      default: 0,
+    },
+
+    // 상태
+    status: {
+      type: String,
+      enum: ['present', 'absent', 'late', 'half_day', 'leave'],
+      default: 'present',
+    },
+
+    // 지각 여부
+    isLate: {
+      type: Boolean,
+      default: false,
+    },
+
+    // 메모
+    note: String,
+
+    // 승인자
+    approvedBy: {
+      type: String,
+      ref: 'Employee',
+    },
+    approvedAt: Date,
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// 복합 인덱스
+attendanceSchema.index({ employeeId: 1, date: -1 });
+attendanceSchema.index({ date: -1 });
+attendanceSchema.index({ status: 1, date: -1 });
+
+// 모델이 이미 존재하면 재사용, 없으면 생성
+module.exports =
+  mongoose.models.Attendance || mongoose.model('Attendance', attendanceSchema);

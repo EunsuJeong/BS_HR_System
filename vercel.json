@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "framework": "create-react-app",
+  "installCommand": "npm install",
+  "devCommand": "npm run start:frontend",
+  "rewrites": [],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "REACT_APP_API_BASE_URL": "@react_app_api_base_url",
+    "REACT_APP_SERVER_URL": "@react_app_server_url"
+  }
+}

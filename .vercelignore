@@ -1,0 +1,17 @@
+server
+scripts
+uploads
+backups
+node_modules
+.env
+.env.local
+*.log
+.vscode
+.claude
+check-*.js
+fix-*.js
+verify-*.js
+start-mongodb.js
+start-mongodb.bat
+*.md
+!README.md

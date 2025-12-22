@@ -1,0 +1,31 @@
+{
+  "short_name": "부성스틸HR",
+  "name": "부성스틸 AI 인사관리 시스템",
+  "description": "직원 근태, 급여, 연차, 공지사항 등을 관리하는 통합 인사관리 앱",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0056B3",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "ko-KR"
+}
