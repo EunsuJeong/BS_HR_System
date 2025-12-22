@@ -1250,11 +1250,60 @@ export const useAttendanceManagement = ({
                 };
               });
 
-              const dbResult = await AttendanceAPI.bulkSave(
-                records,
-                attendanceSheetYear,
-                attendanceSheetMonth
-              );
+              // ========== 4-1단계: 배치 처리 (100개씩 나눠서 업로드) ==========
+              const BATCH_SIZE = 100;
+              const batches = [];
+              for (let i = 0; i < records.length; i += BATCH_SIZE) {
+                batches.push(records.slice(i, i + BATCH_SIZE));
+              }
+
+              console.log(`📦 총 ${records.length}건을 ${batches.length}개 배치로 나눠서 업로드 시작...`);
+
+              let totalInserted = 0;
+              let totalUpdated = 0;
+              let hasError = false;
+              let errorMessage = '';
+
+              // 각 배치를 순차적으로 업로드
+              for (let i = 0; i < batches.length; i++) {
+                try {
+                  console.log(`⏳ 배치 ${i + 1}/${batches.length} 업로드 중... (${batches[i].length}건)`);
+
+                  const batchResult = await AttendanceAPI.bulkSave(
+                    batches[i],
+                    attendanceSheetYear,
+                    attendanceSheetMonth
+                  );
+
+                  if (batchResult.success) {
+                    totalInserted += batchResult.stats?.inserted || 0;
+                    totalUpdated += batchResult.stats?.updated || 0;
+                    console.log(`✅ 배치 ${i + 1} 완료 (신규: ${batchResult.stats?.inserted || 0}, 업데이트: ${batchResult.stats?.updated || 0})`);
+                  } else {
+                    hasError = true;
+                    errorMessage = batchResult.message;
+                    console.error(`❌ 배치 ${i + 1} 실패:`, batchResult.message);
+                    break; // 에러 발생 시 중단
+                  }
+                } catch (error) {
+                  hasError = true;
+                  errorMessage = error.message;
+                  console.error(`❌ 배치 ${i + 1} 오류:`, error);
+                  break; // 에러 발생 시 중단
+                }
+              }
+
+              // 통합 결과 생성
+              const dbResult = {
+                success: !hasError,
+                message: hasError ? errorMessage : 'Success',
+                stats: {
+                  inserted: totalInserted,
+                  updated: totalUpdated
+                }
+              };
+
+              console.log(`🎉 전체 업로드 ${dbResult.success ? '성공' : '실패'}: 신규 ${totalInserted}건, 업데이트 ${totalUpdated}건`);
 
               // ========== 5단계: DB 저장 확인 ==========
               if (dbResult.success) {
