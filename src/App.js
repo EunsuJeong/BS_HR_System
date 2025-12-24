@@ -1198,6 +1198,10 @@ const HRManagementSystem = () => {
   const [editingSuggestion, setEditingSuggestion] = useState(null);
   const [editingSuggestionRemark, setEditingSuggestionRemark] = useState('');
 
+  // *[2_관리자 모드] 2.7_건의 관리 - 건의 내역 전체 수정 STATE*
+  const [editingSuggestionRow, setEditingSuggestionRow] = useState(null);
+  const [editingSuggestionData, setEditingSuggestionData] = useState({});
+
   //---[2_관리자 모드] 2.1_대시보드 STATE---//
   // *[2_관리자 모드] 2.1.1_대시보드 날짜 필터*
   const [dashboardDateFilter, setDashboardDateFilter] = useState('today');
@@ -2745,6 +2749,10 @@ const HRManagementSystem = () => {
   // *[2_관리자 모드] 2.6_연차 관리 - 비고 관련 STATE*
   const [editingLeave, setEditingLeave] = useState(null);
   const [editingLeaveRemark, setEditingLeaveRemark] = useState('');
+
+  // *[2_관리자 모드] 2.6_연차 관리 - 연차 내역 전체 수정 STATE*
+  const [editingLeaveHistoryRow, setEditingLeaveHistoryRow] = useState(null);
+  const [editingLeaveHistoryData, setEditingLeaveHistoryData] = useState({});
   const [showLeaveApprovalPopup, setShowLeaveApprovalPopup] = useState(false);
   const [leaveApprovalData, setLeaveApprovalData] = useState({
     id: null,
@@ -6160,6 +6168,10 @@ const HRManagementSystem = () => {
             leaveApprovalData={leaveApprovalData}
             setLeaveApprovalData={setLeaveApprovalData}
             handleLeaveApprovalConfirm={handleLeaveApprovalConfirm}
+            editingLeaveHistoryRow={editingLeaveHistoryRow}
+            setEditingLeaveHistoryRow={setEditingLeaveHistoryRow}
+            editingLeaveHistoryData={editingLeaveHistoryData}
+            setEditingLeaveHistoryData={setEditingLeaveHistoryData}
           />
         );
 
@@ -6190,6 +6202,10 @@ const HRManagementSystem = () => {
             handleSuggestionApprovalConfirm={handleSuggestionApprovalConfirm}
             suggestionPage={suggestionPage}
             setSuggestionPage={setSuggestionPage}
+            editingSuggestionRow={editingSuggestionRow}
+            setEditingSuggestionRow={setEditingSuggestionRow}
+            editingSuggestionData={editingSuggestionData}
+            setEditingSuggestionData={setEditingSuggestionData}
           />
         );
 

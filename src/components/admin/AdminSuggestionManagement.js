@@ -27,6 +27,10 @@ const AdminSuggestionManagement = ({
   handleSuggestionApprovalConfirm,
   suggestionPage,
   setSuggestionPage,
+  editingSuggestionRow,
+  setEditingSuggestionRow,
+  editingSuggestionData,
+  setEditingSuggestionData,
 }) => {
   // 검색 필터 변경시 페이지 1로 리셋
   useEffect(() => {
@@ -41,6 +45,52 @@ const AdminSuggestionManagement = ({
     suggestionSearch.keyword,
     setSuggestionPage,
   ]);
+
+  // 건의 내역 수정 핸들러
+  const handleEditSuggestion = (suggestion) => {
+    setEditingSuggestionRow(suggestion.id);
+    setEditingSuggestionData({
+      employeeId: suggestion.employeeId,
+      name: suggestion.name,
+      department: suggestion.department,
+      category: suggestion.category,
+      title: suggestion.title,
+      content: suggestion.content,
+      remark: suggestion.remark || '',
+      status: suggestion.status,
+    });
+  };
+
+  // 건의 내역 수정 저장 핸들러
+  const handleSaveSuggestion = async (suggestionId) => {
+    try {
+      const { default: SuggestionAPI } = await import('../../api/suggestion');
+
+      // DB 업데이트
+      await SuggestionAPI.update(suggestionId, editingSuggestionData);
+
+      // 로컬 state 업데이트
+      setSuggestions((prev) =>
+        prev.map((s) =>
+          s.id === suggestionId ? { ...s, ...editingSuggestionData } : s
+        )
+      );
+
+      setEditingSuggestionRow(null);
+      setEditingSuggestionData({});
+      alert('건의 내역이 수정되었습니다.');
+    } catch (error) {
+      console.error('❌ 건의 내역 수정 실패:', error);
+      alert('건의 내역 수정 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 건의 내역 수정 취소 핸들러
+  const handleCancelSuggestion = () => {
+    setEditingSuggestionRow(null);
+    setEditingSuggestionData({});
+  };
+
   return (
     <div className="space-y-6 w-full h-full">
       <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
@@ -263,69 +313,199 @@ const AdminSuggestionManagement = ({
 
                 return filteredSuggestions
                   .slice((suggestionPage - 1) * 16, suggestionPage * 16)
-                  .map((s) => (
-                    <tr key={s.id} className="hover:bg-gray-50">
-                      <td className="text-center py-2 px-2">{s.applyDate}</td>
-                      <td className="text-center py-2 px-2">
-                        {s.approvalDate || '-'}
-                      </td>
-                      <td className="text-center py-2 px-2">{s.employeeId}</td>
-                      <td className="text-center py-2 px-2">{s.name}</td>
-                      <td className="text-center py-2 px-2">{s.department}</td>
-                      <td className="text-center py-2 px-2">
-                        {getSuggestionCategoryText(s.type, 'ko')}
-                      </td>
-                      <td className="text-center py-2 px-2 max-w-xs truncate">
-                        {s.content}
-                      </td>
-                      <td className="text-center py-2 px-2">
-                        <div className="flex items-center justify-center gap-2">
-                          <span
-                            className="truncate max-w-[150px]"
-                            title={s.remark || '-'}
-                          >
-                            {s.remark || '-'}
-                          </span>
-                          <button
-                            onClick={() => {
-                              setEditingSuggestion(s.id);
-                              setEditingSuggestionRemark(s.remark || '');
-                            }}
-                            className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 whitespace-nowrap"
-                          >
-                            수정
-                          </button>
-                        </div>
-                      </td>
-                      <td className="text-center py-1 px-2">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            STATUS_COLORS[s.status] || STATUS_COLORS['대기']
-                          }`}
-                        >
-                          {s.status}
-                        </span>
-                      </td>
-                      <td className="text-center py-1 px-2">
-                        {s.status === '대기' && (
-                          <>
-                            <button
-                              className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
-                              onClick={() => handleApproveSuggestion(s.id)}
+                  .map((s) => {
+                    const isEditing = editingSuggestionRow === s.id;
+                    return (
+                      <tr key={s.id} className="hover:bg-gray-50">
+                        <td className="text-center py-2 px-2">{s.applyDate}</td>
+                        <td className="text-center py-2 px-2">
+                          {s.approvalDate || '-'}
+                        </td>
+                        <td className="text-center py-2 px-2">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editingSuggestionData.employeeId || s.employeeId}
+                              onChange={(e) =>
+                                setEditingSuggestionData((prev) => ({
+                                  ...prev,
+                                  employeeId: e.target.value,
+                                }))
+                              }
+                              className="w-20 px-2 py-1 border rounded text-center"
+                            />
+                          ) : (
+                            s.employeeId
+                          )}
+                        </td>
+                        <td className="text-center py-2 px-2">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editingSuggestionData.name || s.name}
+                              onChange={(e) =>
+                                setEditingSuggestionData((prev) => ({
+                                  ...prev,
+                                  name: e.target.value,
+                                }))
+                              }
+                              className="w-20 px-2 py-1 border rounded text-center"
+                            />
+                          ) : (
+                            s.name
+                          )}
+                        </td>
+                        <td className="text-center py-2 px-2">
+                          {isEditing ? (
+                            <select
+                              value={editingSuggestionData.department || s.department}
+                              onChange={(e) =>
+                                setEditingSuggestionData((prev) => ({
+                                  ...prev,
+                                  department: e.target.value,
+                                }))
+                              }
+                              className="w-24 px-2 py-1 border rounded text-center"
                             >
-                              승인
-                            </button>
-                            <button
-                              className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                              onClick={() => handleRejectSuggestion(s.id)}
+                              {COMPANY_STANDARDS.DEPARTMENTS.map((dept) => (
+                                <option key={dept} value={dept}>
+                                  {dept}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            s.department
+                          )}
+                        </td>
+                        <td className="text-center py-2 px-2">
+                          {isEditing ? (
+                            <select
+                              value={editingSuggestionData.category || s.type}
+                              onChange={(e) =>
+                                setEditingSuggestionData((prev) => ({
+                                  ...prev,
+                                  category: e.target.value,
+                                }))
+                              }
+                              className="w-32 px-2 py-1 border rounded text-center"
                             >
-                              반려
+                              <option value="구매">구매 (소모품)</option>
+                              <option value="기타">건의 (대표이사)</option>
+                            </select>
+                          ) : (
+                            getSuggestionCategoryText(s.type, 'ko')
+                          )}
+                        </td>
+                        <td className="text-center py-2 px-2">
+                          {isEditing ? (
+                            <textarea
+                              value={editingSuggestionData.content || s.content}
+                              onChange={(e) =>
+                                setEditingSuggestionData((prev) => ({
+                                  ...prev,
+                                  content: e.target.value,
+                                }))
+                              }
+                              className="w-full px-2 py-1 border rounded text-center"
+                              rows="2"
+                            />
+                          ) : (
+                            <span className="max-w-xs truncate block">
+                              {s.content}
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-center py-2 px-2">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editingSuggestionData.remark || s.remark || ''}
+                              onChange={(e) =>
+                                setEditingSuggestionData((prev) => ({
+                                  ...prev,
+                                  remark: e.target.value,
+                                }))
+                              }
+                              className="w-32 px-2 py-1 border rounded text-center"
+                            />
+                          ) : (
+                            <span
+                              className="truncate max-w-[150px]"
+                              title={s.remark || '-'}
+                            >
+                              {s.remark || '-'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-center py-1 px-2">
+                          {isEditing ? (
+                            <select
+                              value={editingSuggestionData.status || s.status}
+                              onChange={(e) =>
+                                setEditingSuggestionData((prev) => ({
+                                  ...prev,
+                                  status: e.target.value,
+                                }))
+                              }
+                              className="w-20 px-2 py-1 border rounded text-center"
+                            >
+                              <option value="대기">대기</option>
+                              <option value="승인">승인</option>
+                              <option value="반려">반려</option>
+                            </select>
+                          ) : (
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                STATUS_COLORS[s.status] || STATUS_COLORS['대기']
+                              }`}
+                            >
+                              {s.status}
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-center py-1 px-2">
+                          {isEditing ? (
+                            <>
+                              <button
+                                className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
+                                onClick={() => handleSaveSuggestion(s.id)}
+                              >
+                                저장
+                              </button>
+                              <button
+                                className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                                onClick={handleCancelSuggestion}
+                              >
+                                취소
+                              </button>
+                            </>
+                          ) : s.status === '대기' ? (
+                            <>
+                              <button
+                                className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
+                                onClick={() => handleApproveSuggestion(s.id)}
+                              >
+                                승인
+                              </button>
+                              <button
+                                className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                onClick={() => handleRejectSuggestion(s.id)}
+                              >
+                                반려
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                              onClick={() => handleEditSuggestion(s)}
+                            >
+                              수정
                             </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ));
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  });
               })()}
             </tbody>
           </table>

@@ -43,6 +43,10 @@ const AdminLeaveManagement = ({
   leaveApprovalData,
   setLeaveApprovalData,
   handleLeaveApprovalConfirm,
+  editingLeaveHistoryRow,
+  setEditingLeaveHistoryRow,
+  editingLeaveHistoryData,
+  setEditingLeaveHistoryData,
 }) => {
   // 검색 필터 변경시 페이지 1로 리셋
   useEffect(() => {
@@ -56,6 +60,53 @@ const AdminLeaveManagement = ({
     leaveSearch.keyword,
     setLeaveHistoryPage,
   ]);
+
+  // 연차 내역 수정 핸들러
+  const handleEditLeaveHistory = (leaveRequest) => {
+    setEditingLeaveHistoryRow(leaveRequest.id);
+    setEditingLeaveHistoryData({
+      employeeId: leaveRequest.employeeId,
+      name: leaveRequest.name,
+      startDate: leaveRequest.startDate,
+      endDate: leaveRequest.endDate,
+      type: leaveRequest.type,
+      reason: leaveRequest.reason || '개인사정',
+      contact: leaveRequest.contact || '',
+      remark: leaveRequest.remark || '',
+      status: leaveRequest.status,
+    });
+  };
+
+  // 연차 내역 수정 저장 핸들러
+  const handleSaveLeaveHistory = async (leaveId) => {
+    try {
+      const { default: LeaveAPI } = await import('../../api/leave');
+
+      // DB 업데이트
+      await LeaveAPI.update(leaveId, editingLeaveHistoryData);
+
+      // 로컬 state 업데이트
+      setLeaveRequests((prev) =>
+        prev.map((lr) =>
+          lr.id === leaveId ? { ...lr, ...editingLeaveHistoryData } : lr
+        )
+      );
+
+      setEditingLeaveHistoryRow(null);
+      setEditingLeaveHistoryData({});
+      alert('연차 내역이 수정되었습니다.');
+    } catch (error) {
+      console.error('❌ 연차 내역 수정 실패:', error);
+      alert('연차 내역 수정 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 연차 내역 수정 취소 핸들러
+  const handleCancelLeaveHistory = () => {
+    setEditingLeaveHistoryRow(null);
+    setEditingLeaveHistoryData({});
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
@@ -1032,87 +1083,245 @@ const AdminLeaveManagement = ({
                     );
                     return filteredLeaveRequests
                       .slice((leaveHistoryPage - 1) * 15, leaveHistoryPage * 15)
-                      .map((lr) => (
-                        <tr key={lr.id} className="hover:bg-gray-50">
-                          <td className="text-center py-1 px-2">
-                            {formatDateByLang(lr.requestDate)}
-                          </td>
-                          <td className="text-center py-1 px-2">
-                            {lr.approvedAt
-                              ? formatDateByLang(lr.approvedAt)
-                              : lr.rejectedAt
-                              ? formatDateByLang(lr.rejectedAt)
-                              : '-'}
-                          </td>
-                          <td className="text-center py-2 px-2">
-                            {lr.employeeId}
-                          </td>
-                          <td className="text-center py-2 px-2">{lr.name}</td>
-                          <td className="text-center py-2 px-2">
-                            {formatDateByLang(lr.startDate)}
-                          </td>
-                          <td className="text-center py-2 px-2">
-                            {formatDateByLang(lr.endDate)}
-                          </td>
-                          <td className="text-center py-2 px-2">
-                            {getLeaveDays(lr)}
-                          </td>
-                          <td className="text-center py-2 px-2">{lr.type}</td>
-                          <td className="text-center py-2 px-2">
-                            {lr.reason || '개인사정'}
-                          </td>
-                          <td className="text-center py-2 px-2">
-                            {lr.contact || ''}
-                          </td>
-                          <td className="text-center py-2 px-2">
-                            <div className="flex items-center justify-center gap-2">
-                              <span
-                                className="truncate max-w-[150px]"
-                                title={lr.remark || '-'}
-                              >
-                                {lr.remark || '-'}
-                              </span>
-                              <button
-                                onClick={() => {
-                                  setEditingLeave(lr.id);
-                                  setEditingLeaveRemark(lr.remark || '');
-                                }}
-                                className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 whitespace-nowrap"
-                              >
-                                수정
-                              </button>
-                            </div>
-                          </td>
-                          <td className="text-center py-2 px-2">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                STATUS_COLORS[lr.status] ||
-                                STATUS_COLORS['대기']
-                              }`}
-                            >
-                              {lr.status}
-                            </span>
-                          </td>
-                          <td className="text-center py-1 px-2">
-                            {lr.status === '대기' && (
-                              <>
-                                <button
-                                  className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
-                                  onClick={() => handleApproveLeave(lr.id)}
+                      .map((lr) => {
+                        const isEditing = editingLeaveHistoryRow === lr.id;
+                        return (
+                          <tr key={lr.id} className="hover:bg-gray-50">
+                            <td className="text-center py-1 px-2">
+                              {formatDateByLang(lr.requestDate)}
+                            </td>
+                            <td className="text-center py-1 px-2">
+                              {lr.approvedAt
+                                ? formatDateByLang(lr.approvedAt)
+                                : lr.rejectedAt
+                                ? formatDateByLang(lr.rejectedAt)
+                                : '-'}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editingLeaveHistoryData.employeeId || lr.employeeId}
+                                  onChange={(e) =>
+                                    setEditingLeaveHistoryData((prev) => ({
+                                      ...prev,
+                                      employeeId: e.target.value,
+                                    }))
+                                  }
+                                  className="w-20 px-2 py-1 border rounded text-center"
+                                />
+                              ) : (
+                                lr.employeeId
+                              )}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editingLeaveHistoryData.name || lr.name}
+                                  onChange={(e) =>
+                                    setEditingLeaveHistoryData((prev) => ({
+                                      ...prev,
+                                      name: e.target.value,
+                                    }))
+                                  }
+                                  className="w-20 px-2 py-1 border rounded text-center"
+                                />
+                              ) : (
+                                lr.name
+                              )}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {isEditing ? (
+                                <input
+                                  type="date"
+                                  value={editingLeaveHistoryData.startDate || lr.startDate}
+                                  onChange={(e) =>
+                                    setEditingLeaveHistoryData((prev) => ({
+                                      ...prev,
+                                      startDate: e.target.value,
+                                    }))
+                                  }
+                                  className="w-32 px-2 py-1 border rounded text-center"
+                                />
+                              ) : (
+                                formatDateByLang(lr.startDate)
+                              )}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {isEditing ? (
+                                <input
+                                  type="date"
+                                  value={editingLeaveHistoryData.endDate || lr.endDate}
+                                  onChange={(e) =>
+                                    setEditingLeaveHistoryData((prev) => ({
+                                      ...prev,
+                                      endDate: e.target.value,
+                                    }))
+                                  }
+                                  className="w-32 px-2 py-1 border rounded text-center"
+                                />
+                              ) : (
+                                formatDateByLang(lr.endDate)
+                              )}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {getLeaveDays(lr)}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {isEditing ? (
+                                <select
+                                  value={editingLeaveHistoryData.type || lr.type}
+                                  onChange={(e) =>
+                                    setEditingLeaveHistoryData((prev) => ({
+                                      ...prev,
+                                      type: e.target.value,
+                                    }))
+                                  }
+                                  className="w-24 px-2 py-1 border rounded text-center"
                                 >
-                                  승인
-                                </button>
-                                <button
-                                  className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                                  onClick={() => handleRejectLeave(lr.id)}
+                                  <option value="연차">연차</option>
+                                  <option value="반차(오전)">반차(오전)</option>
+                                  <option value="반차(오후)">반차(오후)</option>
+                                  <option value="외출">외출</option>
+                                  <option value="조퇴">조퇴</option>
+                                  <option value="경조">경조</option>
+                                  <option value="공가">공가</option>
+                                  <option value="휴직">휴직</option>
+                                  <option value="결근">결근</option>
+                                  <option value="기타">기타</option>
+                                </select>
+                              ) : (
+                                lr.type
+                              )}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editingLeaveHistoryData.reason || lr.reason || '개인사정'}
+                                  onChange={(e) =>
+                                    setEditingLeaveHistoryData((prev) => ({
+                                      ...prev,
+                                      reason: e.target.value,
+                                    }))
+                                  }
+                                  className="w-24 px-2 py-1 border rounded text-center"
+                                />
+                              ) : (
+                                lr.reason || '개인사정'
+                              )}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editingLeaveHistoryData.contact || lr.contact || ''}
+                                  onChange={(e) =>
+                                    setEditingLeaveHistoryData((prev) => ({
+                                      ...prev,
+                                      contact: e.target.value,
+                                    }))
+                                  }
+                                  className="w-28 px-2 py-1 border rounded text-center"
+                                />
+                              ) : (
+                                lr.contact || ''
+                              )}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editingLeaveHistoryData.remark || lr.remark || ''}
+                                  onChange={(e) =>
+                                    setEditingLeaveHistoryData((prev) => ({
+                                      ...prev,
+                                      remark: e.target.value,
+                                    }))
+                                  }
+                                  className="w-32 px-2 py-1 border rounded text-center"
+                                />
+                              ) : (
+                                <span
+                                  className="truncate max-w-[150px]"
+                                  title={lr.remark || '-'}
                                 >
-                                  반려
+                                  {lr.remark || '-'}
+                                </span>
+                              )}
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {isEditing ? (
+                                <select
+                                  value={editingLeaveHistoryData.status || lr.status}
+                                  onChange={(e) =>
+                                    setEditingLeaveHistoryData((prev) => ({
+                                      ...prev,
+                                      status: e.target.value,
+                                    }))
+                                  }
+                                  className="w-20 px-2 py-1 border rounded text-center"
+                                >
+                                  <option value="대기">대기</option>
+                                  <option value="승인">승인</option>
+                                  <option value="반려">반려</option>
+                                  <option value="취소">취소</option>
+                                </select>
+                              ) : (
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs ${
+                                    STATUS_COLORS[lr.status] ||
+                                    STATUS_COLORS['대기']
+                                  }`}
+                                >
+                                  {lr.status}
+                                </span>
+                              )}
+                            </td>
+                            <td className="text-center py-1 px-2">
+                              {isEditing ? (
+                                <>
+                                  <button
+                                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
+                                    onClick={() => handleSaveLeaveHistory(lr.id)}
+                                  >
+                                    저장
+                                  </button>
+                                  <button
+                                    className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                                    onClick={handleCancelLeaveHistory}
+                                  >
+                                    취소
+                                  </button>
+                                </>
+                              ) : lr.status === '대기' ? (
+                                <>
+                                  <button
+                                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
+                                    onClick={() => handleApproveLeave(lr.id)}
+                                  >
+                                    승인
+                                  </button>
+                                  <button
+                                    className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                    onClick={() => handleRejectLeave(lr.id)}
+                                  >
+                                    반려
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                                  onClick={() => handleEditLeaveHistory(lr)}
+                                >
+                                  수정
                                 </button>
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                      ));
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      });
                   })()}
                 </tbody>
               </table>

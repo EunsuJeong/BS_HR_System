@@ -513,13 +513,9 @@ router.put('/leaves/:id', async (req, res) => {
       });
     }
 
-    // 대기 상태의 연차만 수정 가능
-    if (existingLeave.status !== '대기') {
-      return res.status(400).json({
-        success: false,
-        error: '대기 중인 연차만 수정할 수 있습니다.',
-      });
-    }
+    // 관리자는 모든 상태의 연차 수정 가능
+    // (직원은 '대기' 상태만 수정 가능하지만, 이 API는 관리자용으로도 사용됨)
+    console.log('✅ 연차 수정 가능 - 현재 상태:', existingLeave.status);
 
     // 날짜 파싱
     let parsedStartDate = existingLeave.startDate;

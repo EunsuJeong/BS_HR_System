@@ -698,7 +698,18 @@ router.post('/suggestions', async (req, res) => {
 router.put('/suggestions/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, approver, type, content, title, remark } = req.body;
+    const {
+      status,
+      approver,
+      type,
+      content,
+      title,
+      remark,
+      employeeId,
+      name,
+      department,
+      category,
+    } = req.body;
 
     console.log('🔄 건의사항 수정 요청:', {
       id,
@@ -712,8 +723,14 @@ router.put('/suggestions/:id', async (req, res) => {
       updateData.status = status;
     }
 
-    // 내용 업데이트 (직원 수정)
+    // 기본 정보 업데이트 (관리자 수정)
+    if (employeeId !== undefined) updateData.employeeId = employeeId;
+    if (name !== undefined) updateData.name = name;
+    if (department !== undefined) updateData.department = department;
+
+    // 내용 업데이트
     if (type !== undefined) updateData.type = type;
+    if (category !== undefined) updateData.type = category; // category는 DB의 type에 저장
     if (content !== undefined) updateData.content = content;
     if (title !== undefined) updateData.title = title;
     if (remark !== undefined) updateData.remark = remark;
