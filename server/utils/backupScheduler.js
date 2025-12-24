@@ -126,22 +126,21 @@ async function deleteOldBackups() {
 }
 
 /**
- * 백업 스케줄러 시작
+ * 백업 스케줄러 시작 (비활성화됨 - GitHub Actions 사용)
  */
 function startBackupScheduler() {
-  // 매일 자정(00:00)에 백업 실행
-  cron.schedule('0 0 * * *', async () => {
-    console.log('\n========================================');
-    console.log('⏰ 예약된 백업 작업 시작');
-    console.log('========================================');
-    await performBackup();
-  }, {
-    timezone: 'Asia/Seoul'
-  });
+  // 자정 자동 백업 비활성화 (GitHub Actions로 대체)
+  // cron.schedule('0 0 * * *', async () => {
+  //   console.log('\n========================================');
+  //   console.log('⏰ 예약된 백업 작업 시작');
+  //   console.log('========================================');
+  //   await performBackup();
+  // }, {
+  //   timezone: 'Asia/Seoul'
+  // });
 
-  console.log('✅ 백업 스케줄러 시작됨 (매일 자정 00:00 KST)');
-  console.log(`📂 백업 저장 위치: ${BACKUP_DIR}`);
-  console.log(`🗓️ 백업 보관 기간: ${BACKUP_RETENTION_DAYS}일`);
+  console.log('ℹ️  로컬 자동 백업 비활성화 (GitHub Actions 사용)');
+  console.log('💡 수동 백업: npm run backup:create');
 }
 
 /**

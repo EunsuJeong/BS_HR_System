@@ -1,0 +1,61 @@
+name: MongoDB 자동 백업
+
+on:
+  schedule:
+    # 매일 자정 00:00 KST (UTC 15:00 = KST 00:00 다음날)
+    - cron: '0 15 * * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 의존성 설치
+        run: npm install
+
+      - name: MongoDB 백업 실행
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+        run: node scripts/backup.js
+
+      - name: 백업 파일 커밋
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions"
+
+          # .gitignore 무시하고 강제로 backups 추가
+          git add -f backups/
+
+          # 백업 파일이 변경되었을 때만 커밋
+          if git diff --staged --quiet; then
+            echo "변경사항 없음 - 커밋 스킵"
+          else
+            BACKUP_DATE=$(date +"%Y-%m-%d %H:%M KST")
+            git commit -m "🗄️ 자동 백업: $BACKUP_DATE"
+            git push
+          fi
+
+      - name: 15일 이상 된 백업 삭제
+        run: |
+          cd backups
+          find . -name "backup_*.json" -type f -mtime +15 -delete
+
+          # 삭제된 파일이 있으면 커밋
+          if [[ $(git status --porcelain) ]]; then
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "GitHub Actions"
+            git add -A
+            git commit -m "🗑️ 15일 이상된 백업 자동 삭제"
+            git push
+          fi
