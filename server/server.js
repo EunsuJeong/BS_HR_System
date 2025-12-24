@@ -136,8 +136,9 @@ async function checkAndPublishScheduledNotices() {
 
 // ================== DB 연결 ==================
 const mongoURI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/busung_hr';
-const { startBackupScheduler } = require('./utils/backupScheduler');
+// const { startBackupScheduler } = require('./utils/backupScheduler');
 const { startAnnualLeaveScheduler } = require('./utils/annualLeaveScheduler');
+const { startSelfPingScheduler } = require('./utils/selfPing');
 
 mongoose
   .connect(mongoURI)
@@ -152,11 +153,14 @@ mongoose
     setInterval(checkAndPublishScheduledNotices, 60000);
     console.log('⏰ 예약 공지사항 자동 체크 시작 (1분마다)');
 
-    // 백업 스케줄러 시작
-    startBackupScheduler();
+    // 백업 스케줄러 시작 (비활성화 - 수동 백업만 사용)
+    // startBackupScheduler();
 
     // 연차 만료 알림 스케줄러 시작
     startAnnualLeaveScheduler(io);
+
+    // Self-ping 스케줄러 시작 (Railway sleep 방지 - 매일 오전 5시)
+    startSelfPingScheduler();
   })
   .catch((err) => console.error('❌ MongoDB 연결 실패:', err));
 
