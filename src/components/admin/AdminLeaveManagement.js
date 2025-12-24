@@ -688,8 +688,9 @@ const AdminLeaveManagement = ({
                               <input
                                 type="number"
                                 value={
-                                  editAnnualData.totalAnnual ||
-                                  annualData.totalAnnual
+                                  editAnnualData.totalAnnual !== undefined
+                                    ? editAnnualData.totalAnnual
+                                    : annualData.totalAnnual
                                 }
                                 onChange={(e) => {
                                   const value = Number(e.target.value) || 0;
@@ -698,9 +699,9 @@ const AdminLeaveManagement = ({
                                     totalAnnual: value,
                                     remainAnnual:
                                       value -
-                                      (prev.usedAnnual ||
-                                        annualData.usedAnnual ||
-                                        0),
+                                      (prev.usedAnnual !== undefined
+                                        ? prev.usedAnnual
+                                        : annualData.usedAnnual || 0),
                                   }));
                                 }}
                                 className="w-16 px-2 py-1 border rounded text-center"
@@ -714,18 +715,19 @@ const AdminLeaveManagement = ({
                               <input
                                 type="number"
                                 value={
-                                  editAnnualData.usedAnnual ||
-                                  annualData.usedAnnual
+                                  editAnnualData.usedLeave !== undefined
+                                    ? editAnnualData.usedLeave
+                                    : emp.usedLeave || 0
                                 }
                                 onChange={(e) => {
                                   const value = Number(e.target.value) || 0;
                                   setEditAnnualData((prev) => ({
                                     ...prev,
-                                    usedAnnual: value,
+                                    usedLeave: value,
                                     remainAnnual:
-                                      (prev.totalAnnual ||
-                                        annualData.totalAnnual ||
-                                        0) - value,
+                                      (prev.totalAnnual !== undefined
+                                        ? prev.totalAnnual
+                                        : annualData.totalAnnual || 0) - value,
                                   }));
                                 }}
                                 className="w-16 px-2 py-1 border rounded text-center"
@@ -733,17 +735,17 @@ const AdminLeaveManagement = ({
                             ) : (
                               <span
                                 className={`font-medium ${
-                                  annualData.usedAnnual >
+                                  (emp.usedLeave || 0) >
                                   annualData.totalAnnual * 0.8
                                     ? 'text-green-600'
-                                    : annualData.usedAnnual >
+                                    : (emp.usedLeave || 0) >
                                       annualData.totalAnnual * 0.5
                                     ? 'text-orange-600'
                                     : 'text-red-600'
                                 }`}
-                                title={`승인된 연차 내역으로 자동 계산됨 (총 ${annualData.totalAnnual}일 중 ${annualData.usedAnnual}일 사용)`}
+                                title={`사용연차 (총 ${annualData.totalAnnual}일 중 ${emp.usedLeave || 0}일 사용)`}
                               >
-                                {annualData.usedAnnual}
+                                {emp.usedLeave || 0}
                               </span>
                             )}
                           </td>
@@ -763,53 +765,46 @@ const AdminLeaveManagement = ({
                               <>
                                 <button
                                   className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
-                                  onClick={() => {
-                                    // 연차 정보 저장 및 직원 정보 업데이트
-                                    const finalData = {
-                                      ...editAnnualData,
-                                      totalAnnual:
-                                        editAnnualData.totalAnnual ||
-                                        annualData.totalAnnual ||
-                                        0,
-                                      usedAnnual:
-                                        editAnnualData.usedAnnual ||
-                                        annualData.usedAnnual ||
-                                        0,
-                                    };
+                                  onClick={async () => {
+                                    try {
+                                      // 사용연차 값 가져오기 (수정된 값 또는 기존 값)
+                                      const usedLeave = editAnnualData.usedLeave !== undefined
+                                        ? editAnnualData.usedLeave
+                                        : emp.usedLeave || 0;
 
-                                    finalData.remainAnnual =
-                                      finalData.totalAnnual -
-                                      finalData.usedAnnual;
+                                      console.log('🔍 직원 정보:', emp);
+                                      console.log('🔍 employeeId:', emp.id);
+                                      console.log('💾 DB 저장 데이터:', { usedLeave });
 
-                                    // 직원 정보 업데이트 - annualLeave 객체와 개별 필드 모두 업데이트
-                                    setEmployees((prev) =>
-                                      prev.map((employee) =>
-                                        employee.id === emp.id
-                                          ? {
-                                              ...employee,
-                                              ...finalData,
-                                              totalAnnual:
-                                                finalData.totalAnnual,
-                                              usedAnnual: finalData.usedAnnual,
-                                              remainAnnual:
-                                                finalData.remainAnnual,
-                                              annualLeave: {
-                                                total: finalData.totalAnnual,
-                                                used: finalData.usedAnnual,
-                                                remaining:
-                                                  finalData.remainAnnual,
-                                              },
-                                            }
-                                          : employee
-                                      )
-                                    );
+                                      // DB에 저장 - usedLeave 필드만 전송
+                                      const { default: EmployeeAPI } = await import('../../api/employee');
+                                      const response = await EmployeeAPI.update(emp.id, {
+                                        usedLeave: usedLeave,
+                                      });
 
-                                    devLog('연차 정보 저장 완료:', finalData);
-                                    alert(
-                                      '연차 정보가 성공적으로 저장되었습니다.'
-                                    );
-                                    setEditingAnnualLeave(null);
-                                    setEditAnnualData({});
+                                      console.log('✅ API 응답:', response);
+
+                                      // 로컬 state 업데이트
+                                      setEmployees((prev) =>
+                                        prev.map((employee) =>
+                                          employee.id === emp.id
+                                            ? {
+                                                ...employee,
+                                                usedLeave: usedLeave,
+                                              }
+                                            : employee
+                                        )
+                                      );
+
+                                      console.log('✅ 사용연차 저장 완료:', usedLeave);
+                                      alert('사용연차가 성공적으로 저장되었습니다.');
+                                      setEditingAnnualLeave(null);
+                                      setEditAnnualData({});
+                                    } catch (error) {
+                                      console.error('❌ 사용연차 저장 실패:', error);
+                                      console.error('❌ 에러 상세:', error.response?.data || error.message);
+                                      alert('사용연차 저장 중 오류가 발생했습니다: ' + (error.response?.data?.error || error.message));
+                                    }
                                   }}
                                 >
                                   저장
@@ -844,8 +839,10 @@ const AdminLeaveManagement = ({
                                     address: emp.address || '',
                                     password: emp.password || '',
                                     totalAnnual: annualData.totalAnnual,
-                                    usedAnnual: annualData.usedAnnual,
+                                    usedLeave: emp.usedLeave || 0,
                                     remainAnnual: annualData.remainAnnual,
+                                    baseAnnual: annualData.baseAnnual || annualData.totalAnnual - (annualData.carryOverLeave || 0),
+                                    carryOverLeave: annualData.carryOverLeave || 0,
                                   });
                                 }}
                               >

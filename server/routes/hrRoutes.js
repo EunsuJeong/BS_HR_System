@@ -1097,4 +1097,44 @@ router.post('/analyze-work-type', async (req, res) => {
   }
 });
 
+// ✅ usedLeave 필드 마이그레이션 (한 번만 실행)
+router.post('/migrate-usedleave', async (req, res) => {
+  try {
+    console.log('🔄 usedLeave 데이터 마이그레이션 시작...');
+
+    // 모든 직원 조회
+    const employees = await Employee.find({});
+    console.log(`📊 총 ${employees.length}명의 직원 데이터 발견`);
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    for (const emp of employees) {
+      // usedLeave 필드가 없거나 undefined인 경우에만 업데이트
+      if (emp.usedLeave === undefined || emp.usedLeave === null) {
+        // annualLeave.used 값이 있으면 usedLeave로 복사, 없으면 0
+        emp.usedLeave = emp.annualLeave?.used || 0;
+        await emp.save();
+        console.log(`✅ ${emp.name} (${emp.employeeId}): usedLeave = ${emp.usedLeave}`);
+        updatedCount++;
+      } else {
+        console.log(`⏭️  ${emp.name} (${emp.employeeId}): 이미 usedLeave 있음 (${emp.usedLeave})`);
+        skippedCount++;
+      }
+    }
+
+    console.log('✅ 마이그레이션 완료!');
+    res.json({
+      success: true,
+      message: 'usedLeave 필드 마이그레이션 완료',
+      updatedCount,
+      skippedCount,
+      totalEmployees: employees.length,
+    });
+  } catch (error) {
+    console.error('❌ 마이그레이션 실패:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

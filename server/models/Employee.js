@@ -107,6 +107,12 @@ const employeeSchema = new mongoose.Schema(
       used: { type: Number, default: 0 },
       remaining: { type: Number, default: 15 },
     },
+
+    // 사용연차 (직접 수정 가능)
+    usedLeave: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true, // createdAt, updatedAt 자동 생성

@@ -637,6 +637,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              usedLeave: emp.usedLeave || 0,
             };
             // 연차 계산은 나중에 leaveRequests 로드 후 다시 계산
             return baseEmp;
@@ -704,6 +705,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              usedLeave: emp.usedLeave || 0,
             };
             const formattedLeaves = dbLeaves
               ? dbLeaves.map((leave) => ({
@@ -3126,6 +3128,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              usedLeave: emp.usedLeave || 0,
             };
             const annualData = calculateEmployeeAnnualLeaveUtil(
               baseEmp,
@@ -3167,6 +3170,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              usedLeave: emp.usedLeave || 0,
             };
             const annualData = calculateEmployeeAnnualLeaveUtil(
               baseEmp,
@@ -3208,6 +3212,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              usedLeave: emp.usedLeave || 0,
             };
             const annualData = calculateEmployeeAnnualLeaveUtil(
               baseEmp,
@@ -4769,6 +4774,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              usedLeave: emp.usedLeave || 0,
             };
             const annualData = calculateEmployeeAnnualLeaveUtil(
               baseEmp,
