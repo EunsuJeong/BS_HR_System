@@ -5738,14 +5738,17 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
 
   let usedAnnual = 0;
 
-  // DB 데이터를 최우선으로 사용 (usedLeave 또는 leaveUsed)
-  if (employee.usedLeave !== undefined) {
-    usedAnnual = employee.usedLeave;
-  } else if (employee.leaveUsed !== undefined) {
+  // ✅ 우선순위 수정: DB 원본(leaveUsed) > 연차 신청 내역 계산
+  // DB에 명시적으로 저장된 값이 있으면 그걸 사용 (직접 수정한 경우)
+  if (employee.leaveUsed !== undefined && employee.leaveUsed !== null) {
     usedAnnual = employee.leaveUsed;
-  } else if (savedAnnualData && savedAnnualData.used !== undefined) {
-    usedAnnual = savedAnnualData.used;
+    console.log(`📊 [${employee.name}] DB leaveUsed 사용: ${usedAnnual}`);
+  } else if (employee.usedLeave !== undefined && employee.usedLeave !== null && employee.usedLeave > 0) {
+    // usedLeave가 0보다 크면 사용 (0이면 연차 신청 계산)
+    usedAnnual = employee.usedLeave;
+    console.log(`📊 [${employee.name}] 매핑된 usedLeave 사용: ${usedAnnual}`);
   } else {
+    // DB 값이 없으면 연차 신청 내역으로 계산
     const annualStartDate = new Date(annualStart);
     const annualEndDate = new Date(annualEnd);
 
@@ -5802,7 +5805,10 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
         // 외출, 조퇴, 결근, 기타: 1.0일 (관리자 승인 시 일수 직접 지정 가능)
         return sum + (leave.approvedDays || leave.days || 1);
       }, 0);
+    console.log(`📊 [${employee.name}] 연차 신청 내역 계산: ${usedAnnual}일`);
   }
+
+  console.log(`✅ [${employee.name}] 최종 사용연차: ${usedAnnual}일`);
 
   const totalAnnual =
     savedAnnualData?.total || employee.totalAnnual || defaultTotalAnnual;

@@ -637,7 +637,9 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
-              // ✅ usedLeave와 leaveUsed 둘 다 체크 (DB 필드명 호환)
+              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
+              leaveUsed: emp.leaveUsed,
+              // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
             // 연차 계산은 나중에 leaveRequests 로드 후 다시 계산
@@ -706,7 +708,9 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
-              // ✅ usedLeave와 leaveUsed 둘 다 체크 (DB 필드명 호환)
+              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
+              leaveUsed: emp.leaveUsed,
+              // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
             const formattedLeaves = dbLeaves
@@ -3130,7 +3134,9 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
-              // ✅ usedLeave와 leaveUsed 둘 다 체크 (DB 필드명 호환)
+              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
+              leaveUsed: emp.leaveUsed,
+              // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
             const annualData = calculateEmployeeAnnualLeaveUtil(
@@ -3173,7 +3179,9 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
-              // ✅ usedLeave와 leaveUsed 둘 다 체크 (DB 필드명 호환)
+              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
+              leaveUsed: emp.leaveUsed,
+              // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
             const annualData = calculateEmployeeAnnualLeaveUtil(
@@ -3216,7 +3224,9 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
-              // ✅ usedLeave와 leaveUsed 둘 다 체크 (DB 필드명 호환)
+              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
+              leaveUsed: emp.leaveUsed,
+              // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
             const annualData = calculateEmployeeAnnualLeaveUtil(
@@ -4793,7 +4803,9 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
-              // ✅ usedLeave와 leaveUsed 둘 다 체크 (DB 필드명 호환)
+              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
+              leaveUsed: emp.leaveUsed,
+              // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
             const annualData = calculateEmployeeAnnualLeaveUtil(
