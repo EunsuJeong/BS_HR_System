@@ -68,6 +68,7 @@ router.post('/login', async (req, res) => {
     const responseData = {
       ...employeeData,
       id: employeeData.employeeId, // 프론트엔드와 일관성을 위해 id 필드 추가
+      usedLeave: employeeData.leaveUsed || 0, // leaveUsed를 usedLeave로도 매핑
       isAdmin: false,
     };
 
@@ -138,7 +139,13 @@ router.put('/employees/:employeeId/password', async (req, res) => {
 router.get('/employees', async (_, res) => {
   try {
     const employees = await Employee.find();
-    res.json(employees);
+    // leaveUsed를 usedLeave로도 매핑 (프론트엔드 호환성)
+    const employeesWithMapping = employees.map(emp => {
+      const empObj = emp.toObject();
+      empObj.usedLeave = empObj.leaveUsed || 0;
+      return empObj;
+    });
+    res.json(employeesWithMapping);
   } catch (error) {
     console.error('❌ 직원 조회 실패:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -168,9 +175,25 @@ router.put('/employees/:id', async (req, res) => {
       req.body.leaveDate = parseDateString(req.body.leaveDate);
     }
 
+    // usedLeave를 leaveUsed로 변환 (프론트엔드 호환성)
+    if (req.body.usedLeave !== undefined) {
+      req.body.leaveUsed = req.body.usedLeave;
+      delete req.body.usedLeave;
+    }
+
     // findOneAndUpdate를 사용하여 직접 업데이트
+    // MongoDB _id 또는 employeeId로 조회
+    let query;
+    if (mongoose.Types.ObjectId.isValid(req.params.id) && req.params.id.length === 24) {
+      // MongoDB ObjectId 형식인 경우
+      query = { _id: req.params.id };
+    } else {
+      // employeeId 형식인 경우
+      query = { employeeId: req.params.id };
+    }
+
     const employee = await Employee.findOneAndUpdate(
-      { employeeId: req.params.id },
+      query,
       req.body,
       {
         new: true, // 업데이트된 문서 반환
@@ -179,9 +202,7 @@ router.put('/employees/:id', async (req, res) => {
     );
 
     if (!employee) {
-      console.error('❌ 직원을 찾을 수 없음. 조회 조건:', {
-        employeeId: req.params.id,
-      });
+      console.error('❌ 직원을 찾을 수 없음. 조회 조건:', query);
       // 디버깅: 실제 DB에 있는 직원 ID 목록 출력
       const allEmployees = await Employee.find({})
         .select('employeeId _id')
@@ -200,7 +221,12 @@ router.put('/employees/:id', async (req, res) => {
     }
 
     console.log('✅ 직원 정보 수정 완료:', employee.employeeId);
-    res.json({ success: true, data: employee });
+
+    // leaveUsed를 usedLeave로도 매핑 (프론트엔드 호환성)
+    const employeeObj = employee.toObject();
+    employeeObj.usedLeave = employeeObj.leaveUsed || 0;
+
+    res.json({ success: true, data: employeeObj });
   } catch (error) {
     console.error('❌ 직원 정보 수정 실패:', error.message);
     console.error('❌ 전체 에러:', error);
@@ -221,7 +247,12 @@ router.post('/employees', async (req, res) => {
     const employee = new Employee(req.body);
 
     await employee.save();
-    res.json({ success: true, data: employee });
+
+    // leaveUsed를 usedLeave로도 매핑 (프론트엔드 호환성)
+    const employeeObj = employee.toObject();
+    employeeObj.usedLeave = employeeObj.leaveUsed || 0;
+
+    res.json({ success: true, data: employeeObj });
   } catch (error) {
     console.error('❌ 직원 등록 실패:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -1097,10 +1128,10 @@ router.post('/analyze-work-type', async (req, res) => {
   }
 });
 
-// ✅ usedLeave 필드 마이그레이션 (한 번만 실행)
+// ✅ leaveUsed 필드 마이그레이션 (한 번만 실행)
 router.post('/migrate-usedleave', async (req, res) => {
   try {
-    console.log('🔄 usedLeave 데이터 마이그레이션 시작...');
+    console.log('🔄 leaveUsed 데이터 마이그레이션 시작...');
 
     // 모든 직원 조회
     const employees = await Employee.find({});
@@ -1110,15 +1141,15 @@ router.post('/migrate-usedleave', async (req, res) => {
     let skippedCount = 0;
 
     for (const emp of employees) {
-      // usedLeave 필드가 없거나 undefined인 경우에만 업데이트
-      if (emp.usedLeave === undefined || emp.usedLeave === null) {
-        // annualLeave.used 값이 있으면 usedLeave로 복사, 없으면 0
-        emp.usedLeave = emp.annualLeave?.used || 0;
+      // leaveUsed 필드가 없거나 undefined인 경우에만 업데이트
+      if (emp.leaveUsed === undefined || emp.leaveUsed === null) {
+        // annualLeave.used 값이 있으면 leaveUsed로 복사, 없으면 0
+        emp.leaveUsed = emp.annualLeave?.used || 0;
         await emp.save();
-        console.log(`✅ ${emp.name} (${emp.employeeId}): usedLeave = ${emp.usedLeave}`);
+        console.log(`✅ ${emp.name} (${emp.employeeId}): leaveUsed = ${emp.leaveUsed}`);
         updatedCount++;
       } else {
-        console.log(`⏭️  ${emp.name} (${emp.employeeId}): 이미 usedLeave 있음 (${emp.usedLeave})`);
+        console.log(`⏭️  ${emp.name} (${emp.employeeId}): 이미 leaveUsed 있음 (${emp.leaveUsed})`);
         skippedCount++;
       }
     }
@@ -1126,7 +1157,7 @@ router.post('/migrate-usedleave', async (req, res) => {
     console.log('✅ 마이그레이션 완료!');
     res.json({
       success: true,
-      message: 'usedLeave 필드 마이그레이션 완료',
+      message: 'leaveUsed 필드 마이그레이션 완료',
       updatedCount,
       skippedCount,
       totalEmployees: employees.length,

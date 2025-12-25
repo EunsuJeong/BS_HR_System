@@ -776,10 +776,10 @@ const AdminLeaveManagement = ({
                                       console.log('🔍 employeeId:', emp.id);
                                       console.log('💾 DB 저장 데이터:', { usedLeave });
 
-                                      // DB에 저장 - usedLeave 필드만 전송
+                                      // DB에 저장 - leaveUsed 필드만 전송 (DB 스키마 필드명)
                                       const { default: EmployeeAPI } = await import('../../api/employee');
                                       const response = await EmployeeAPI.update(emp.id, {
-                                        usedLeave: usedLeave,
+                                        leaveUsed: usedLeave,
                                       });
 
                                       console.log('✅ API 응답:', response);
