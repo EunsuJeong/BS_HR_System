@@ -20,8 +20,8 @@ const employeeSchema = new mongoose.Schema(
     leaveDate: Date,
     phone: String,
     address: String,
-    leaveEntitled: Number,
-    leaveUsed: Number,
+    leaveEntitled: Number, // 부여된 연차
+    leaveUsed: Number,     // 사용한 연차 (직접 수정 가능)
     evalScore: Number,
     createdAt: { type: Date, default: Date.now },
   },

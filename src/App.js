@@ -4263,13 +4263,20 @@ const HRManagementSystem = () => {
               baseEmp,
               leaveRequests
             );
+
+            // ✅ DB에서 받은 usedLeave 값 우선 사용 (강력 새로고침 시에도 정확한 값 유지)
+            const usedLeaveFromDB = emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
+            const finalUsedLeave = usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
+              ? usedLeaveFromDB
+              : annualData.usedAnnual;
+
             return {
               ...baseEmp,
               leaveYearStart: annualData.annualStart,
               leaveYearEnd: annualData.annualEnd,
               totalAnnualLeave: annualData.totalAnnual,
-              usedAnnualLeave: annualData.usedAnnual,
-              remainingAnnualLeave: annualData.remainAnnual,
+              usedAnnualLeave: finalUsedLeave, // DB 값 우선 사용
+              remainingAnnualLeave: annualData.totalAnnual - finalUsedLeave,
             };
           });
           setEmployees(formattedEmployees);
@@ -4331,13 +4338,20 @@ const HRManagementSystem = () => {
                 baseEmp,
                 leaveRequests
               );
+
+              // ✅ DB에서 받은 usedLeave 값 우선 사용 (강력 새로고침 시에도 정확한 값 유지)
+              const usedLeaveFromDB = emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
+              const finalUsedLeave = usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
+                ? usedLeaveFromDB
+                : annualData.usedAnnual;
+
               return {
                 ...baseEmp,
                 leaveYearStart: annualData.annualStart,
                 leaveYearEnd: annualData.annualEnd,
                 totalAnnualLeave: annualData.totalAnnual,
-                usedAnnualLeave: annualData.usedAnnual,
-                remainingAnnualLeave: annualData.remainAnnual,
+                usedAnnualLeave: finalUsedLeave, // DB 값 우선 사용
+                remainingAnnualLeave: annualData.totalAnnual - finalUsedLeave,
               };
             });
             setEmployees(formattedEmployees);

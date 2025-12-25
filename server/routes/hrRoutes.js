@@ -138,6 +138,13 @@ router.put('/employees/:employeeId/password', async (req, res) => {
 // ✅ 직원 전체 조회
 router.get('/employees', async (_, res) => {
   try {
+    // ✅ 캐시 방지 헤더 설정 (강력 새로고침 시에도 최신 데이터 제공)
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
     const employees = await Employee.find();
     // leaveUsed를 usedLeave로도 매핑 (프론트엔드 호환성)
     const employeesWithMapping = employees.map(emp => {

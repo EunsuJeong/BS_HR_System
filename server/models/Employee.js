@@ -1,8 +1,18 @@
+// ===============================================
+// ⚠️ 이 파일은 사용되지 않습니다
+// ===============================================
+// 실제 사용 파일: server/models/hr/employees.js
+// 이 파일은 server/routes/employees.js에서만 참조하는데,
+// 해당 라우트가 server/routes/index.js에 등록되지 않았습니다.
+// 따라서 전체 주석처리합니다.
+// ===============================================
+
+/*
 const mongoose = require('mongoose');
 
 /**
  * 직원 스키마
- */
+ *\/
 const employeeSchema = new mongoose.Schema(
   {
     // 기본 정보
@@ -132,3 +142,4 @@ employeeSchema.methods.toJSON = function () {
 };
 
 module.exports = mongoose.model('Employee', employeeSchema);
+*/
