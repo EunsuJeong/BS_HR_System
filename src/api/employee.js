@@ -5,7 +5,11 @@ export const EmployeeAPI = {
   login: async (credentials) => api.post('/hr/login', credentials),
 
   // 전체 직원 목록 조회
-  list: async () => api.get('/hr/employees'),
+  list: async () => {
+    const response = await api.get('/hr/employees');
+    // API 응답 형식: {success: true, data: [...]}
+    return response.data || [];
+  },
 
   // 특정 직원 조회
   getById: async (employeeId) => api.get(`/hr/employees/${employeeId}`),

@@ -152,7 +152,9 @@ router.get('/employees', async (_, res) => {
       empObj.usedLeave = empObj.leaveUsed || 0;
       return empObj;
     });
-    res.json(employeesWithMapping);
+
+    // 일관성있는 API 응답 형식 사용
+    res.json({ success: true, data: employeesWithMapping });
   } catch (error) {
     console.error('❌ 직원 조회 실패:', error.message);
     res.status(500).json({ success: false, error: error.message });
