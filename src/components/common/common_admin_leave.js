@@ -1646,10 +1646,13 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
 
   let usedAnnual = 0;
 
-  if (savedAnnualData && savedAnnualData.used !== undefined) {
+  // DB 데이터를 최우선으로 사용 (usedLeave 또는 leaveUsed)
+  if (employee.usedLeave !== undefined) {
+    usedAnnual = employee.usedLeave;
+  } else if (employee.leaveUsed !== undefined) {
+    usedAnnual = employee.leaveUsed;
+  } else if (savedAnnualData && savedAnnualData.used !== undefined) {
     usedAnnual = savedAnnualData.used;
-  } else if (employee.usedAnnual !== undefined) {
-    usedAnnual = employee.usedAnnual;
   } else {
     const annualStartDate = new Date(annualStart);
     const annualEndDate = new Date(annualEnd);
