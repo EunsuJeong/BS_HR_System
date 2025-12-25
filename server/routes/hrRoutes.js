@@ -149,9 +149,26 @@ router.get('/employees', async (_, res) => {
     // leaveUsed를 usedLeave로도 매핑 (프론트엔드 호환성)
     const employeesWithMapping = employees.map(emp => {
       const empObj = emp.toObject();
-      empObj.usedLeave = empObj.leaveUsed || 0;
+      // ✅ leaveUsed 값이 있으면 그대로 사용, 없으면 0 (null/undefined 모두 처리)
+      const leaveUsedValue = empObj.leaveUsed !== undefined && empObj.leaveUsed !== null
+        ? empObj.leaveUsed
+        : 0;
+
+      empObj.usedLeave = leaveUsedValue;
+      // leaveUsed도 그대로 유지 (양방향 호환성)
+      empObj.leaveUsed = leaveUsedValue;
+
       return empObj;
     });
+
+    console.log('🔍 [GET /hr/employees] 샘플 응답 데이터 (첫 번째 직원):');
+    if (employeesWithMapping.length > 0) {
+      const sample = employeesWithMapping[0];
+      console.log(`  - employeeId: ${sample.employeeId}`);
+      console.log(`  - name: ${sample.name}`);
+      console.log(`  - leaveUsed: ${sample.leaveUsed} (타입: ${typeof sample.leaveUsed})`);
+      console.log(`  - usedLeave: ${sample.usedLeave} (타입: ${typeof sample.usedLeave})`);
+    }
 
     // 일관성있는 API 응답 형식 사용
     res.json({ success: true, data: employeesWithMapping });
