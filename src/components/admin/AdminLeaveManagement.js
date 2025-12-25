@@ -717,7 +717,7 @@ const AdminLeaveManagement = ({
                                 value={
                                   editAnnualData.usedLeave !== undefined
                                     ? editAnnualData.usedLeave
-                                    : emp.usedLeave || 0
+                                    : annualData.usedAnnual
                                 }
                                 onChange={(e) => {
                                   const value = Number(e.target.value) || 0;
@@ -735,17 +735,17 @@ const AdminLeaveManagement = ({
                             ) : (
                               <span
                                 className={`font-medium ${
-                                  (emp.usedLeave || 0) >
+                                  annualData.usedAnnual >
                                   annualData.totalAnnual * 0.8
                                     ? 'text-green-600'
-                                    : (emp.usedLeave || 0) >
+                                    : annualData.usedAnnual >
                                       annualData.totalAnnual * 0.5
                                     ? 'text-orange-600'
                                     : 'text-red-600'
                                 }`}
-                                title={`사용연차 (총 ${annualData.totalAnnual}일 중 ${emp.usedLeave || 0}일 사용)`}
+                                title={`사용연차 (총 ${annualData.totalAnnual}일 중 ${annualData.usedAnnual}일 사용)`}
                               >
-                                {emp.usedLeave || 0}
+                                {annualData.usedAnnual}
                               </span>
                             )}
                           </td>
@@ -770,7 +770,7 @@ const AdminLeaveManagement = ({
                                       // 사용연차 값 가져오기 (수정된 값 또는 기존 값)
                                       const usedLeave = editAnnualData.usedLeave !== undefined
                                         ? editAnnualData.usedLeave
-                                        : emp.usedLeave || 0;
+                                        : annualData.usedAnnual;
 
                                       console.log('🔍 직원 정보:', emp);
                                       console.log('🔍 employeeId:', emp.id);
@@ -839,7 +839,7 @@ const AdminLeaveManagement = ({
                                     address: emp.address || '',
                                     password: emp.password || '',
                                     totalAnnual: annualData.totalAnnual,
-                                    usedLeave: emp.usedLeave || 0,
+                                    usedLeave: annualData.usedAnnual,
                                     remainAnnual: annualData.remainAnnual,
                                     baseAnnual: annualData.baseAnnual || annualData.totalAnnual - (annualData.carryOverLeave || 0),
                                     carryOverLeave: annualData.carryOverLeave || 0,
