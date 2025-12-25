@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "bs-hr-system",
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "framework": "create-react-app",
