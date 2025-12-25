@@ -639,6 +639,7 @@ const HRManagementSystem = () => {
               address: emp.address,
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
+              leaveUsedModifiedAt: emp.leaveUsedModifiedAt,
               // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
@@ -710,6 +711,7 @@ const HRManagementSystem = () => {
               address: emp.address,
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
+              leaveUsedModifiedAt: emp.leaveUsedModifiedAt,
               // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
@@ -3136,6 +3138,7 @@ const HRManagementSystem = () => {
               address: emp.address,
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
+              leaveUsedModifiedAt: emp.leaveUsedModifiedAt,
               // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
@@ -3181,6 +3184,7 @@ const HRManagementSystem = () => {
               address: emp.address,
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
+              leaveUsedModifiedAt: emp.leaveUsedModifiedAt,
               // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
@@ -3226,6 +3230,7 @@ const HRManagementSystem = () => {
               address: emp.address,
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
+              leaveUsedModifiedAt: emp.leaveUsedModifiedAt,
               // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
@@ -4805,6 +4810,7 @@ const HRManagementSystem = () => {
               address: emp.address,
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
+              leaveUsedModifiedAt: emp.leaveUsedModifiedAt,
               // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };

@@ -762,9 +762,10 @@ export const calcDailyWage = (
   }
 
   // 평일 근무: 시간대별 구간 계산
-  const workRules = workType === 'night'
-    ? COMPANY_WAGE_RULES.workTimeRules.nightShift
-    : COMPANY_WAGE_RULES.workTimeRules.weekday;
+  const workRules =
+    workType === 'night'
+      ? COMPANY_WAGE_RULES.workTimeRules.nightShift
+      : COMPANY_WAGE_RULES.workTimeRules.weekday;
 
   // 각 시간대별 계산
   Object.values(workRules).forEach((rule) => {
@@ -5738,12 +5739,67 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
 
   let usedAnnual = 0;
 
-  // ✅ 우선순위 수정: DB 원본(leaveUsed) > 연차 신청 내역 계산
-  // DB에 명시적으로 저장된 값이 있으면 그걸 사용 (직접 수정한 경우)
-  if (employee.leaveUsed !== undefined && employee.leaveUsed !== null) {
+  const annualStartDate = new Date(annualStart);
+  const annualEndDate = new Date(annualEnd);
+
+  // ✅ 새로운 계산 로직: 관리자 설정값 + 이후 연차
+  if (employee.leaveUsed !== undefined && employee.leaveUsed !== null &&
+      employee.leaveUsedModifiedAt) {
+    // 관리자가 설정한 상수값 (강제성)
+    const adminSetValue = employee.leaveUsed;
+    const modifiedAt = new Date(employee.leaveUsedModifiedAt);
+
+    console.log(`[📊 ${employee.name}] 관리자 설정: ${adminSetValue}일 (수정일: ${modifiedAt.toLocaleDateString()})`);
+
+    // 수정일 이후 승인된 연차만 계산
+    const afterModification = leaveRequests
+      .filter((leave) => {
+        const matchesEmployee =
+          leave.employeeId === employee.id || leave.name === employee.name;
+        const isApproved = leave.status === '승인';
+        const leaveType = leave.type || leave.leaveType || '';
+        const isAnnualLeave = leaveType === '연차' || leaveType.includes('반차');
+
+        if (!matchesEmployee || !isApproved || !isAnnualLeave) return false;
+
+        const leaveStartDate = new Date(leave.startDate);
+        const leaveEndDate = new Date(leave.endDate || leave.startDate);
+
+        // 수정일 이후 && 연차 기간 내
+        const isAfterModified = leaveStartDate >= modifiedAt;
+        const isInPeriod =
+          (leaveStartDate >= annualStartDate && leaveStartDate <= annualEndDate) ||
+          (leaveEndDate >= annualStartDate && leaveEndDate <= annualEndDate) ||
+          (leaveStartDate <= annualStartDate && leaveEndDate >= annualEndDate);
+
+        return isAfterModified && isInPeriod;
+      })
+      .reduce((sum, leave) => {
+        const leaveType = leave.type || leave.leaveType || '';
+        if (leaveType.includes('반차')) return sum + 0.5;
+        if (leaveType === '경조' || leaveType === '공가' || leaveType === '휴직') return sum;
+        if (leaveType === '연차') {
+          if (leave.approvedDays) return sum + leave.approvedDays;
+          if (leave.startDate && leave.endDate) {
+            const start = new Date(leave.startDate);
+            const end = new Date(leave.endDate);
+            const days = Math.abs((end - start) / (1000 * 60 * 60 * 24)) + 1;
+            return sum + days;
+          }
+        }
+        return sum + (leave.approvedDays || leave.days || 1);
+      }, 0);
+
+    usedAnnual = adminSetValue + afterModification;
+    console.log(`[✅ ${employee.name}] 총 사용연차: ${adminSetValue} + ${afterModification} = ${usedAnnual}일`);
+  } else if (employee.leaveUsed !== undefined && employee.leaveUsed !== null) {
     usedAnnual = employee.leaveUsed;
     console.log(`📊 [${employee.name}] DB leaveUsed 사용: ${usedAnnual}`);
-  } else if (employee.usedLeave !== undefined && employee.usedLeave !== null && employee.usedLeave > 0) {
+  } else if (
+    employee.usedLeave !== undefined &&
+    employee.usedLeave !== null &&
+    employee.usedLeave > 0
+  ) {
     // usedLeave가 0보다 크면 사용 (0이면 연차 신청 계산)
     usedAnnual = employee.usedLeave;
     console.log(`📊 [${employee.name}] 매핑된 usedLeave 사용: ${usedAnnual}`);
@@ -5805,10 +5861,7 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
         // 외출, 조퇴, 결근, 기타: 1.0일 (관리자 승인 시 일수 직접 지정 가능)
         return sum + (leave.approvedDays || leave.days || 1);
       }, 0);
-    console.log(`📊 [${employee.name}] 연차 신청 내역 계산: ${usedAnnual}일`);
   }
-
-  console.log(`✅ [${employee.name}] 최종 사용연차: ${usedAnnual}일`);
 
   const totalAnnual =
     savedAnnualData?.total || employee.totalAnnual || defaultTotalAnnual;
