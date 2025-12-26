@@ -853,9 +853,23 @@ const HRManagementSystem = () => {
   // *[1_공통] 1.3.7.2_공휴일 판정*
   const isHoliday = (date) => {
     const dateStr = typeof date === 'string' ? date : formatDateToString(date);
-    const year = new Date(dateStr).getFullYear();
-    const month = new Date(dateStr).getMonth() + 1;
-    const day = new Date(dateStr).getDate();
+    const dateObj = new Date(dateStr);
+
+    // 날짜 유효성 검증
+    if (isNaN(dateObj.getTime())) {
+      console.warn(`[isHoliday] 유효하지 않은 날짜: ${dateStr}`);
+      return false;
+    }
+
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth() + 1;
+    const day = dateObj.getDate();
+
+    // year 유효성 추가 검증
+    if (isNaN(year) || year < 2000 || year > 2100) {
+      console.warn(`[isHoliday] 유효하지 않은 year: ${year} (from ${dateStr})`);
+      return false;
+    }
 
     // 수동 휴일 선택 체크 (근태관리 평일/휴일 셀렉트)
     const dateKey = getDateKey(year, month, day);
