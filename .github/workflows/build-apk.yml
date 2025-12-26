@@ -1,10 +1,11 @@
-name: Build Android APK
+name: Build Android APK & Generate QR Code
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -18,8 +19,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '18'
           cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Install dependencies
         run: npm ci
@@ -32,35 +39,378 @@ jobs:
           REACT_APP_AI_PROVIDER: openai
           REACT_APP_HOLIDAY_API_KEY: 603c88ccf76cf95f2e1c8ffe7dfa6be2fd88feb4bd6e3000a0293c308885e111
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build Android APK
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build Android APK (Release)
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: bs-hr-system-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+      - name: Get version info
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION="v$(date +'%Y.%m.%d')-${GITHUB_SHA::7}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
 
-      - name: Create Release (on tag)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Rename APK
+        run: |
+          mv android/app/build/outputs/apk/release/app-release-unsigned.apk \
+             android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk || true
+
+          # unsigned 파일이 없으면 signed 파일 찾기
+          if [ ! -f "android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk" ]; then
+            find android/app/build/outputs/apk/release/ -name "*.apk" -exec mv {} android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk \;
+          fi
+
+      - name: Create Release
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          tag_name: ${{ steps.version.outputs.version }}
+          name: BS HR System ${{ steps.version.outputs.version }}
+          body: |
+            ## 🏢 부성스틸 HR 시스템 Android APK
+
+            ### 📱 다운로드 방법
+            1. 아래 APK 파일을 다운로드하세요
+            2. Android 기기에서 APK를 설치하세요
+            3. "알 수 없는 출처" 허용이 필요할 수 있습니다
+
+            ### 📋 변경사항
+            - 빌드 날짜: ${{ steps.version.outputs.date }}
+            - 커밋: ${{ github.sha }}
+
+            ### 🔗 QR 코드로 다운로드
+            https://eunsujeong.github.io/BS_HR_System/
+
+          draft: false
+          prerelease: false
+          files: |
+            android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install QR code generator
+        run: npm install -g qrcode
+
+      - name: Generate APK download QR codes
+        run: |
+          mkdir -p qr-codes
+
+          # APK 다운로드 URL
+          APK_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/BS-HR-System-${{ steps.version.outputs.version }}.apk"
+
+          echo "Generating QR code for APK: $APK_URL"
+          qrcode -o qr-codes/apk-download-qr.png "$APK_URL"
+
+          # 최신 릴리즈 페이지 QR 코드
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/latest"
+          qrcode -o qr-codes/release-page-qr.png "$RELEASE_URL"
+
+          # 정보 저장
+          cat > qr-codes/download-info.txt <<EOF
+          APK 다운로드 URL: $APK_URL
+          릴리즈 페이지: $RELEASE_URL
+          버전: ${{ steps.version.outputs.version }}
+          빌드 날짜: ${{ steps.version.outputs.date }}
+          커밋: ${{ github.sha }}
+          EOF
+
+      - name: Create download page
+        run: |
+          cat > qr-codes/index.html <<'HTMLEOF'
+          <!DOCTYPE html>
+          <html lang="ko">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>부성스틸 HR 시스템 - APK 다운로드</title>
+              <style>
+                  * {
+                      margin: 0;
+                      padding: 0;
+                      box-sizing: border-box;
+                  }
+                  body {
+                      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      min-height: 100vh;
+                      padding: 20px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                  }
+                  .container {
+                      background: white;
+                      border-radius: 24px;
+                      padding: 40px;
+                      max-width: 600px;
+                      width: 100%;
+                      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                  }
+                  .logo {
+                      text-align: center;
+                      margin-bottom: 30px;
+                  }
+                  .logo h1 {
+                      font-size: 2em;
+                      color: #333;
+                      margin-bottom: 8px;
+                  }
+                  .logo p {
+                      color: #666;
+                      font-size: 1.1em;
+                  }
+                  .qr-section {
+                      background: #f8f9fa;
+                      border-radius: 16px;
+                      padding: 30px;
+                      text-align: center;
+                      margin: 25px 0;
+                  }
+                  .qr-section h2 {
+                      color: #667eea;
+                      margin-bottom: 20px;
+                      font-size: 1.5em;
+                  }
+                  .qr-code {
+                      background: white;
+                      padding: 20px;
+                      border-radius: 12px;
+                      display: inline-block;
+                      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                      margin: 15px 0;
+                  }
+                  .qr-code img {
+                      max-width: 280px;
+                      width: 100%;
+                      height: auto;
+                      display: block;
+                  }
+                  .download-btn {
+                      display: inline-block;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white;
+                      padding: 16px 40px;
+                      border-radius: 12px;
+                      text-decoration: none;
+                      font-size: 1.1em;
+                      font-weight: 600;
+                      margin: 20px 0;
+                      transition: transform 0.2s, box-shadow 0.2s;
+                      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                  }
+                  .download-btn:hover {
+                      transform: translateY(-2px);
+                      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+                  }
+                  .info-box {
+                      background: #e7f3ff;
+                      border-left: 4px solid #667eea;
+                      padding: 20px;
+                      margin: 25px 0;
+                      border-radius: 8px;
+                  }
+                  .info-box h3 {
+                      color: #667eea;
+                      margin-bottom: 12px;
+                      font-size: 1.2em;
+                  }
+                  .info-box ul {
+                      list-style: none;
+                      color: #555;
+                  }
+                  .info-box li {
+                      padding: 8px 0;
+                      padding-left: 24px;
+                      position: relative;
+                  }
+                  .info-box li:before {
+                      content: "✓";
+                      position: absolute;
+                      left: 0;
+                      color: #667eea;
+                      font-weight: bold;
+                  }
+                  .version-info {
+                      text-align: center;
+                      color: #888;
+                      margin-top: 30px;
+                      padding-top: 20px;
+                      border-top: 2px solid #eee;
+                      font-size: 0.9em;
+                  }
+                  .badge {
+                      display: inline-block;
+                      background: #667eea;
+                      color: white;
+                      padding: 6px 14px;
+                      border-radius: 20px;
+                      font-size: 0.85em;
+                      margin: 5px;
+                  }
+                  @media (max-width: 640px) {
+                      .container {
+                          padding: 24px;
+                      }
+                      .logo h1 {
+                          font-size: 1.6em;
+                      }
+                      .qr-code img {
+                          max-width: 220px;
+                      }
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="logo">
+                      <h1>🏢 부성스틸 HR 시스템</h1>
+                      <p>Android 앱 다운로드</p>
+                      <div style="margin-top: 15px;">
+                          <span class="badge" id="version">로딩 중...</span>
+                          <span class="badge" id="buildDate">로딩 중...</span>
+                      </div>
+                  </div>
+
+                  <div class="qr-section">
+                      <h2>📱 QR 코드로 다운로드</h2>
+                      <p style="color: #666; margin-bottom: 15px;">스마트폰 카메라로 스캔하세요</p>
+                      <div class="qr-code">
+                          <img src="apk-download-qr.png" alt="APK Download QR Code">
+                      </div>
+                      <p style="color: #888; font-size: 0.9em; margin-top: 15px;">
+                          QR 코드를 스캔하면 APK 파일이 바로 다운로드됩니다
+                      </p>
+                  </div>
+
+                  <div style="text-align: center;">
+                      <a href="#" id="downloadLink" class="download-btn">
+                          ⬇️ APK 직접 다운로드
+                      </a>
+                  </div>
+
+                  <div class="info-box">
+                      <h3>📋 설치 방법</h3>
+                      <ul>
+                          <li>APK 파일을 다운로드합니다</li>
+                          <li>Android 기기의 설정에서 "알 수 없는 출처" 허용</li>
+                          <li>다운로드한 APK 파일을 실행</li>
+                          <li>설치 완료 후 앱을 실행하세요</li>
+                      </ul>
+                  </div>
+
+                  <div class="info-box" style="background: #fff3cd; border-left-color: #ff9800;">
+                      <h3 style="color: #ff9800;">⚠️ 주의사항</h3>
+                      <ul>
+                          <li>Android 6.0 (Marshmallow) 이상 필요</li>
+                          <li>Google Play 스토어 버전이 아닌 개발 버전입니다</li>
+                          <li>처음 설치 시 보안 경고가 나타날 수 있습니다</li>
+                      </ul>
+                  </div>
+
+                  <div class="qr-section" style="margin-top: 30px;">
+                      <h2>🔗 릴리즈 페이지</h2>
+                      <p style="color: #666; margin-bottom: 15px;">모든 버전 확인</p>
+                      <div class="qr-code">
+                          <img src="release-page-qr.png" alt="Release Page QR Code">
+                      </div>
+                      <p style="color: #888; font-size: 0.9em; margin-top: 15px;">
+                          이전 버전 및 변경 이력 확인
+                      </p>
+                  </div>
+
+                  <div class="version-info" id="versionInfo">
+                      정보를 불러오는 중...
+                  </div>
+              </div>
+
+              <script>
+                  // download-info.txt에서 정보 읽기
+                  fetch('download-info.txt')
+                      .then(response => response.text())
+                      .then(text => {
+                          const lines = text.split('\n');
+                          const apkUrl = lines[0].split(': ')[1];
+                          const releaseUrl = lines[1].split(': ')[1];
+                          const version = lines[2].split(': ')[1];
+                          const buildDate = lines[3].split(': ')[1];
+                          const commit = lines[4].split(': ')[1];
+
+                          // 다운로드 링크 설정
+                          document.getElementById('downloadLink').href = apkUrl;
+
+                          // 버전 정보 표시
+                          document.getElementById('version').textContent = version;
+                          document.getElementById('buildDate').textContent = buildDate;
+
+                          // 하단 정보 업데이트
+                          document.getElementById('versionInfo').innerHTML = `
+                              <strong>버전:</strong> ${version}<br>
+                              <strong>빌드 날짜:</strong> ${buildDate}<br>
+                              <strong>커밋:</strong> ${commit.substring(0, 7)}<br>
+                              <a href="${releaseUrl}" style="color: #667eea; text-decoration: none; margin-top: 10px; display: inline-block;">
+                                  GitHub 릴리즈 페이지 →
+                              </a>
+                          `;
+                      })
+                      .catch(error => {
+                          console.error('Error loading download info:', error);
+                          document.getElementById('version').textContent = '최신 버전';
+                          document.getElementById('buildDate').textContent = new Date().toLocaleDateString('ko-KR');
+
+                          // GitHub latest release 링크로 대체
+                          const repoUrl = 'https://github.com/EunsuJeong/BS_HR_System';
+                          document.getElementById('downloadLink').href = repoUrl + '/releases/latest';
+                          document.getElementById('versionInfo').innerHTML = `
+                              <a href="${repoUrl}/releases/latest" style="color: #667eea; text-decoration: none;">
+                                  최신 릴리즈 다운로드 →
+                              </a>
+                          `;
+                      });
+              </script>
+          </body>
+          </html>
+          HTMLEOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./qr-codes
+          publish_branch: gh-pages
+          force_orphan: true
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BS-HR-System-APK
+          path: android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk
+          retention-days: 90
+
+      - name: Create summary
+        run: |
+          echo "## 🎉 Android APK 빌드 완료!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📱 다운로드 방법" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. **QR 코드 페이지**: https://eunsujeong.github.io/BS_HR_System/" >> $GITHUB_STEP_SUMMARY
+          echo "2. **직접 다운로드**: [APK 파일](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/BS-HR-System-${{ steps.version.outputs.version }}.apk)" >> $GITHUB_STEP_SUMMARY
+          echo "3. **릴리즈 페이지**: https://github.com/${{ github.repository }}/releases/latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 버전 정보" >> $GITHUB_STEP_SUMMARY
+          echo "- **버전**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **빌드 날짜**: ${{ steps.version.outputs.date }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **커밋**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📲 QR 코드 사용법" >> $GITHUB_STEP_SUMMARY
+          echo "스마트폰 카메라로 QR 코드를 스캔하면 APK 파일을 바로 다운로드할 수 있습니다." >> $GITHUB_STEP_SUMMARY
