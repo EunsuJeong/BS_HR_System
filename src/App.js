@@ -345,6 +345,12 @@ const HRManagementSystem = () => {
   // *[1_공통] 1.3.2.3_공휴일 데이터 로드 함수 (DB 기반)*
   const loadHolidayData = React.useCallback(
     async (year) => {
+      // 방어 코드: year가 유효한 숫자인지 확인
+      if (!year || isNaN(year) || year < 2000 || year > 2100) {
+        console.error(`❌ [loadHolidayData] 유효하지 않은 year 값: ${year}`);
+        return {};
+      }
+
       if (holidayData[year] || holidayLoadingStatus[year]) {
         return holidayData[year];
       }

@@ -172,6 +172,16 @@ app.get('/', (req, res) =>
   res.send('부성스틸 AI 인사관리 서버 정상 동작 중 ✅')
 );
 
+// Health check 엔드포인트
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    message: '부성스틸 AI 인사관리 서버 정상 동작 중'
+  });
+});
+
 // ================== Socket.io 연결 관리 ==================
 io.on('connection', (socket) => {
   console.log('✅ 클라이언트 연결:', socket.id);
