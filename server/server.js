@@ -86,8 +86,8 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 // app.use(morgan('dev')); // API 요청 로그 비활성화
 
 // Socket.io 인스턴스를 app.locals에 저장하여 라우트에서 사용 가능하게 함
