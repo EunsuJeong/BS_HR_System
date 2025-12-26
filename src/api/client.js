@@ -1,5 +1,8 @@
 // Lightweight API client for frontend
-const BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+// Railway 백엔드 URL (프로덕션)
+const PRODUCTION_API_URL = 'https://bshrsystem-production.up.railway.app/api';
+const BASE = process.env.REACT_APP_API_BASE_URL ||
+  (process.env.NODE_ENV === 'production' ? PRODUCTION_API_URL : 'http://localhost:5000/api');
 
 // Retry + timeout wrapper
 async function fetchWithRetry(url, init, retries = 3, timeout = 10000) {
