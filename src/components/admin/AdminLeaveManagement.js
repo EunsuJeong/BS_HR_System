@@ -785,13 +785,14 @@ const AdminLeaveManagement = ({
 
                                       console.log('✅ API 응답:', response);
 
-                                      // 로컬 state 업데이트
+                                      // 로컬 state 업데이트 (leaveUsed, usedLeave 모두 업데이트)
                                       setEmployees((prev) =>
                                         prev.map((employee) =>
                                           employee.id === emp.id
                                             ? {
                                                 ...employee,
-                                                usedLeave: usedLeave,
+                                                leaveUsed: usedLeave,  // DB 원본 필드
+                                                usedLeave: usedLeave,  // 호환성 필드
                                               }
                                             : employee
                                         )
