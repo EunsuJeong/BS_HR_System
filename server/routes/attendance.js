@@ -316,86 +316,71 @@ router.post('/bulk', async (req, res) => {
       });
     }
 
-    let inserted = 0;
-    let updated = 0;
-    let errors = 0;
+    // MongoDB bulkWrite를 사용한 대량 저장 (훨씬 빠름!)
+    const bulkOps = [];
     const errorDetails = [];
 
     for (const record of records) {
-      try {
-        const { employeeId, date, checkIn, checkOut, shiftType, leaveType } =
-          record;
+      const { employeeId, date, checkIn, checkOut, shiftType, leaveType } =
+        record;
 
-        // 첫 번째 레코드 샘플 로깅
-        if (inserted + updated + errors === 0) {
-          console.log(
-            '[근태 대량 저장] 첫 번째 레코드 샘플:',
-            JSON.stringify(record)
-          );
-        }
-
-        if (!employeeId || !date) {
-          errors++;
-          errorDetails.push({
-            employeeId,
-            date,
-            error: '필수 필드 누락 (employeeId, date)',
-          });
-          continue;
-        }
-
-        // 기존 레코드 확인
-        const existing = await Attendance.findOne({ employeeId, date });
-
-        // 업데이트 데이터 구성
-        const updateData = {};
-
-        // checkIn과 checkOut은 문자열로 저장 (스키마: checkIn: String, checkOut: String)
-        if (checkIn) {
-          updateData.checkIn = checkIn;
-        }
-
-        if (checkOut) {
-          updateData.checkOut = checkOut;
-        }
-
-        // shiftType 설정
-        if (shiftType) {
-          updateData.shiftType = shiftType;
-        } else {
-          updateData.shiftType = '주간';
-        }
-
-        // leaveType이 있으면 status 설정
-        if (leaveType) {
-          updateData.status = leaveType;
-        }
-
-        const result = await Attendance.findOneAndUpdate(
-          { employeeId, date },
-          { $set: updateData },
-          { upsert: true, new: true }
+      // 첫 번째 레코드 샘플 로깅
+      if (bulkOps.length === 0) {
+        console.log(
+          '[근태 대량 저장] 첫 번째 레코드 샘플:',
+          JSON.stringify(record)
         );
+      }
 
-        if (existing) {
-          updated++;
-        } else {
-          inserted++;
-        }
+      if (!employeeId || !date) {
+        errorDetails.push({
+          employeeId,
+          date,
+          error: '필수 필드 누락 (employeeId, date)',
+        });
+        continue;
+      }
+
+      // 업데이트 데이터 구성
+      const updateData = {
+        shiftType: shiftType || '주간',
+      };
+
+      if (checkIn) updateData.checkIn = checkIn;
+      if (checkOut) updateData.checkOut = checkOut;
+      if (leaveType) updateData.status = leaveType;
+
+      bulkOps.push({
+        updateOne: {
+          filter: { employeeId, date },
+          update: { $set: updateData },
+          upsert: true,
+        },
+      });
+    }
+
+    console.log(`[근태 대량 저장] bulkWrite 실행 중... (${bulkOps.length}건)`);
+
+    let inserted = 0;
+    let updated = 0;
+    let errors = errorDetails.length;
+
+    if (bulkOps.length > 0) {
+      try {
+        const bulkResult = await Attendance.bulkWrite(bulkOps, {
+          ordered: false,
+        });
+
+        inserted = bulkResult.upsertedCount || 0;
+        updated = bulkResult.modifiedCount || 0;
+
+        console.log(
+          `[근태 대량 저장] bulkWrite 결과:`,
+          JSON.stringify(bulkResult)
+        );
       } catch (error) {
-        errors++;
-        const errorDetail = {
-          employeeId: record.employeeId,
-          date: record.date,
-          error: error.message,
-        };
-        errorDetails.push(errorDetail);
-
-        // 첫 번째 에러 상세 로깅
-        if (errors === 1) {
-          console.error('[근태 대량 저장] 첫 번째 에러 상세:', errorDetail);
-          console.error('[근태 대량 저장] 스택:', error.stack);
-        }
+        console.error('[근태 대량 저장] bulkWrite 오류:', error);
+        throw error;
       }
     }
 
