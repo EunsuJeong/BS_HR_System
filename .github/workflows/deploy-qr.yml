@@ -1,0 +1,261 @@
+name: Generate Deployment QR Codes
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  generate-qr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install QR code generator
+        run: npm install -g qrcode
+
+      - name: Create QR codes directory
+        run: mkdir -p qr-codes
+
+      - name: Generate Frontend QR Code
+        run: |
+          # Vercel 배포 URL
+          FRONTEND_URL="https://bs-hr-system.vercel.app"
+          echo "Generating QR code for Frontend: $FRONTEND_URL"
+          qrcode -o qr-codes/frontend-qr.png "$FRONTEND_URL"
+
+          # QR 코드 정보 저장
+          echo "Frontend URL: $FRONTEND_URL" > qr-codes/deployment-info.txt
+          echo "Generated at: $(date)" >> qr-codes/deployment-info.txt
+
+      - name: Generate Backend QR Code
+        run: |
+          # Railway 백엔드 URL
+          BACKEND_URL="https://bshrsystem-production.up.railway.app"
+          echo "Generating QR code for Backend: $BACKEND_URL"
+          qrcode -o qr-codes/backend-qr.png "$BACKEND_URL"
+
+          # QR 코드 정보 추가
+          echo "" >> qr-codes/deployment-info.txt
+          echo "Backend URL: $BACKEND_URL" >> qr-codes/deployment-info.txt
+
+      - name: Generate Combined Info QR Code
+        run: |
+          # 전체 배포 정보를 JSON 형식으로
+          INFO_JSON='{"frontend":"https://bs-hr-system.vercel.app","backend":"https://bshrsystem-production.up.railway.app","updated":"'$(date -Iseconds)'"}'
+          echo "Generating combined info QR code"
+          qrcode -o qr-codes/deployment-info-qr.png "$INFO_JSON"
+
+      - name: Create HTML page with QR codes
+        run: |
+          cat > qr-codes/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="ko">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>부성스틸 HR 시스템 - 배포 QR 코드</title>
+              <style>
+                  body {
+                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                      max-width: 1200px;
+                      margin: 0 auto;
+                      padding: 40px 20px;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      min-height: 100vh;
+                  }
+                  .container {
+                      background: white;
+                      border-radius: 20px;
+                      padding: 40px;
+                      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                  }
+                  h1 {
+                      text-align: center;
+                      color: #333;
+                      margin-bottom: 10px;
+                      font-size: 2.5em;
+                  }
+                  .subtitle {
+                      text-align: center;
+                      color: #666;
+                      margin-bottom: 40px;
+                      font-size: 1.1em;
+                  }
+                  .qr-grid {
+                      display: grid;
+                      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                      gap: 30px;
+                      margin-top: 40px;
+                  }
+                  .qr-card {
+                      background: #f8f9fa;
+                      border-radius: 15px;
+                      padding: 30px;
+                      text-align: center;
+                      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                      transition: transform 0.3s ease, box-shadow 0.3s ease;
+                  }
+                  .qr-card:hover {
+                      transform: translateY(-5px);
+                      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+                  }
+                  .qr-card h2 {
+                      color: #667eea;
+                      margin-bottom: 20px;
+                      font-size: 1.5em;
+                  }
+                  .qr-card img {
+                      max-width: 100%;
+                      height: auto;
+                      border-radius: 10px;
+                      margin: 20px 0;
+                      background: white;
+                      padding: 15px;
+                  }
+                  .url {
+                      background: white;
+                      padding: 12px 20px;
+                      border-radius: 8px;
+                      margin: 15px 0;
+                      word-break: break-all;
+                      font-family: 'Courier New', monospace;
+                      font-size: 0.9em;
+                      color: #495057;
+                      border: 2px solid #e9ecef;
+                  }
+                  .badge {
+                      display: inline-block;
+                      padding: 6px 15px;
+                      background: #667eea;
+                      color: white;
+                      border-radius: 20px;
+                      font-size: 0.85em;
+                      margin-top: 10px;
+                  }
+                  .info-section {
+                      background: #e7f3ff;
+                      border-left: 4px solid #667eea;
+                      padding: 20px;
+                      margin: 30px 0;
+                      border-radius: 8px;
+                  }
+                  .info-section h3 {
+                      color: #667eea;
+                      margin-top: 0;
+                  }
+                  .timestamp {
+                      text-align: center;
+                      color: #888;
+                      margin-top: 40px;
+                      font-size: 0.9em;
+                  }
+                  @media (max-width: 768px) {
+                      body { padding: 20px 10px; }
+                      .container { padding: 20px; }
+                      h1 { font-size: 1.8em; }
+                      .qr-grid { grid-template-columns: 1fr; }
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🏢 부성스틸 HR 시스템</h1>
+                  <p class="subtitle">배포 환경 QR 코드</p>
+
+                  <div class="info-section">
+                      <h3>📱 사용 방법</h3>
+                      <p>스마트폰 카메라로 QR 코드를 스캔하면 해당 서비스에 바로 접속할 수 있습니다.</p>
+                      <ul>
+                          <li><strong>Frontend</strong>: 사용자가 접속하는 웹 애플리케이션</li>
+                          <li><strong>Backend</strong>: API 서버 상태 확인</li>
+                      </ul>
+                  </div>
+
+                  <div class="qr-grid">
+                      <div class="qr-card">
+                          <h2>🌐 Frontend</h2>
+                          <div class="badge">Vercel</div>
+                          <img src="frontend-qr.png" alt="Frontend QR Code">
+                          <div class="url">https://bs-hr-system.vercel.app</div>
+                          <p style="color: #666; margin-top: 15px;">메인 웹 애플리케이션</p>
+                      </div>
+
+                      <div class="qr-card">
+                          <h2>🔧 Backend</h2>
+                          <div class="badge">Railway</div>
+                          <img src="backend-qr.png" alt="Backend QR Code">
+                          <div class="url">https://bshrsystem-production.up.railway.app</div>
+                          <p style="color: #666; margin-top: 15px;">API 서버</p>
+                      </div>
+
+                      <div class="qr-card">
+                          <h2>📋 배포 정보</h2>
+                          <div class="badge">JSON Format</div>
+                          <img src="deployment-info-qr.png" alt="Deployment Info QR Code">
+                          <p style="color: #666; margin-top: 15px;">전체 배포 정보 (JSON)</p>
+                      </div>
+                  </div>
+
+                  <div class="timestamp" id="timestamp">
+                      생성 시간이 여기에 표시됩니다
+                  </div>
+              </div>
+
+              <script>
+                  // 타임스탬프 업데이트
+                  fetch('deployment-info.txt')
+                      .then(response => response.text())
+                      .then(text => {
+                          const match = text.match(/Generated at: (.+)/);
+                          if (match) {
+                              document.getElementById('timestamp').textContent =
+                                  '최종 업데이트: ' + match[1];
+                          }
+                      })
+                      .catch(() => {
+                          document.getElementById('timestamp').textContent =
+                              '최종 업데이트: ' + new Date().toLocaleString('ko-KR');
+                      });
+              </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload QR codes as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-qr-codes
+          path: qr-codes/
+          retention-days: 90
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./qr-codes
+          publish_branch: gh-pages
+          force_orphan: true
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🎉 QR 코드 생성 완료!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📱 생성된 QR 코드" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend**: https://bs-hr-system.vercel.app" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend**: https://bshrsystem-production.up.railway.app" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 QR 코드 페이지" >> $GITHUB_STEP_SUMMARY
+          echo "GitHub Pages에서 확인: https://eunsujeong.github.io/BS_HR_System/" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 다운로드" >> $GITHUB_STEP_SUMMARY
+          echo "Actions 탭의 Artifacts에서 QR 코드 이미지를 다운로드할 수 있습니다." >> $GITHUB_STEP_SUMMARY
