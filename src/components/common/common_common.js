@@ -5760,7 +5760,8 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
 
       // 연차 기간 내 신청만 포함
       return (
-        (leaveStartDate >= annualStartDate && leaveStartDate <= annualEndDate) ||
+        (leaveStartDate >= annualStartDate &&
+          leaveStartDate <= annualEndDate) ||
         (leaveEndDate >= annualStartDate && leaveEndDate <= annualEndDate) ||
         (leaveStartDate <= annualStartDate && leaveEndDate >= annualEndDate)
       );
@@ -5787,10 +5788,6 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
 
   // 3️⃣ 최종 사용연차 = DB 저장값 + 연차 신청 합계
   const usedAnnual = dbLeaveUsed + leaveRequestsSum;
-
-  console.log(
-    `[📊 ${employee.name}] 사용연차: DB(${dbLeaveUsed}) + 신청(${leaveRequestsSum}) = ${usedAnnual}일`
-  );
 
   const totalAnnual =
     savedAnnualData?.total || employee.totalAnnual || defaultTotalAnnual;
