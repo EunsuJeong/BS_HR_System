@@ -295,8 +295,7 @@ const formatDateToString = (date) => {
 // *[1_공통] 1.2.2_API 상수*
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
-const SERVER_URL =
-  process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
+const SERVER_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
 
 // *[1_공통] 1.2.3_AI 서비스 상수*
 const FAIL_MSG = CommonAIService.FAIL_MSG;
@@ -343,260 +342,255 @@ const HRManagementSystem = () => {
   ] = useState([]);
 
   // *[1_공통] 1.3.2.3_공휴일 데이터 로드 함수 (DB 기반)*
-  const loadHolidayData = React.useCallback(
-    async (year) => {
-      // 방어 코드: year가 유효한 숫자인지 확인
-      if (!year || isNaN(year) || year < 2000 || year > 2100) {
-        console.error(`❌ [loadHolidayData] 유효하지 않은 year 값: ${year}`);
-        return {};
-      }
+  // const loadHolidayData = React.useCallback(
+  //   async (year) => {
+  //     // 방어 코드: year가 유효한 숫자인지 확인
+  //     if (holidayData[year] || holidayLoadingStatus[year]) {
+  //       return holidayData[year];
+  //     }
 
-      if (holidayData[year] || holidayLoadingStatus[year]) {
-        return holidayData[year];
-      }
+  //     setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'loading' }));
 
-      setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'loading' }));
+  //     try {
+  //       devLog(`🔄 [DB] ${year}년 공휴일 데이터 로딩 중...`);
 
-      try {
-        devLog(`🔄 [DB] ${year}년 공휴일 데이터 로딩 중...`);
+  //       // DB에서 공휴일 데이터 로드
+  //       const response = await HolidayAPI.getYearHolidays(year);
+  //       let holidays = response.data || {};
 
-        // DB에서 공휴일 데이터 로드
-        const response = await HolidayAPI.getYearHolidays(year);
-        let holidays = response.data || {};
+  //       devLog(
+  //         `✅ [DB] ${year}년 공휴일 ${
+  //           Object.keys(holidays).length / 2
+  //         }일 로드 완료`
+  //       );
 
-        devLog(
-          `✅ [DB] ${year}년 공휴일 ${
-            Object.keys(holidays).length / 2
-          }일 로드 완료`
-        );
+  //       // 삭제된 시스템 공휴일 제외
+  //       const deleted = JSON.parse(
+  //         localStorage.getItem('deletedSystemHolidays') || '[]'
+  //       );
+  //       deleted.forEach((date) => {
+  //         const shortDate = date.substring(5); // MM-DD
+  //         delete holidays[date];
+  //         delete holidays[shortDate];
+  //       });
 
-        // 삭제된 시스템 공휴일 제외
-        const deleted = JSON.parse(
-          localStorage.getItem('deletedSystemHolidays') || '[]'
-        );
-        deleted.forEach((date) => {
-          const shortDate = date.substring(5); // MM-DD
-          delete holidays[date];
-          delete holidays[shortDate];
-        });
+  //       // 영구 삭제된 시스템 공휴일도 제외
+  //       const permanentlyDeleted = JSON.parse(
+  //         localStorage.getItem('permanentlyDeletedSystemHolidays') || '[]'
+  //       );
+  //       permanentlyDeleted.forEach((date) => {
+  //         const shortDate = date.substring(5); // MM-DD
+  //         delete holidays[date];
+  //         delete holidays[shortDate];
+  //       });
 
-        // 영구 삭제된 시스템 공휴일도 제외
-        const permanentlyDeleted = JSON.parse(
-          localStorage.getItem('permanentlyDeletedSystemHolidays') || '[]'
-        );
-        permanentlyDeleted.forEach((date) => {
-          const shortDate = date.substring(5); // MM-DD
-          delete holidays[date];
-          delete holidays[shortDate];
-        });
+  //       // 수정된 시스템 공휴일 적용
+  //       const edited = JSON.parse(
+  //         localStorage.getItem('editedSystemHolidays') || '{}'
+  //       );
+  //       Object.entries(edited).forEach(([date, name]) => {
+  //         const shortDate = date.substring(5); // MM-DD
+  //         holidays[date] = name;
+  //         holidays[shortDate] = name;
+  //       });
 
-        // 수정된 시스템 공휴일 적용
-        const edited = JSON.parse(
-          localStorage.getItem('editedSystemHolidays') || '{}'
-        );
-        Object.entries(edited).forEach(([date, name]) => {
-          const shortDate = date.substring(5); // MM-DD
-          holidays[date] = name;
-          holidays[shortDate] = name;
-        });
+  //       setHolidayData((prev) => ({ ...prev, [year]: holidays }));
+  //       setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'loaded' }));
 
-        setHolidayData((prev) => ({ ...prev, [year]: holidays }));
-        setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'loaded' }));
+  //       return holidays;
+  //     } catch (error) {
+  //       devLog(
+  //         `❌ [DB] ${year}년 공휴일 데이터 로드 실패, 로컬 폴백 사용:`,
+  //         error.message
+  //       );
+  //       setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'error' }));
 
-        return holidays;
-      } catch (error) {
-        devLog(
-          `❌ [DB] ${year}년 공휴일 데이터 로드 실패, 로컬 폴백 사용:`,
-          error.message
-        );
-        setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'error' }));
-
-        // 폴백: HolidayService의 로컬 데이터 사용
-        const basicHolidays = holidayService.getBasicHolidays(year);
-        setHolidayData((prev) => ({ ...prev, [year]: basicHolidays }));
-        return basicHolidays;
-      }
-    },
-    [holidayData, holidayLoadingStatus]
-  );
+  //       // 폴백: HolidayService의 로컬 데이터 사용
+  //       const basicHolidays = holidayService.getBasicHolidays(year);
+  //       setHolidayData((prev) => ({ ...prev, [year]: basicHolidays }));
+  //       return basicHolidays;
+  //     }
+  //   },
+  //   [holidayData, holidayLoadingStatus]
+  // );
 
   // *[1_공통] 1.3.2.4_공휴일 시스템 초기화 useEffect (DB 기반)*
-  useEffect(() => {
-    const initializeHolidaySystem = async () => {
-      try {
-        const currentYear = new Date().getFullYear();
+  // useEffect(() => {
+  //   const initializeHolidaySystem = async () => {
+  //     try {
+  //       const currentYear = new Date().getFullYear();
 
-        const priorityYears = [currentYear - 1, currentYear, currentYear + 1];
-        devLog('🚀 [DB] 우선순위 공휴일 데이터 로드 시작:', priorityYears);
+  //       const priorityYears = [currentYear - 1, currentYear, currentYear + 1];
+  //       devLog('🚀 [DB] 우선순위 공휴일 데이터 로드 시작:', priorityYears);
 
-        await Promise.all(priorityYears.map((year) => loadHolidayData(year)));
-        devLog('✅ [DB] 우선순위 공휴일 데이터 로드 완료');
+  //       await Promise.all(priorityYears.map((year) => loadHolidayData(year)));
+  //       devLog('✅ [DB] 우선순위 공휴일 데이터 로드 완료');
 
-        // 확장 연도 범위 로드는 이제 불필요 (DB에 50년치 저장됨)
-        // setTimeout(async () => {
-        //   try {
-        //     devLog('📅 확장 연도 범위 백그라운드 로드 시작...');
-        //     await holidayService.loadExtendedYearRange(currentYear, 30);
-        //     devLog('🎉 확장 연도 범위 로드 완료 (±30년)');
-        //   } catch (error) {
-        //     devLog('⚠️ 확장 연도 범위 로드 실패:', error);
-        //   }
-        // }, 2000);
+  //       // 확장 연도 범위 로드는 이제 불필요 (DB에 50년치 저장됨)
+  //       // setTimeout(async () => {
+  //       //   try {
+  //       //     devLog('📅 확장 연도 범위 백그라운드 로드 시작...');
+  //       //     await holidayService.loadExtendedYearRange(currentYear, 30);
+  //       //     devLog('🎉 확장 연도 범위 로드 완료 (±30년)');
+  //       //   } catch (error) {
+  //       //     devLog('⚠️ 확장 연도 범위 로드 실패:', error);
+  //       //   }
+  //       // }, 2000);
 
-        // 주기적 업데이트도 DB 기반이므로 불필요
-        // holidayService.startPeriodicUpdate(24);
+  //       // 주기적 업데이트도 DB 기반이므로 불필요
+  //       // holidayService.startPeriodicUpdate(24);
 
-        // 개발 환경에서 데이터 품질 검증도 이제 불필요
-        // if (process.env.NODE_ENV === 'development') {
-        //   setTimeout(async () => {
-        //     await holidayService.validateDataQuality(
-        //       currentYear - 1,
-        //       currentYear + 1
-        //     );
-        //   }, 5000);
-        // }
-      } catch (error) {
-        devLog('❌ 공휴일 시스템 초기화 실패:', error);
+  //       // 개발 환경에서 데이터 품질 검증도 이제 불필요
+  //       // if (process.env.NODE_ENV === 'development') {
+  //       //   setTimeout(async () => {
+  //       //     await holidayService.validateDataQuality(
+  //       //       currentYear - 1,
+  //       //       currentYear + 1
+  //       //     );
+  //       //   }, 5000);
+  //       // }
+  //     } catch (error) {
+  //       devLog('❌ 공휴일 시스템 초기화 실패:', error);
 
-        const currentYear = new Date().getFullYear();
-        await loadHolidayData(currentYear);
-      }
-    };
+  //       const currentYear = new Date().getFullYear();
+  //       await loadHolidayData(currentYear);
+  //     }
+  //   };
 
-    initializeHolidaySystem();
+  //   initializeHolidaySystem();
 
-    // 자정 자동 업데이트 이벤트 리스너 등록
-    const handleHolidayUpdate = async (event) => {
-      const { years } = event.detail;
-      // devLog(
-      //   '📢 [자정] 공휴일 업데이트 감지, App.js holidayData 재로드 중...',
-      //   years
-      // );
+  //   // 자정 자동 업데이트 이벤트 리스너 등록
+  //   const handleHolidayUpdate = async (event) => {
+  //     const { years } = event.detail;
+  //     // devLog(
+  //     //   '📢 [자정] 공휴일 업데이트 감지, App.js holidayData 재로드 중...',
+  //     //   years
+  //     // );
 
-      // 업데이트된 연도들의 데이터를 다시 로드
-      for (const year of years) {
-        await loadHolidayData(year);
-      }
+  //     // 업데이트된 연도들의 데이터를 다시 로드
+  //     for (const year of years) {
+  //       await loadHolidayData(year);
+  //     }
 
-      // devLog('✅ [자정] App.js holidayData 재로드 완료');
-    };
+  //     // devLog('✅ [자정] App.js holidayData 재로드 완료');
+  //   };
 
-    window.addEventListener('holidayDataUpdated', handleHolidayUpdate);
+  //   window.addEventListener('holidayDataUpdated', handleHolidayUpdate);
 
-    return () => {
-      holidayService.stopPeriodicUpdate();
-      window.removeEventListener('holidayDataUpdated', handleHolidayUpdate);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  //   return () => {
+  //     holidayService.stopPeriodicUpdate();
+  //     window.removeEventListener('holidayDataUpdated', handleHolidayUpdate);
+  //   };
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
 
-  // *[1_공통] 1.3.2.5_공휴일 데이터 가져오기 (레거시 호환)*
-  const getKoreanHolidays = (year) => {
-    return holidayData[year] || {};
-  };
+  // // *[1_공통] 1.3.2.5_공휴일 데이터 가져오기 (레거시 호환)*
+  // const getKoreanHolidays = (year) => {
+  //   return holidayData[year] || {};
+  // };
 
   // *[1_공통] 1.3.2.6_공휴일 강제 새로고침*
-  const forceRefreshHolidays = async () => {
-    const currentYear = new Date().getFullYear();
-    const yearsToRefresh = [currentYear - 1, currentYear, currentYear + 1];
+  // const forceRefreshHolidays = async () => {
+  //   const currentYear = new Date().getFullYear();
+  //   const yearsToRefresh = [currentYear - 1, currentYear, currentYear + 1];
 
-    try {
-      // devLog('🔄 공휴일 데이터 강제 새로고침 시작...');
+  //   try {
+  //     // devLog('🔄 공휴일 데이터 강제 새로고침 시작...');
 
-      yearsToRefresh.forEach((year) => {
-        holidayService.clearCache(year);
-        setHolidayLoadingStatus((prev) => ({ ...prev, [year]: null }));
-      });
+  //     yearsToRefresh.forEach((year) => {
+  //       holidayService.clearCache(year);
+  //       setHolidayLoadingStatus((prev) => ({ ...prev, [year]: null }));
+  //     });
 
-      const refreshPromises = yearsToRefresh.map(async (year) => {
-        const holidays = await loadHolidayData(year);
-        return { year, holidays };
-      });
+  //     const refreshPromises = yearsToRefresh.map(async (year) => {
+  //       const holidays = await loadHolidayData(year);
+  //       return { year, holidays };
+  //     });
 
-      await Promise.all(refreshPromises);
+  //     await Promise.all(refreshPromises);
 
-      // devLog('✅ 공휴일 데이터 강제 새로고침 완료');
+  //     // devLog('✅ 공휴일 데이터 강제 새로고침 완료');
 
-      return true;
-    } catch (error) {
-      // devLog('❌ 공휴일 데이터 강제 새로고침 실패:', error);
-      return false;
-    }
-  };
+  //     return true;
+  //   } catch (error) {
+  //     // devLog('❌ 공휴일 데이터 강제 새로고침 실패:', error);
+  //     return false;
+  //   }
+  // };
 
   // *[1_공통] 1.3.2.7_시스템 공휴일 복구*
-  const restoreSystemHoliday = async (dateToRestore) => {
-    try {
-      // localStorage에서 삭제된 공휴일 목록 가져오기
-      const deleted = JSON.parse(
-        localStorage.getItem('deletedSystemHolidays') || '[]'
-      );
+  // const restoreSystemHoliday = async (dateToRestore) => {
+  //   try {
+  //     // localStorage에서 삭제된 공휴일 목록 가져오기
+  //     const deleted = JSON.parse(
+  //       localStorage.getItem('deletedSystemHolidays') || '[]'
+  //     );
 
-      // 해당 날짜를 삭제 목록에서 제거
-      const updatedDeleted = deleted.filter((date) => date !== dateToRestore);
-      localStorage.setItem(
-        'deletedSystemHolidays',
-        JSON.stringify(updatedDeleted)
-      );
+  //     // 해당 날짜를 삭제 목록에서 제거
+  //     const updatedDeleted = deleted.filter((date) => date !== dateToRestore);
+  //     localStorage.setItem(
+  //       'deletedSystemHolidays',
+  //       JSON.stringify(updatedDeleted)
+  //     );
 
-      // 상태 업데이트
-      setDeletedSystemHolidays(updatedDeleted);
+  //     // 상태 업데이트
+  //     setDeletedSystemHolidays(updatedDeleted);
 
-      // 해당 연도의 공휴일 데이터 다시 로드
-      const year = parseInt(dateToRestore.split('-')[0]);
-      holidayService.clearCache(year);
-      setHolidayLoadingStatus((prev) => ({ ...prev, [year]: null }));
-      await loadHolidayData(year);
+  //     // 해당 연도의 공휴일 데이터 다시 로드
+  //     const year = parseInt(dateToRestore.split('-')[0]);
+  //     holidayService.clearCache(year);
+  //     setHolidayLoadingStatus((prev) => ({ ...prev, [year]: null }));
+  //     await loadHolidayData(year);
 
-      // devLog(`✅ 시스템 공휴일 복구 완료: ${dateToRestore}`);
-      return true;
-    } catch (error) {
-      // devLog(`❌ 시스템 공휴일 복구 실패:`, error);
-      return false;
-    }
-  };
+  //     // devLog(`✅ 시스템 공휴일 복구 완료: ${dateToRestore}`);
+  //     return true;
+  //   } catch (error) {
+  //     // devLog(`❌ 시스템 공휴일 복구 실패:`, error);
+  //     return false;
+  //   }
+  // };
 
   // *[1_공통] 1.3.2.8_시스템 공휴일 영구 삭제*
-  const permanentlyDeleteSystemHoliday = async (dateToDelete) => {
-    try {
-      // 1. deletedSystemHolidays에서 제거
-      const deleted = JSON.parse(
-        localStorage.getItem('deletedSystemHolidays') || '[]'
-      );
-      const updatedDeleted = deleted.filter((date) => date !== dateToDelete);
-      localStorage.setItem(
-        'deletedSystemHolidays',
-        JSON.stringify(updatedDeleted)
-      );
-      setDeletedSystemHolidays(updatedDeleted);
+  // const permanentlyDeleteSystemHoliday = async (dateToDelete) => {
+  //   try {
+  //     // 1. deletedSystemHolidays에서 제거
+  //     const deleted = JSON.parse(
+  //       localStorage.getItem('deletedSystemHolidays') || '[]'
+  //     );
+  //     const updatedDeleted = deleted.filter((date) => date !== dateToDelete);
+  //     localStorage.setItem(
+  //       'deletedSystemHolidays',
+  //       JSON.stringify(updatedDeleted)
+  //     );
+  //     setDeletedSystemHolidays(updatedDeleted);
 
-      // 2. permanentlyDeletedSystemHolidays에 추가
-      const permanentlyDeleted = JSON.parse(
-        localStorage.getItem('permanentlyDeletedSystemHolidays') || '[]'
-      );
-      if (!permanentlyDeleted.includes(dateToDelete)) {
-        permanentlyDeleted.push(dateToDelete);
-        localStorage.setItem(
-          'permanentlyDeletedSystemHolidays',
-          JSON.stringify(permanentlyDeleted)
-        );
-        setPermanentlyDeletedSystemHolidays(permanentlyDeleted);
-      }
+  //     // 2. permanentlyDeletedSystemHolidays에 추가
+  //     const permanentlyDeleted = JSON.parse(
+  //       localStorage.getItem('permanentlyDeletedSystemHolidays') || '[]'
+  //     );
+  //     if (!permanentlyDeleted.includes(dateToDelete)) {
+  //       permanentlyDeleted.push(dateToDelete);
+  //       localStorage.setItem(
+  //         'permanentlyDeletedSystemHolidays',
+  //         JSON.stringify(permanentlyDeleted)
+  //       );
+  //       setPermanentlyDeletedSystemHolidays(permanentlyDeleted);
+  //     }
 
-      // 3. editedSystemHolidays에서도 제거 (있다면)
-      const edited = JSON.parse(
-        localStorage.getItem('editedSystemHolidays') || '{}'
-      );
-      if (edited[dateToDelete]) {
-        delete edited[dateToDelete];
-        localStorage.setItem('editedSystemHolidays', JSON.stringify(edited));
-      }
+  //     // 3. editedSystemHolidays에서도 제거 (있다면)
+  //     const edited = JSON.parse(
+  //       localStorage.getItem('editedSystemHolidays') || '{}'
+  //     );
+  //     if (edited[dateToDelete]) {
+  //       delete edited[dateToDelete];
+  //       localStorage.setItem('editedSystemHolidays', JSON.stringify(edited));
+  //     }
 
-      return true;
-    } catch (error) {
-      return false;
-    }
-  };
+  //     return true;
+  //   } catch (error) {
+  //     return false;
+  //   }
+  // };
 
   //---[1_공통] 1.3.3_사용자 및 로그인 STATE---//
   const [employees, setEmployees] = useState([]);
@@ -4290,10 +4284,12 @@ const HRManagementSystem = () => {
             );
 
             // ✅ DB에서 받은 usedLeave 값 우선 사용 (강력 새로고침 시에도 정확한 값 유지)
-            const usedLeaveFromDB = emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
-            const finalUsedLeave = usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
-              ? usedLeaveFromDB
-              : annualData.usedAnnual;
+            const usedLeaveFromDB =
+              emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
+            const finalUsedLeave =
+              usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
+                ? usedLeaveFromDB
+                : annualData.usedAnnual;
 
             return {
               ...baseEmp,
@@ -4369,10 +4365,12 @@ const HRManagementSystem = () => {
               );
 
               // ✅ DB에서 받은 usedLeave 값 우선 사용 (강력 새로고침 시에도 정확한 값 유지)
-              const usedLeaveFromDB = emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
-              const finalUsedLeave = usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
-                ? usedLeaveFromDB
-                : annualData.usedAnnual;
+              const usedLeaveFromDB =
+                emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
+              const finalUsedLeave =
+                usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
+                  ? usedLeaveFromDB
+                  : annualData.usedAnnual;
 
               return {
                 ...baseEmp,
