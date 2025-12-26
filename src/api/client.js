@@ -5,7 +5,7 @@ const BASE = process.env.REACT_APP_API_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? PRODUCTION_API_URL : 'http://localhost:5000/api');
 
 // Retry + timeout wrapper
-async function fetchWithRetry(url, init, retries = 3, timeout = 10000) {
+async function fetchWithRetry(url, init, retries = 3, timeout = 30000) {
   for (let i = 0; i < retries; i++) {
     try {
       const controller = new AbortController();
