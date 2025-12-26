@@ -214,7 +214,8 @@ const AdminLeaveManagement = ({
                 onClick={() =>
                   exportEmployeeLeaveStatusToXLSX(
                     employees,
-                    calculateEmployeeAnnualLeave
+                    calculateEmployeeAnnualLeave,
+                    leaveRequests
                   )
                 }
                 className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center whitespace-nowrap"
@@ -386,8 +387,8 @@ const AdminLeaveManagement = ({
                         annualLeaveSortField === 'usedAnnual' ||
                         annualLeaveSortField === 'remainAnnual'
                       ) {
-                        const aAnnual = calculateEmployeeAnnualLeave(a);
-                        const bAnnual = calculateEmployeeAnnualLeave(b);
+                        const aAnnual = calculateEmployeeAnnualLeave(a, leaveRequests);
+                        const bAnnual = calculateEmployeeAnnualLeave(b, leaveRequests);
                         aValue =
                           annualLeaveSortField === 'totalAnnual'
                             ? aAnnual.totalAnnual
@@ -419,7 +420,7 @@ const AdminLeaveManagement = ({
                       }
                     })
                     .map((emp) => {
-                      const annualData = calculateEmployeeAnnualLeave(emp);
+                      const annualData = calculateEmployeeAnnualLeave(emp, leaveRequests);
                       const isEditing = editingAnnualLeave === emp.id;
                       return (
                         <tr key={emp.id} className="hover:bg-gray-50">

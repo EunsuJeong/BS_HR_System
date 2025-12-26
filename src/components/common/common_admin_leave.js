@@ -1736,13 +1736,15 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
  * 직원 연차 현황 엑셀 다운로드
  * @param {Array} employees - 직원 목록
  * @param {Function} calculateEmployeeAnnualLeave - 연차 계산 함수
+ * @param {Array} leaveRequests - 연차 신청 내역
  */
 export const exportEmployeeLeaveStatusToXLSX = (
   employees,
-  calculateEmployeeAnnualLeave
+  calculateEmployeeAnnualLeave,
+  leaveRequests = []
 ) => {
   const employeeLeaveData = employees.map((emp) => {
-    const annualData = calculateEmployeeAnnualLeave(emp);
+    const annualData = calculateEmployeeAnnualLeave(emp, leaveRequests);
     return {
       사번: emp.employeeNumber || emp.id,
       이름: emp.name,
