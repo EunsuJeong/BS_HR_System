@@ -1,5 +1,6 @@
 import React from 'react';
 import { Edit, Upload, Download } from 'lucide-react';
+import { formatTimeDisplay } from '../common/common_common';
 
 const AdminAttendanceManagement = ({
   attendanceSheetYear,
@@ -713,7 +714,7 @@ const AdminAttendanceManagement = ({
                             {isEditingAttendance ? (
                               <input
                                 type="text"
-                                value={attendance.checkIn || ''}
+                                value={formatTimeDisplay(attendance.checkIn) || ''}
                                 onChange={(e) => {
                                   setAttendanceForEmployee(
                                     emp.id,
@@ -806,7 +807,7 @@ const AdminAttendanceManagement = ({
                                             : ''
                                         }
                                       >
-                                        {attendance.checkIn || ''}
+                                        {formatTimeDisplay(attendance.checkIn) || ''}
                                       </span>
                                     );
                                   }
@@ -875,7 +876,7 @@ const AdminAttendanceManagement = ({
                                         : ''
                                     }
                                   >
-                                    {attendance.checkIn || ''}
+                                    {formatTimeDisplay(attendance.checkIn) || ''}
                                   </span>
                                 );
                               })()
@@ -979,7 +980,7 @@ const AdminAttendanceManagement = ({
                             {isEditingAttendance ? (
                               <input
                                 type="text"
-                                value={attendance.checkOut || ''}
+                                value={formatTimeDisplay(attendance.checkOut) || ''}
                                 onChange={(e) => {
                                   setAttendanceForEmployee(
                                     emp.id,
@@ -1042,7 +1043,7 @@ const AdminAttendanceManagement = ({
                                             : ''
                                         }
                                       >
-                                        {attendance.checkOut || ''}
+                                        {formatTimeDisplay(attendance.checkOut) || ''}
                                       </span>
                                     );
                                   }
@@ -1079,7 +1080,7 @@ const AdminAttendanceManagement = ({
                                         : ''
                                     }
                                   >
-                                    {attendance.checkOut || ''}
+                                    {formatTimeDisplay(attendance.checkOut) || ''}
                                   </span>
                                 );
                               })()

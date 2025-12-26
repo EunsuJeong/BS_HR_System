@@ -2698,11 +2698,38 @@ export class AttendanceExcelParser {
   }
 
   /**
-   * 시간 포맷 변환 (0815 → 08:15)
+   * 시간 포맷 변환 (0815 → 08:15, 0.6472222 → 15:32)
    */
   formatTime(timeValue) {
+    const originalValue = timeValue;
     let formattedTime = String(timeValue).trim();
 
+    // 1. 엑셀 소수점 시간 형식 처리 (0.6472222... → 15:32)
+    // 공식: 소수점 값 = (시간*60 + 분) / 1440
+    // 역공식: 총분 = 소수점 * 1440
+    if (typeof timeValue === 'number' && timeValue > 0 && timeValue < 1) {
+      const totalMinutes = Math.round(timeValue * 1440);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      this.devLog(`      🔄 엑셀 소수점 시간 변환: ${originalValue} → ${formattedTime}`);
+      return { formatted: formattedTime, original: String(originalValue) };
+    }
+
+    // 2. 문자열 소수점 형식도 처리 ("0.6472222" → 15:32)
+    if (formattedTime && /^0\.\d+$/.test(formattedTime)) {
+      const numValue = parseFloat(formattedTime);
+      if (!isNaN(numValue) && numValue > 0 && numValue < 1) {
+        const totalMinutes = Math.round(numValue * 1440);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        this.devLog(`      🔄 엑셀 소수점 시간 변환: ${originalValue} → ${formattedTime}`);
+        return { formatted: formattedTime, original: String(originalValue) };
+      }
+    }
+
+    // 3. 기존 4자리 숫자 형식 처리 (0815 → 08:15)
     if (
       formattedTime &&
       formattedTime !== '0' &&
@@ -2723,7 +2750,7 @@ export class AttendanceExcelParser {
       return { formatted: formattedTime, original: originalTime };
     }
 
-    return { formatted: formattedTime, original: timeValue };
+    return { formatted: formattedTime, original: String(timeValue) };
   }
 
   /**

@@ -904,6 +904,58 @@ export const parseTime = (timeStr) => {
 };
 
 /**
+ * 시간 값을 표시용 HH:MM 형식으로 변환
+ * - 엑셀 소수점 형식 (0.6472222... → 15:32) 지원
+ * - 4자리 숫자 형식 (0815 → 08:15) 지원
+ * - 이미 HH:MM 형식이면 그대로 반환
+ *
+ * @param {string|number} timeValue - 변환할 시간 값
+ * @returns {string} HH:MM 형식의 시간 문자열
+ */
+export const formatTimeDisplay = (timeValue) => {
+  if (!timeValue && timeValue !== 0) return '';
+
+  // 1. 이미 HH:MM 형식이면 그대로 반환
+  if (typeof timeValue === 'string' && /^\d{1,2}:\d{2}$/.test(timeValue.trim())) {
+    return timeValue.trim();
+  }
+
+  // 2. 엑셀 소수점 시간 형식 처리 (0.6472222... → 15:32)
+  // 공식: 소수점 값 = (시간*60 + 분) / 1440
+  // 역공식: 총분 = 소수점 * 1440
+  if (typeof timeValue === 'number' && timeValue > 0 && timeValue < 1) {
+    const totalMinutes = Math.round(timeValue * 1440);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  }
+
+  // 3. 문자열 소수점 형식도 처리 ("0.6472222" → 15:32)
+  const timeStr = String(timeValue).trim();
+  if (/^0\.\d+$/.test(timeStr)) {
+    const numValue = parseFloat(timeStr);
+    if (!isNaN(numValue) && numValue > 0 && numValue < 1) {
+      const totalMinutes = Math.round(numValue * 1440);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+  }
+
+  // 4. 4자리 숫자 형식 처리 (0815 → 08:15)
+  if (/^\d{3,4}$/.test(timeStr)) {
+    if (timeStr.length === 3) {
+      return `0${timeStr.substring(0, 1)}:${timeStr.substring(1)}`;
+    } else if (timeStr.length === 4) {
+      return `${timeStr.substring(0, 2)}:${timeStr.substring(2)}`;
+    }
+  }
+
+  // 5. 변환할 수 없으면 원본 문자열 반환
+  return timeStr;
+};
+
+/**
  * 근태 상태 분석 함수
  * @param {object} attendance - 출퇴근 기록
  * @param {number} day - 일
