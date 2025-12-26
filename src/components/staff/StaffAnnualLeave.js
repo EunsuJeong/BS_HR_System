@@ -726,7 +726,7 @@ const StaffAnnualLeave = ({
               />
               <button
                 onClick={handleSaveEditedLeave}
-                className={`${commonClass} w-full bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-normal`}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-normal text-xs"
               >
                 저장
               </button>

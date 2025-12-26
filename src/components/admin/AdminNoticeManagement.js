@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { FileText, Edit, Upload, Download, Trash2 } from 'lucide-react';
 import { useNoticeManagement } from '../common/common_admin_notice';
 
@@ -45,6 +45,17 @@ const AdminNoticeManagement = ({
   const contentEditableRef = useRef(null);
   const isUserEditingRef = useRef(false);
 
+  // 이미지 크기 조절 state
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStart, setResizeStart] = useState({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+  const [currentHandle, setCurrentHandle] = useState(null);
+
   // noticeForm.content가 프로그래밍 방식으로 변경될 때만 contentEditable 업데이트
   useEffect(() => {
     try {
@@ -67,6 +78,153 @@ const AdminNoticeManagement = ({
       console.warn('contentEditable 업데이트 실패:', error);
     }
   }, [noticeForm.content]);
+
+  // 이미지 클릭 이벤트 처리
+  useEffect(() => {
+    const element = contentEditableRef?.current;
+    if (!element) return;
+
+    const handleImageClick = (e) => {
+      if (e.target.tagName === 'IMG' && !e.target.closest('.resize-handle')) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // 이전 선택된 이미지의 클래스 제거
+        const allImages = element.querySelectorAll('img');
+        allImages.forEach((img) => img.classList.remove('selected-for-resize'));
+
+        // 새로 선택된 이미지에 클래스 추가
+        e.target.classList.add('selected-for-resize');
+        setSelectedImage(e.target);
+      }
+    };
+
+    const handleClickOutside = (e) => {
+      if (e.target.tagName !== 'IMG' && !e.target.closest('.resize-handle')) {
+        // 모든 이미지의 선택 클래스 제거
+        if (element) {
+          const allImages = element.querySelectorAll('img');
+          allImages.forEach((img) =>
+            img.classList.remove('selected-for-resize')
+          );
+        }
+        setSelectedImage(null);
+      }
+    };
+
+    element.addEventListener('click', handleImageClick);
+    document.addEventListener('click', handleClickOutside);
+
+    return () => {
+      element.removeEventListener('click', handleImageClick);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
+  // 핸들에 맞는 커서 반환
+  const getCursorForHandle = (handle) => {
+    const cursors = {
+      nw: 'nw-resize',
+      ne: 'ne-resize',
+      sw: 'sw-resize',
+      se: 'se-resize',
+      n: 'n-resize',
+      s: 's-resize',
+      e: 'e-resize',
+      w: 'w-resize',
+    };
+    return cursors[handle] || 'default';
+  };
+
+  // 리사이즈 핸들 드래그 시작
+  const handleResizeStart = (e, handle) => {
+    if (!selectedImage) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsResizing(true);
+    setCurrentHandle(handle);
+
+    const rect = selectedImage.getBoundingClientRect();
+    setResizeStart({
+      x: e.clientX,
+      y: e.clientY,
+      width: rect.width,
+      height: rect.height,
+    });
+  };
+
+  // 리사이즈 드래그 중
+  useEffect(() => {
+    if (!isResizing || !selectedImage) return;
+
+    const handleMouseMove = (e) => {
+      const deltaX = e.clientX - resizeStart.x;
+      const deltaY = e.clientY - resizeStart.y;
+
+      let newWidth = resizeStart.width;
+      let newHeight = resizeStart.height;
+
+      // 핸들 위치에 따라 크기 조절
+      switch (currentHandle) {
+        case 'se': // 오른쪽 하단
+          newWidth = resizeStart.width + deltaX;
+          break;
+        case 'sw': // 왼쪽 하단
+          newWidth = resizeStart.width - deltaX;
+          break;
+        case 'ne': // 오른쪽 상단
+          newWidth = resizeStart.width + deltaX;
+          break;
+        case 'nw': // 왼쪽 상단
+          newWidth = resizeStart.width - deltaX;
+          break;
+        case 'e': // 오른쪽
+          newWidth = resizeStart.width + deltaX;
+          break;
+        case 'w': // 왼쪽
+          newWidth = resizeStart.width - deltaX;
+          break;
+        case 'n': // 위쪽 (높이는 자동이므로 무시)
+        case 's': // 아래쪽 (높이는 자동이므로 무시)
+          return; // 비율 유지를 위해 세로 조절은 무시
+        default:
+          break;
+      }
+
+      // 최소/최대 크기 제한
+      newWidth = Math.max(
+        50,
+        Math.min(newWidth, contentEditableRef.current?.offsetWidth || 800)
+      );
+
+      // 비율 유지하며 크기 조절
+      selectedImage.style.width = `${newWidth}px`;
+      selectedImage.style.height = 'auto';
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      setCurrentHandle(null);
+
+      // content 업데이트
+      if (contentEditableRef.current) {
+        setNoticeForm((prev) => ({
+          ...prev,
+          content: contentEditableRef.current.innerHTML,
+        }));
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, selectedImage, resizeStart, currentHandle]);
   return (
     <div className="flex gap-6 w-full h-[calc(102vh-70px)">
       {/* 좌측: 공지글 목록 및 검색 */}
@@ -234,9 +392,9 @@ const AdminNoticeManagement = ({
             )}
           </div>
 
-          <div className="flex flex-col h-full flex-1">
+          <div className="flex flex-col h-full flex-1 overflow-hidden">
             {/* 제목 */}
-            <div className="mb-4">
+            <div className="mb-2 flex-shrink-0">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 제목
               </label>
@@ -304,36 +462,38 @@ const AdminNoticeManagement = ({
             </div> */}
 
             {/* 파일첨부 */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                파일첨부 (현재 {noticeFiles.length}개)
-              </label>
-              <div className="flex gap-2">
-                <label className="inline-flex items-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 cursor-pointer text-sm">
-                  <Upload size={16} className="mr-2" />
-                  파일 선택
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={handleNoticeFileUpload}
-                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-                  />
+            <div className="mb-3 flex-shrink-0">
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  파일첨부 (현재 {noticeFiles.length}개)
                 </label>
-                {noticeFiles.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setNoticeFiles([])}
-                    className="text-sm text-red-600 hover:text-red-700"
-                  >
-                    모두 삭제
-                  </button>
-                )}
+                <div className="flex gap-2">
+                  <label className="inline-flex items-center px-2 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 cursor-pointer text-sm">
+                    <Upload size={16} className="mr-2" />
+                    파일 선택
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleNoticeFileUpload}
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                    />
+                  </label>
+                  {noticeFiles.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setNoticeFiles([])}
+                      className="px-2 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                    >
+                      모두 삭제
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* 첨부된 파일 목록 */}
               {noticeFiles.length > 0 && (
-                <div className="mt-3 space-y-2">
+                <div className="mt-2 space-y-0.5 max-h-[100px] overflow-y-auto border border-gray-200 rounded-lg p-1.5 bg-gray-50">
                   {noticeFiles.map((file, index) => {
                     // 파일 크기 계산
                     let fileSizeText = '크기 불명';
@@ -361,7 +521,7 @@ const AdminNoticeManagement = ({
                     return (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between bg-gray-50 rounded-lg"
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <FileText
@@ -379,7 +539,7 @@ const AdminNoticeManagement = ({
                           {/* 기존 파일인 경우에만 다운로드 버튼 표시 */}
                           {file.isExisting && file.url && (
                             <a
-                              href={`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/communication/download/${file.url
+                              href={`http://localhost:5000/api/communication/download/${file.url
                                 .split('/')
                                 .pop()}`}
                               download={file.name}
@@ -409,41 +569,111 @@ const AdminNoticeManagement = ({
             </div>
 
             {/* 공지사항 내용 입력 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="flex-1 flex flex-col min-h-0">
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex-shrink-0">
                 내용
               </label>
-              <div
-                ref={contentEditableRef}
-                contentEditable
-                data-placeholder="공지사항 내용을 입력하세요 (이미지 붙여넣기 가능)"
-                className="w-full min-h-[500px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none overflow-auto"
-                onFocus={() => {
-                  isUserEditingRef.current = true;
-                }}
-                onBlur={() => {
-                  isUserEditingRef.current = false;
-                }}
-                onInput={(e) => {
-                  isUserEditingRef.current = true;
-                  try {
-                    // React 합성 이벤트가 재사용되기 전에 값을 먼저 추출
-                    const target = e.currentTarget;
-                    if (!target) return;
+              <div className="relative flex-1 min-h-0 max-h-full overflow-hidden">
+                {/* 이미지 리사이즈 핸들 */}
+                {selectedImage &&
+                  !isResizing &&
+                  (() => {
+                    const imgRect = selectedImage.getBoundingClientRect();
+                    const containerRect =
+                      contentEditableRef.current?.getBoundingClientRect();
+                    if (!containerRect) return null;
 
-                    const htmlContent = target.innerHTML;
-                    if (htmlContent !== undefined) {
-                      setNoticeForm((prev) => ({
-                        ...prev,
-                        content: htmlContent,
-                      }));
+                    return (
+                      <div
+                        className="resize-handles-container"
+                        style={{
+                          position: 'absolute',
+                          top: imgRect.top - containerRect.top - 3 + 'px',
+                          left: imgRect.left - containerRect.left - 3 + 'px',
+                          width: imgRect.width + 6 + 'px',
+                          height: imgRect.height + 6 + 'px',
+                          border: '2px solid #3b82f6',
+                          pointerEvents: 'none',
+                          zIndex: 10,
+                        }}
+                      >
+                        {/* 6개 리사이즈 핸들 (비율 유지를 위해 n, s 제외) */}
+                        {['nw', 'ne', 'sw', 'se', 'e', 'w'].map((handle) => (
+                          <div
+                            key={handle}
+                            className={`resize-handle resize-handle-${handle}`}
+                            onMouseDown={(e) => handleResizeStart(e, handle)}
+                            style={{
+                              position: 'absolute',
+                              width: handle.length === 1 ? '6px' : '8px',
+                              height: handle.length === 1 ? '6px' : '8px',
+                              background: 'white',
+                              border: '1px solid #3b82f6',
+                              pointerEvents: 'auto',
+                              cursor: getCursorForHandle(handle),
+                              ...(handle === 'nw' && { top: -4, left: -4 }),
+                              ...(handle === 'ne' && { top: -4, right: -4 }),
+                              ...(handle === 'sw' && { bottom: -4, left: -4 }),
+                              ...(handle === 'se' && { bottom: -4, right: -4 }),
+                              ...(handle === 'n' && {
+                                top: -3,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                              }),
+                              ...(handle === 's' && {
+                                bottom: -3,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                              }),
+                              ...(handle === 'e' && {
+                                right: -3,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                              }),
+                              ...(handle === 'w' && {
+                                left: -3,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                              }),
+                            }}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                <div
+                  ref={contentEditableRef}
+                  contentEditable
+                  data-placeholder="공지사항 내용을 입력하세요 (이미지 붙여넣기 가능)"
+                  className="w-full h-full max-h-full px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none overflow-y-auto"
+                  onFocus={() => {
+                    isUserEditingRef.current = true;
+                  }}
+                  onBlur={() => {
+                    isUserEditingRef.current = false;
+                  }}
+                  onInput={(e) => {
+                    isUserEditingRef.current = true;
+                    try {
+                      // React 합성 이벤트가 재사용되기 전에 값을 먼저 추출
+                      const target = e.currentTarget;
+                      if (!target) return;
+
+                      const htmlContent = target.innerHTML;
+                      if (htmlContent !== undefined) {
+                        setNoticeForm((prev) => ({
+                          ...prev,
+                          content: htmlContent,
+                        }));
+                      }
+                    } catch (error) {
+                      console.warn('contentEditable onInput 에러:', error);
                     }
-                  } catch (error) {
-                    console.warn('contentEditable onInput 에러:', error);
-                  }
-                }}
-                onPaste={handleNoticePasteImage}
-              />
+                  }}
+                  onPaste={handleNoticePasteImage}
+                />
+              </div>
               <style>{`
                 [contenteditable][data-placeholder]:empty:before {
                   content: attr(data-placeholder);
@@ -455,14 +685,32 @@ const AdminNoticeManagement = ({
                   height: auto;
                   display: block;
                   margin: 10px 0;
-                  border-radius: 8px;
+                  border-radius: 4px;
                   cursor: pointer;
+                  transition: opacity 0.2s ease;
+                  user-select: none;
+                }
+                [contenteditable] img:hover {
+                  opacity: 0.9;
+                }
+                [contenteditable] img.selected-for-resize {
+                  opacity: 1;
+                }
+                .resize-handles-container {
+                  box-sizing: border-box;
+                }
+                .resize-handle {
+                  box-sizing: border-box;
+                  border-radius: 2px;
+                }
+                .resize-handle:hover {
+                  background: #3b82f6 !important;
                 }
               `}</style>
             </div>
 
             {/* 버튼 영역 */}
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-2 pt-3 flex-shrink-0">
               {!editingNoticeId ? (
                 <button
                   className="flex-1 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium"

@@ -1767,9 +1767,8 @@ export const send자동알림 = async ({
         };
 
         savedNotification = await NotificationAPI.create(notificationLogData);
-        console.log('✅ 자동 알림 로그 DB 저장 성공:', savedNotification);
       } catch (dbError) {
-        console.error('❌ 자동 알림 로그 DB 저장 실패:', dbError);
+        // DB 저장 실패 시 로컬 데이터 사용
       }
 
       setNotificationLogs((prev) => [새로운알림로그, ...prev]);

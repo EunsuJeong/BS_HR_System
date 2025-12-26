@@ -498,7 +498,7 @@ const StaffSuggestion = ({
                       );
                     }
                   }}
-                  className={`${commonClass} flex-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-normal`}
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-normal text-xs"
                 >
                   {getText('저장', 'Save')}
                 </button>
@@ -510,7 +510,7 @@ const StaffSuggestion = ({
                     setEditingSuggestionTitle('');
                     setEditingSuggestionRemark('');
                   }}
-                  className={`${commonClass} flex-1 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-normal`}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-normal text-xs"
                 >
                   {getText('취소', 'Cancel')}
                 </button>

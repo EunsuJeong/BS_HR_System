@@ -179,8 +179,8 @@ const StaffSalary = ({
 
   return (
     <>
-      <div className="bg-white p-3 rounded-2xl shadow-sm border border-emerald-100">
-        <div className="flex items-center justify-between mb-2">
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100">
+        <div className="flex items-center justify-between">
           <div className="flex items-center">
             <DollarSign className="w-5 h-5 text-emerald-500 mr-2" />
             <h3 className="text-sm font-semibold text-gray-800">
