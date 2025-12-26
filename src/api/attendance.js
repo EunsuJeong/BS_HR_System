@@ -23,14 +23,27 @@ export const AttendanceAPI = {
   // 근태 데이터 대량 저장
   bulkSave: async (records, year, month) => {
     try {
+      console.log(`[AttendanceAPI.bulkSave] 🚀 API 호출 시작: ${records.length}건, ${year}년 ${month}월`);
+      console.log(`[AttendanceAPI.bulkSave] 📍 API URL: ${api.baseURL}/attendance/bulk`);
+      console.log(`[AttendanceAPI.bulkSave] 📦 첫 번째 레코드 샘플:`, records[0]);
+
       const response = await api.post('/attendance/bulk', {
         records,
         year,
         month,
       });
+
+      console.log(`[AttendanceAPI.bulkSave] ✅ API 응답 성공:`, response);
       return response;
     } catch (error) {
-      console.error('[AttendanceAPI.bulkSave] 오류:', error);
+      console.error('[AttendanceAPI.bulkSave] ❌ API 호출 실패:', error);
+      console.error('[AttendanceAPI.bulkSave] 오류 상세:', {
+        message: error.message,
+        isNetworkError: error.isNetworkError,
+        isServerError: error.isServerError,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
       return {
         success: false,
         message: error.message,
