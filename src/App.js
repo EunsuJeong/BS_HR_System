@@ -295,8 +295,7 @@ const formatDateToString = (date) => {
 // *[1_공통] 1.2.2_API 상수*
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
-const SERVER_URL =
-  process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
+const SERVER_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
 
 // *[1_공통] 1.2.3_AI 서비스 상수*
 const FAIL_MSG = CommonAIService.FAIL_MSG;
@@ -347,7 +346,6 @@ const HRManagementSystem = () => {
     async (year) => {
       // 방어 코드: year가 유효한 숫자인지 확인
       if (!year || isNaN(year) || year < 2000 || year > 2100) {
-        console.error(`❌ [loadHolidayData] 유효하지 않은 year 값: ${year}`);
         return {};
       }
 
@@ -855,19 +853,12 @@ const HRManagementSystem = () => {
     const dateStr = typeof date === 'string' ? date : formatDateToString(date);
     const dateObj = new Date(dateStr);
 
-    // 날짜 유효성 검증
-    if (isNaN(dateObj.getTime())) {
-      console.warn(`[isHoliday] 유효하지 않은 날짜: ${dateStr}`);
-      return false;
-    }
-
     const year = dateObj.getFullYear();
     const month = dateObj.getMonth() + 1;
     const day = dateObj.getDate();
 
     // year 유효성 추가 검증
     if (isNaN(year) || year < 2000 || year > 2100) {
-      console.warn(`[isHoliday] 유효하지 않은 year: ${year} (from ${dateStr})`);
       return false;
     }
 
@@ -4304,10 +4295,12 @@ const HRManagementSystem = () => {
             );
 
             // ✅ DB에서 받은 usedLeave 값 우선 사용 (강력 새로고침 시에도 정확한 값 유지)
-            const usedLeaveFromDB = emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
-            const finalUsedLeave = usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
-              ? usedLeaveFromDB
-              : annualData.usedAnnual;
+            const usedLeaveFromDB =
+              emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
+            const finalUsedLeave =
+              usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
+                ? usedLeaveFromDB
+                : annualData.usedAnnual;
 
             return {
               ...baseEmp,
@@ -4383,10 +4376,12 @@ const HRManagementSystem = () => {
               );
 
               // ✅ DB에서 받은 usedLeave 값 우선 사용 (강력 새로고침 시에도 정확한 값 유지)
-              const usedLeaveFromDB = emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
-              const finalUsedLeave = usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
-                ? usedLeaveFromDB
-                : annualData.usedAnnual;
+              const usedLeaveFromDB =
+                emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
+              const finalUsedLeave =
+                usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
+                  ? usedLeaveFromDB
+                  : annualData.usedAnnual;
 
               return {
                 ...baseEmp,
