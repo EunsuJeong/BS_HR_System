@@ -21,8 +21,7 @@ const employeeSchema = new mongoose.Schema(
     phone: String,
     address: String,
     leaveEntitled: Number, // 부여된 연차
-    leaveUsed: Number,     // 사용한 연차 (관리자가 설정한 상수)
-    leaveUsedModifiedAt: Date, // 사용 연차 마지막 수정 시점
+    leaveUsed: Number,     // 사용한 연차 (관리자가 직접 설정한 기준값, 기본값 0)
     evalScore: Number,
     createdAt: { type: Date, default: Date.now },
   },

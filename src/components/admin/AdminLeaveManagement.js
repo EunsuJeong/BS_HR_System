@@ -776,12 +776,10 @@ const AdminLeaveManagement = ({
                                       console.log('🔍 employeeId:', emp.id);
                                       console.log('💾 DB 저장 데이터:', { usedLeave });
 
-                                      // DB에 저장 - leaveUsed + 수정 시점 저장
+                                      // DB에 leaveUsed 저장 (기준값)
                                       const { default: EmployeeAPI } = await import('../../api/employee');
                                       const response = await EmployeeAPI.update(emp.id, {
                                         leaveUsed: usedLeave,
-                                        leaveUsedModifiedAt: new Date(),
-                                        leaveUsedModifiedAt: new Date(),  // 현재 시각 저장 (관리자 수정 시점)
                                       });
 
                                       console.log('✅ API 응답:', response);
