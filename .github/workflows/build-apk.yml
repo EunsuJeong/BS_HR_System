@@ -50,13 +50,8 @@ jobs:
           REACT_APP_AI_PROVIDER: openai
           REACT_APP_HOLIDAY_API_KEY: 603c88ccf76cf95f2e1c8ffe7dfa6be2fd88feb4bd6e3000a0293c308885e111
 
-      - name: Remove old app icons
-        run: |
-          rm -rf android/app/src/main/res/mipmap-*
-          rm -rf android/app/src/main/res/drawable*
-
-      - name: Generate app icons from logo
-        run: npx @capacitor/assets generate --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#000000'
+      - name: Generate app icons from public/logo192.png
+        run: node generate-icons.js
 
       - name: Sync Capacitor (copy web assets)
         run: npx cap copy android
