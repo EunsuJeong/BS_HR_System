@@ -856,26 +856,22 @@ export const useAnnualLeaveManager = ({
       }
     };
 
-    // 최초 실행
-    checkAnnualLeavePeriodExpiry();
+    // ⚠️ DEPRECATED: 연차 갱신 로직이 서버로 이동되었습니다.
+    // 📍 서버: server/utils/annualLeaveScheduler.js
+    // 📍 매일 오전 8시에 자동 실행 (cron 스케줄러)
+    devLog('[연차관리] ⚠️ 프론트엔드 연차 갱신 로직은 deprecated - 서버에서 처리 중');
 
-    // 매일 자동 실행
-    const interval = setInterval(
-      checkAnnualLeavePeriodExpiry,
-      24 * 60 * 60 * 1000
-    );
+    // 최초 실행 - DISABLED (서버에서 처리)
+    // checkAnnualLeavePeriodExpiry();
 
-    return () => clearInterval(interval);
-  }, [
-    employees,
-    realtimeNotifications,
-    setEmployees,
-    setRealtimeNotifications,
-    setNotificationLogs,
-    calculateEmployeeAnnualLeave,
-    get연차갱신알림수신자,
-    devLog,
-  ]);
+    // 매일 자동 실행 - DISABLED (서버에서 처리)
+    // const interval = setInterval(
+    //   checkAnnualLeavePeriodExpiry,
+    //   24 * 60 * 60 * 1000
+    // );
+
+    return () => {}; // cleanup 불필요
+  }, [devLog]);
 };
 
 // ============================================================
