@@ -68,7 +68,64 @@ const AdminNotificationManagement = ({
   employees,
 }) => {
   return (
-    <div className="flex gap-6 w-full">
+    <div className="flex flex-col gap-6 w-full">
+      {/* 연차 알림 현황 섹션 */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+          📅 연차 알림 설정
+        </h3>
+
+        <div className="grid grid-cols-2 gap-6">
+          {/* 서버 알림 */}
+          <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-blue-800">서버 알림</h4>
+              <span className="px-2 py-1 bg-blue-500 text-white text-xs rounded">활성화</span>
+            </div>
+            <div className="space-y-2 text-sm text-gray-700">
+              <div className="flex items-center">
+                <span className="text-blue-600 mr-2">✓</span>
+                <span>4단계 (180일, 90일, 30일, 7일 전)</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-blue-600 mr-2">✓</span>
+                <span className="font-medium text-blue-800">연차 갱신 알림 ⭐</span>
+              </div>
+              <div className="mt-3 pt-3 border-t border-blue-200 text-xs text-gray-600">
+                <div>• 발송 시각: 연차 만료일 다음날 오전 8시</div>
+                <div>• 처리 방식: 매일 오전 8시 자동 실행 (cron)</div>
+                <div>• 관리자: 인사팀장, 대표</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 프론트엔드 알림 (Deprecated) */}
+          <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 opacity-75">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-gray-600">프론트엔드 알림</h4>
+              <span className="px-2 py-1 bg-gray-400 text-white text-xs rounded">비활성화</span>
+            </div>
+            <div className="space-y-2 text-sm text-gray-500">
+              <div className="flex items-center">
+                <span className="text-gray-400 mr-2">✗</span>
+                <span className="line-through">3단계 (6개월, 30일, 7일 전)</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-gray-400 mr-2">✗</span>
+                <span className="line-through">만료일 다음날 오전 8시 알림</span>
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-300 text-xs text-gray-500">
+                <div>⚠️ 서버 알림으로 대체됨</div>
+                <div>• 브라우저 열려있어야만 작동</div>
+                <div>• 24시간 타이머 불안정</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 기존 알림 관리 섹션 */}
+      <div className="flex gap-6 w-full">
       {/* 좌측: 통합 알림 관리 */}
       <div className="w-1/2 flex flex-col">
         <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
@@ -2183,6 +2240,7 @@ const AdminNotificationManagement = ({
           </div>
         </div>
       )}{' '}
+      </div>
     </div>
   );
 };
