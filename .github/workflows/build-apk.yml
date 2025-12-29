@@ -50,10 +50,10 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
-      - name: Build Android APK (Release)
+      - name: Build Android APK (Debug)
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleDebug --no-daemon
 
       - name: Get version info
         id: version
@@ -68,13 +68,8 @@ jobs:
 
       - name: Rename APK
         run: |
-          mv android/app/build/outputs/apk/release/app-release-unsigned.apk \
-             android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk || true
-
-          # unsigned 파일이 없으면 signed 파일 찾기
-          if [ ! -f "android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk" ]; then
-            find android/app/build/outputs/apk/release/ -name "*.apk" -exec mv {} android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk \;
-          fi
+          mv android/app/build/outputs/apk/debug/app-debug.apk \
+             android/app/build/outputs/apk/debug/BS-HR-System-${{ steps.version.outputs.version }}.apk
 
       - name: Create Release
         id: create_release
@@ -100,7 +95,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk
+            android/app/build/outputs/apk/debug/BS-HR-System-${{ steps.version.outputs.version }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -399,7 +394,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BS-HR-System-APK
-          path: android/app/build/outputs/apk/release/BS-HR-System-${{ steps.version.outputs.version }}.apk
+          path: android/app/build/outputs/apk/debug/BS-HR-System-${{ steps.version.outputs.version }}.apk
           retention-days: 90
 
       - name: Create summary
