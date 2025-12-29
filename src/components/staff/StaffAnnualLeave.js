@@ -356,6 +356,7 @@ const StaffAnnualLeave = ({
                   wordWrap: 'break-word',
                   whiteSpace: 'pre-wrap',
                   overflow: 'hidden',
+                  minHeight: '30px',
                 }}
               />
               <textarea
@@ -377,6 +378,7 @@ const StaffAnnualLeave = ({
                   wordWrap: 'break-word',
                   whiteSpace: 'pre-wrap',
                   overflow: 'hidden',
+                  minHeight: '30px',
                 }}
               />
               <button

@@ -89,18 +89,23 @@ const StaffSuggestion = ({
             {getText('더보기', 'More')} &gt;
           </button>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-2">
           <div className="flex space-x-1">
             <select
               value={suggestionInput}
               onChange={(e) => setSuggestionInput(e.target.value)}
               className={`${commonClass} border rounded flex-1 min-w-[100px]`}
+              style={{ minHeight: '30px' }}
             >
               <option value="구매">
-                {selectedLanguage === 'en' ? 'Purchase (Consumables)' : '구매 (소모품)'}
+                {selectedLanguage === 'en'
+                  ? 'Purchase (Consumables)'
+                  : '구매 (소모품)'}
               </option>
               <option value="기타">
-                {selectedLanguage === 'en' ? 'Suggestion (to CEO)' : '건의 (대표이사)'}
+                {selectedLanguage === 'en'
+                  ? 'Suggestion (to CEO)'
+                  : '건의 (대표이사)'}
               </option>
             </select>
             <button
@@ -133,6 +138,7 @@ const StaffSuggestion = ({
                 wordWrap: 'break-word',
                 whiteSpace: 'pre-wrap',
                 overflow: 'hidden',
+                minHeight: '30px',
               }}
             />
           </div>
@@ -194,7 +200,10 @@ const StaffSuggestion = ({
                             {s.applyDate}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
-                            {getSuggestionCategoryText(s.type, selectedLanguage)}
+                            {getSuggestionCategoryText(
+                              s.type,
+                              selectedLanguage
+                            )}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             {s.content}
@@ -429,10 +438,14 @@ const StaffSuggestion = ({
                   className="text-xs w-full px-4 py-1 border border-gray-300 rounded-lg"
                 >
                   <option value="구매">
-                    {selectedLanguage === 'en' ? 'Purchase (Consumables)' : '구매 (소모품)'}
+                    {selectedLanguage === 'en'
+                      ? 'Purchase (Consumables)'
+                      : '구매 (소모품)'}
                   </option>
                   <option value="기타">
-                    {selectedLanguage === 'en' ? 'Suggestion (to CEO)' : '건의 (대표이사)'}
+                    {selectedLanguage === 'en'
+                      ? 'Suggestion (to CEO)'
+                      : '건의 (대표이사)'}
                   </option>
                 </select>
               </div>
