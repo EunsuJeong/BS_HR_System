@@ -53,6 +53,13 @@ jobs:
       - name: Generate app icons from public/logo192.png
         run: node generate-icons.js
 
+      - name: Remove adaptive icon files (use standard icons only)
+        run: |
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          find android/app/src/main/res -name "ic_launcher_foreground.png" -delete
+          find android/app/src/main/res -name "ic_launcher_background.png" -delete
+          rm -rf android/app/src/main/res/drawable*
+
       - name: Sync Capacitor (copy web assets)
         run: npx cap copy android
 
