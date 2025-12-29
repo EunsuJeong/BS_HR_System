@@ -36,6 +36,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Clean previous builds
+        run: |
+          rm -rf build
+          rm -rf android/app/build
+          rm -rf android/app/src/main/assets/public
+
       - name: Build React app
         run: npm run build
         env:
@@ -44,7 +50,10 @@ jobs:
           REACT_APP_AI_PROVIDER: openai
           REACT_APP_HOLIDAY_API_KEY: 603c88ccf76cf95f2e1c8ffe7dfa6be2fd88feb4bd6e3000a0293c308885e111
 
-      - name: Sync Capacitor
+      - name: Sync Capacitor (copy web assets)
+        run: npx cap copy android
+
+      - name: Update Capacitor assets
         run: npx cap sync android
 
       - name: Grant execute permission for gradlew
@@ -53,7 +62,7 @@ jobs:
       - name: Build Android APK (Debug)
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew clean assembleDebug --no-daemon
 
       - name: Get version info
         id: version
