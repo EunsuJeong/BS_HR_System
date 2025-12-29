@@ -64,6 +64,7 @@
     "dev:ai": "concurrently \"npm run start:ai\" \"npm start\"",
     "backup": "node scripts/backup.js",
     "restore": "node scripts/restore.js",
+    "cleanup:schedules": "node scripts/cleanup-ghost-schedules.js",
     "server": "node server/server.js",
     "server:dev": "nodemon server/server.js",
     "deploy:backend": "echo 'Backend deployment configured for Railway'",

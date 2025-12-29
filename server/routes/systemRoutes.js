@@ -3,11 +3,17 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const { Schedule, SystemLog, UserSession } = require('../models');
 
-// ✅ 일정 조회
+// ✅ 일정 조회 (삭제된 일정 제외)
 router.get('/schedules', async (req, res) => {
   try {
-    const schedules = await Schedule.find().sort({ date: 1 });
-    console.log(`✅ [GET /schedules] 일정 ${schedules.length}건 조회`);
+    // isDeleted가 false이거나 존재하지 않는 일정만 조회 (유령 일정 방지)
+    const schedules = await Schedule.find({
+      $or: [
+        { isDeleted: { $exists: false } },
+        { isDeleted: false }
+      ]
+    }).sort({ date: 1 });
+    console.log(`✅ [GET /schedules] 일정 ${schedules.length}건 조회 (삭제된 일정 제외)`);
     res.json({ success: true, data: schedules });
   } catch (error) {
     console.error('❌ [GET /schedules] 오류:', error);
