@@ -69,7 +69,6 @@ app.use(
     origin: function (origin, callback) {
       // 모바일 앱, Postman, SSR 등에서 origin이 없거나 null일 수 있음
       if (!origin || origin === 'null') {
-        console.log('✅ CORS: Allowing request with no origin or null origin');
         return callback(null, true);
       }
 
@@ -79,7 +78,6 @@ app.use(
         origin.match(/\.vercel\.app$/) || // Vercel 프리뷰 배포
         origin.match(/^https?:\/\/localhost/) // 로컬호스트 모든 포트
       ) {
-        console.log('✅ CORS: Allowing origin:', origin);
         callback(null, true);
       } else {
         console.error('❌ CORS policy violation - Rejected origin:', origin);
@@ -186,7 +184,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    message: '부성스틸 AI 인사관리 서버 정상 동작 중'
+    message: '부성스틸 AI 인사관리 서버 정상 동작 중',
   });
 });
 
