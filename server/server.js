@@ -67,8 +67,11 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // 모바일 앱이나 Postman 등에서 origin이 없을 수 있음
-      if (!origin) return callback(null, true);
+      // 모바일 앱, Postman, SSR 등에서 origin이 없거나 null일 수 있음
+      if (!origin || origin === 'null') {
+        console.log('✅ CORS: Allowing request with no origin or null origin');
+        return callback(null, true);
+      }
 
       // 허용된 origin 또는 와일드카드 패턴 체크
       if (
@@ -76,6 +79,7 @@ app.use(
         origin.match(/\.vercel\.app$/) || // Vercel 프리뷰 배포
         origin.match(/^https?:\/\/localhost/) // 로컬호스트 모든 포트
       ) {
+        console.log('✅ CORS: Allowing origin:', origin);
         callback(null, true);
       } else {
         console.error('❌ CORS policy violation - Rejected origin:', origin);
