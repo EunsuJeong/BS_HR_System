@@ -60,7 +60,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:3002',
-  process.env.FRONTEND_URL, // Vercel 배포 URL
+  'https://bs-hr-system.vercel.app', // Vercel 프로덕션 URL
+  process.env.FRONTEND_URL, // Vercel 배포 URL (환경변수)
 ].filter(Boolean); // undefined 제거
 
 app.use(
@@ -77,6 +78,9 @@ app.use(
       ) {
         callback(null, true);
       } else {
+        console.error('❌ CORS policy violation - Rejected origin:', origin);
+        console.error('📋 Allowed origins:', allowedOrigins);
+        console.error('🔍 FRONTEND_URL:', process.env.FRONTEND_URL);
         callback(new Error('CORS policy violation'));
       }
     },
