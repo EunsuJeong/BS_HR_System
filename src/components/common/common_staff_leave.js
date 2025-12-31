@@ -277,15 +277,14 @@ export const useStaffLeave = (dependencies = {}) => {
       department: savedLeave.department,
       leaveType: savedLeave.type || savedLeave.leaveType, // type 필드 사용
       type: savedLeave.type || savedLeave.leaveType,
-      startDate: savedLeave.startDate?.split('T')[0] || savedLeave.startDate,
-      endDate: savedLeave.endDate?.split('T')[0] || savedLeave.endDate,
+      startDate: savedLeave.startDate, // ISO 문자열 그대로 저장 (formatDateByLang에서 UTC→KST 변환)
+      endDate: savedLeave.endDate, // ISO 문자열 그대로 저장 (formatDateByLang에서 UTC→KST 변환)
       days: savedLeave.requestedDays || savedLeave.days,
       requestedDays: savedLeave.requestedDays || savedLeave.days,
       reason: savedLeave.reason,
       contact: savedLeave.contact,
       status: savedLeave.status,
-      requestDate:
-        savedLeave.requestDate?.split('T')[0] || now.toISOString().slice(0, 10),
+      requestDate: savedLeave.requestDate || now.toISOString(), // ISO 문자열 그대로 저장
       requestDateTime: savedLeave.requestDateTime || now.toISOString(),
     };
     setLeaveRequests((prev) => [formattedLeave, ...prev]);
