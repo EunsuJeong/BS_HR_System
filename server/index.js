@@ -3,6 +3,22 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
+
+// Prefer .env.production when present; fallback to .env
+const envCandidates = [
+  path.join(__dirname, '../.env.production'),
+  path.join(__dirname, '../.env'),
+];
+const envPath = envCandidates.find((p) => {
+  try {
+    return fs.existsSync(p);
+  } catch {
+    return false;
+  }
+});
+require('dotenv').config(envPath ? { path: envPath } : {});
 
 // 스케줄러
 const { startBackupScheduler } = require('./utils/backupScheduler');
@@ -17,10 +33,9 @@ const server = createServer(app);
 app.use(
   cors({
     origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-    ],
+      process.env.FRONTEND_URL,
+      ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()) : []),
+    ].filter(Boolean),
     credentials: true,
   })
 );
@@ -31,17 +46,19 @@ app.use(express.json());
 const io = new Server(server, {
   cors: {
     origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-    ],
+      process.env.FRONTEND_URL,
+      ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()) : []),
+    ].filter(Boolean),
     methods: ['GET', 'POST'],
     credentials: true,
   },
 });
 
 // JWT 시크릿 키 (실제 환경에서는 환경변수로 관리)
-const JWT_SECRET = process.env.JWT_SECRET || 'hr-system-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('환경변수 JWT_SECRET이 설정되지 않았습니다 (.env.production).');
+}
 
 // 실시간 동기화 이벤트 타입 정의
 const SYNC_EVENTS = {
@@ -487,11 +504,18 @@ function getDefaultHolidayData(year) {
 }
 
 // 서버 시작
-const PORT = process.env.PORT || 3003;
+const PORT = Number(process.env.PORT);
+if (!PORT) {
+  throw new Error('환경변수 PORT가 설정되지 않았습니다 (.env.production).');
+}
 server.listen(PORT, () => {
-  console.log(`🚀 HR 시스템 실시간 서버가 포트 ${PORT}에서 실행중입니다.`);
-  console.log(`📊 상태 확인: http://localhost:${PORT}/api/health`);
-  console.log(`📅 공휴일 API: http://localhost:${PORT}/api/holidays/2025`);
+  const publicUrl = process.env.SERVER_PUBLIC_URL || process.env.BACKEND_URL;
+  if (publicUrl) {
+    console.log(`🚀 HR 시스템 실시간 서버 실행: ${publicUrl}`);
+    console.log(`📊 상태 확인: ${publicUrl}/api/health`);
+  } else {
+    console.log(`🚀 HR 시스템 실시간 서버가 포트 ${PORT}에서 실행중입니다.`);
+  }
   console.log(`🔄 실시간 대체공휴일 업데이트 시스템 활성화됨`);
 
   // 스케줄러 시작

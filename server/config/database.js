@@ -6,10 +6,10 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     // 두 환경변수 모두 지원: MONGO_URI(신규) / MONGODB_URI(기존)
-    const mongoURI =
-      process.env.MONGO_URI ||
-      process.env.MONGODB_URI ||
-      'mongodb://127.0.0.1:27017/busung_hr';
+    const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI;
+    if (!mongoURI) {
+      throw new Error('환경변수 MONGO_URI 또는 MONGODB_URI가 설정되지 않았습니다 (.env.production).');
+    }
 
     const options = {
       // useNewUrlParser: true, // mongoose 6.0 이상에서는 기본값

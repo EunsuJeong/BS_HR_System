@@ -69,7 +69,12 @@
     "server:dev": "nodemon server/server.js",
     "deploy:backend": "echo 'Backend deployment configured for Railway'",
     "deploy:frontend": "vercel --prod",
-    "deploy:frontend:preview": "vercel"
+    "deploy:frontend:preview": "vercel",
+    "pm2:start": "pm2 start pm2.config.js",
+    "pm2:stop": "pm2 stop bs-hr-backend",
+    "pm2:restart": "pm2 restart bs-hr-backend",
+    "pm2:logs": "pm2 logs bs-hr-backend",
+    "pm2:startup": "pm2 startup && pm2 save"
   },
   "eslintConfig": {
     "extends": [

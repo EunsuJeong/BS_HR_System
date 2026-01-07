@@ -8,9 +8,7 @@ const https = require('https');
 const http = require('http');
 
 // 테스트할 URL (로컬 또는 Railway)
-const BACKEND_URL = process.env.RAILWAY_STATIC_URL
-  || process.env.BACKEND_URL
-  || 'http://localhost:5000';
+const BACKEND_URL = process.env.BACKEND_URL;
 
 console.log('\n========================================');
 console.log('🧪 Self-Ping 테스트');
@@ -89,3 +87,5 @@ testSelfPing()
     console.error('에러 상세:', err);
     process.exit(1);
   });
+
+console.log(`📍 대상 URL: ${BACKEND_URL || '(미설정)'}`);

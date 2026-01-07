@@ -3,7 +3,20 @@
 // ===============================================
 
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const fs = require('fs');
+// Prefer .env.production when present; fallback to .env
+const envCandidates = [
+  path.join(__dirname, '../.env.production'),
+  path.join(__dirname, '../.env'),
+];
+const envPath = envCandidates.find((p) => {
+  try {
+    return fs.existsSync(p);
+  } catch {
+    return false;
+  }
+});
+require('dotenv').config(envPath ? { path: envPath } : {});
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -25,23 +38,17 @@ console.log(
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io CORS 설정
+// Socket.io CORS 설정 (환경변수 기반)
 const socketAllowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:3002',
   process.env.FRONTEND_URL,
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()) : []),
 ].filter(Boolean);
 
 const io = new Server(server, {
   cors: {
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
-      if (
-        socketAllowedOrigins.includes(origin) ||
-        origin.match(/\.vercel\.app$/) ||
-        origin.match(/^https?:\/\/localhost/)
-      ) {
+      if (socketAllowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error('CORS policy violation'));
@@ -52,17 +59,18 @@ const io = new Server(server, {
   },
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT);
+if (!PORT) {
+  console.error('❌ 환경변수 PORT가 설정되지 않았습니다 (.env.production).');
+  process.exit(1);
+}
 
 // ================== 미들웨어 ==================
-// CORS 설정 - 프로덕션 환경 고려
+// CORS 설정 - 환경변수 기반
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:3002',
-  'https://bs-hr-system.vercel.app', // Vercel 프로덕션 URL
-  process.env.FRONTEND_URL, // Vercel 배포 URL (환경변수)
-].filter(Boolean); // undefined 제거
+  process.env.FRONTEND_URL,
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()) : []),
+].filter(Boolean);
 
 app.use(
   cors({
@@ -73,11 +81,7 @@ app.use(
       }
 
       // 허용된 origin 또는 와일드카드 패턴 체크
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.match(/\.vercel\.app$/) || // Vercel 프리뷰 배포
-        origin.match(/^https?:\/\/localhost/) // 로컬호스트 모든 포트
-      ) {
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         console.error('❌ CORS policy violation - Rejected origin:', origin);
@@ -141,7 +145,11 @@ async function checkAndPublishScheduledNotices() {
 }
 
 // ================== DB 연결 ==================
-const mongoURI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/busung_hr';
+const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI;
+if (!mongoURI) {
+  console.error('❌ 환경변수 MONGO_URI 또는 MONGODB_URI가 설정되지 않았습니다 (.env.production).');
+  process.exit(1);
+}
 // const { startBackupScheduler } = require('./utils/backupScheduler');
 const { startAnnualLeaveScheduler } = require('./utils/annualLeaveScheduler');
 const { startSelfPingScheduler } = require('./utils/selfPing');
@@ -165,7 +173,7 @@ mongoose
     // 연차 만료 알림 스케줄러 시작
     startAnnualLeaveScheduler(io);
 
-    // Self-ping 스케줄러 시작 (Railway sleep 방지 - 매일 오전 5시)
+    // Self-ping 스케줄러 시작 (환경변수에 따라 동작)
     startSelfPingScheduler();
   })
   .catch((err) => console.error('❌ MongoDB 연결 실패:', err));
@@ -199,6 +207,11 @@ io.on('connection', (socket) => {
 
 // ================== 서버 시작 ==================
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  const publicUrl = process.env.SERVER_PUBLIC_URL || process.env.BACKEND_URL;
+  if (publicUrl) {
+    console.log(`🚀 Server running: ${publicUrl}`);
+  } else {
+    console.log(`🚀 Server running on port ${PORT}`);
+  }
   console.log(`🔌 Socket.io ready for real-time updates`);
 });
