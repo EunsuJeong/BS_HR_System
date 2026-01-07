@@ -25,15 +25,15 @@ const bodyParser = require('body-parser');
 const routes = require('./routes');
 const http = require('http');
 const { Server } = require('socket.io');
+const logger = require('./utils/logger');
 
 // ================== 시간대 설정 ==================
 // 한국 시간대(KST, UTC+9)로 설정
 process.env.TZ = 'Asia/Seoul';
-console.log('🕐 시간대 설정:', process.env.TZ);
-console.log(
-  '🕐 현재 서버 시간:',
-  new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
-);
+logger.info('timezone set', {
+  tz: process.env.TZ,
+  now: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -63,7 +63,7 @@ const io = new Server(server, {
 
 const PORT = Number(process.env.PORT);
 if (!PORT) {
-  console.error('❌ 환경변수 PORT가 설정되지 않았습니다 (.env.production).');
+  logger.error('PORT not set (.env.production)');
   process.exit(1);
 }
 
@@ -88,9 +88,11 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.error('❌ CORS policy violation - Rejected origin:', origin);
-        console.error('📋 Allowed origins:', allowedOrigins);
-        console.error('🔍 FRONTEND_URL:', process.env.FRONTEND_URL);
+        logger.warn('CORS policy violation', {
+          origin,
+          allowedOrigins,
+          frontendUrl: process.env.FRONTEND_URL,
+        });
         callback(new Error('CORS policy violation'));
       }
     },
@@ -131,11 +133,10 @@ async function checkAndPublishScheduledNotices() {
     );
 
     if (updateResult.modifiedCount > 0) {
-      console.log(
-        `📢 [${new Date().toLocaleString('ko-KR')}] ${
-          updateResult.modifiedCount
-        }개의 예약 공지사항을 자동 게시로 변경했습니다.`
-      );
+      logger.info('scheduled notices published', {
+        modifiedCount: updateResult.modifiedCount,
+        at: new Date().toLocaleString('ko-KR'),
+      });
 
       // Socket.io로 모든 클라이언트에 알림
       io.emit('notice-published', {
@@ -144,16 +145,14 @@ async function checkAndPublishScheduledNotices() {
       });
     }
   } catch (err) {
-    console.error('⚠️ 예약 공지사항 체크 중 오류:', err);
+    logger.error('scheduled notice check error', { error: err.message });
   }
 }
 
 // ================== DB 연결 ==================
 const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI;
 if (!mongoURI) {
-  console.error(
-    '❌ 환경변수 MONGO_URI 또는 MONGODB_URI가 설정되지 않았습니다 (.env.production).'
-  );
+  logger.error('MONGO_URI/MONGODB_URI not set (.env.production)');
   process.exit(1);
 }
 // const { startBackupScheduler } = require('./utils/backupScheduler');
@@ -163,15 +162,15 @@ const { startSelfPingScheduler } = require('./utils/selfPing');
 mongoose
   .connect(mongoURI)
   .then(async () => {
-    console.log('✅ MongoDB 연결 성공');
+    logger.info('mongodb connected');
 
     // 서버 시작 시 즉시 체크
     await checkAndPublishScheduledNotices();
-    console.log('📢 서버 시작: 예약 공지사항 초기 체크 완료');
+    logger.info('scheduled notice initial check done');
 
     // 1분마다 주기적으로 체크 (60000ms = 1분)
     setInterval(checkAndPublishScheduledNotices, 60000);
-    console.log('⏰ 예약 공지사항 자동 체크 시작 (1분마다)');
+    logger.info('scheduled notice auto-check started', { intervalMs: 60000 });
 
     // 백업 스케줄러 시작 (비활성화 - 수동 백업만 사용)
     // startBackupScheduler();
@@ -182,7 +181,7 @@ mongoose
     // Self-ping 스케줄러 시작 (환경변수에 따라 동작)
     startSelfPingScheduler();
   })
-  .catch((err) => console.error('❌ MongoDB 연결 실패:', err));
+  .catch((err) => logger.error('mongodb connection failed', { error: err.message }));
 
 // ================== 라우트 ==================
 app.use('/api', routes);
@@ -224,37 +223,37 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   const publicUrl = process.env.SERVER_PUBLIC_URL || process.env.BACKEND_URL;
   if (publicUrl) {
-    console.log(`🚀 Server running: ${publicUrl}`);
+    logger.info('server running', { url: publicUrl });
   } else {
-    console.log(`🚀 Server running on port ${PORT}`);
+    logger.info('server running', { port: PORT });
   }
-  console.log(`🔌 Socket.io ready for real-time updates`);
+  logger.info('socket.io ready');
 });
 
 // ================== Graceful Shutdown (PM2 대응) ==================
 function gracefulShutdown(signal) {
-  console.log(`\n📴 Received ${signal}. Shutting down gracefully...`);
+  logger.info('shutdown signal received', { signal });
 
   // 더 이상 신규 요청을 받지 않도록 서버 닫기
   server.close(() => {
-    console.log('✅ HTTP server closed');
+    logger.info('http server closed');
 
     // MongoDB 연결 종료
     mongoose.connection
       .close()
       .then(() => {
-        console.log('✅ MongoDB connection closed');
+        logger.info('mongodb connection closed');
         process.exit(0);
       })
       .catch((err) => {
-        console.error('❌ Error closing MongoDB connection:', err);
+        logger.error('error closing mongodb', { error: err.message });
         process.exit(1);
       });
   });
 
   // 타임아웃 후 강제 종료 (PM2 등 신호 재전송 대비)
   setTimeout(() => {
-    console.error('⏰ Shutdown timeout. Forcing exit.');
+    logger.error('shutdown timeout forcing exit');
     process.exit(1);
   }, 10000).unref();
 }

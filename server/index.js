@@ -5,6 +5,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
+const logger = require('./utils/logger');
 
 // Prefer .env.production when present; fallback to .env
 const envCandidates = [
@@ -46,6 +47,15 @@ app.use(
   })
 );
 
+logger.info('realtime server cors configured', {
+  origins: [
+    process.env.FRONTEND_URL,
+    ...(process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+      : []),
+  ].filter(Boolean),
+});
+
 app.use(express.json());
 
 // Socket.IO 설정
@@ -69,6 +79,10 @@ if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
     '환경변수 JWT_SECRET이 설정되지 않았습니다 (.env.production).'
   );
 }
+logger.info('realtime server jwt configured', {
+  jwtConfigured: Boolean(JWT_SECRET),
+  nodeEnv: process.env.NODE_ENV,
+});
 
 // 실시간 동기화 이벤트 타입 정의
 const SYNC_EVENTS = {
@@ -163,7 +177,11 @@ function detectConflict(localData, serverData) {
 
 // Socket.IO 연결 처리
 io.on('connection', (socket) => {
-  console.log(`사용자 연결: ${socket.userId} (Role: ${socket.userRole})`);
+  logger.info('socket connected', {
+    userId: socket.userId,
+    role: socket.userRole,
+    socketId: socket.id,
+  });
 
   // 연결된 사용자 정보 저장
   connectedUsers.set(socket.userId, {
@@ -193,7 +211,7 @@ io.on('connection', (socket) => {
       }
       roomSubscriptions.get(room).add(socket.userId);
 
-      console.log(`사용자 ${socket.userId}가 룸 ${room}에 구독`);
+      logger.info('room subscribed', { userId: socket.userId, room });
 
       // 구독 성공 응답
       socket.emit('attendance:subscribed', {
@@ -226,7 +244,7 @@ io.on('connection', (socket) => {
         }
       }
 
-      console.log(`사용자 ${socket.userId}가 룸 ${room} 구독 해제`);
+      logger.info('room unsubscribed', { userId: socket.userId, room });
     } catch (error) {
       console.error('구독 해제 오류:', error);
     }
@@ -235,7 +253,7 @@ io.on('connection', (socket) => {
   // 근태 데이터 실시간 업데이트
   socket.on(SYNC_EVENTS.ATTENDANCE_UPDATE, async (data) => {
     try {
-      console.log(`근태 데이터 업데이트 요청 from ${socket.userId}:`, data);
+      logger.info('attendance update requested', { userId: socket.userId });
 
       // 충돌 감지 (실제 구현에서는 DB에서 현재 데이터 조회)
       const currentServerData = null; // DB에서 조회할 현재 데이터
@@ -268,7 +286,7 @@ io.on('connection', (socket) => {
       // 같은 룸의 다른 사용자들에게는 업데이트 알림
       socket.to(room).emit(SYNC_EVENTS.ATTENDANCE_UPDATED, updatePayload);
 
-      console.log(`룸 ${room}에 근태 데이터 업데이트 브로드캐스트 완료`);
+      logger.info('attendance update broadcasted', { room });
     } catch (error) {
       console.error('근태 데이터 업데이트 오류:', error);
       socket.emit('attendance:error', {
@@ -282,11 +300,10 @@ io.on('connection', (socket) => {
   // 대량 데이터 업데이트
   socket.on(SYNC_EVENTS.BULK_IMPORT, async (data) => {
     try {
-      console.log(
-        `대량 데이터 업데이트 요청 from ${socket.userId}:`,
-        data.records?.length || 0,
-        '건'
-      );
+      logger.info('bulk update requested', {
+        userId: socket.userId,
+        count: data.records?.length || 0,
+      });
 
       const results = [];
       const room = `attendance_${data.year || new Date().getFullYear()}_${
@@ -316,7 +333,7 @@ io.on('connection', (socket) => {
       // 같은 룸의 다른 사용자들에게는 대량 업데이트 알림
       socket.to(room).emit('bulk_import:completed', bulkUpdatePayload);
 
-      console.log(`룸 ${room}에 대량 데이터 업데이트 브로드캐스트 완료`);
+      logger.info('bulk update broadcasted', { room });
     } catch (error) {
       console.error('대량 데이터 업데이트 오류:', error);
       socket.emit('bulk_import:error', {
@@ -329,7 +346,7 @@ io.on('connection', (socket) => {
   // 직원 상태 업데이트
   socket.on(SYNC_EVENTS.EMPLOYEE_STATUS, (data) => {
     try {
-      console.log(`직원 상태 업데이트: ${socket.userId}`, data);
+      logger.info('employee status update', { userId: socket.userId });
 
       // 모든 연결된 클라이언트에게 직원 상태 변경 알림
       io.emit(SYNC_EVENTS.EMPLOYEE_STATUS, {
@@ -344,7 +361,7 @@ io.on('connection', (socket) => {
 
   // 연결 해제 처리
   socket.on('disconnect', () => {
-    console.log(`사용자 연결 해제: ${socket.userId}`);
+    logger.info('socket disconnected', { userId: socket.userId });
 
     // 연결된 사용자 목록에서 제거
     connectedUsers.delete(socket.userId);
@@ -366,7 +383,7 @@ io.on('connection', (socket) => {
 
   // 에러 처리
   socket.on('error', (error) => {
-    console.error(`Socket 에러 (${socket.userId}):`, error);
+    logger.error('socket error', { userId: socket.userId, error: error.message });
   });
 });
 
@@ -403,7 +420,7 @@ app.get('/api/holidays/:year', async (req, res) => {
   const { year } = req.params;
   const { source } = req.query;
 
-  console.log(`📡 공휴일 API 요청: ${year}년, 소스: ${source}`);
+  logger.info('holiday api request', { year, source });
 
   try {
     let holidayData = {};
@@ -411,21 +428,21 @@ app.get('/api/holidays/:year', async (req, res) => {
     switch (source) {
       case '한국천문연구원': {
         // API 키가 없을 때는 백업 데이터 즉시 사용
-        console.log(`💡 외부 API 대신 검증된 백업 데이터 사용: ${year}년`);
+        logger.info('holiday api fallback to backup', { year, source });
         holidayData = getDefaultHolidayData(year);
         break;
       }
 
       case 'Holiday API': {
         // API 키가 없을 때는 백업 데이터 즉시 사용
-        console.log(`💡 외부 API 대신 검증된 백업 데이터 사용: ${year}년`);
+        logger.info('holiday api fallback to backup', { year, source });
         holidayData = getDefaultHolidayData(year);
         break;
       }
 
       case '법정공휴일 API': {
         // API 키가 없을 때는 백업 데이터 즉시 사용
-        console.log(`💡 외부 API 대신 검증된 백업 데이터 사용: ${year}년`);
+        logger.info('holiday api fallback to backup', { year, source });
         holidayData = getDefaultHolidayData(year);
         break;
       }
@@ -437,12 +454,13 @@ app.get('/api/holidays/:year', async (req, res) => {
       }
     }
 
-    console.log(
-      `✅ ${year}년 공휴일 API 응답: ${Object.keys(holidayData).length}개`
-    );
+    logger.info('holiday api response', {
+      year,
+      count: Object.keys(holidayData).length,
+    });
     res.json(holidayData);
   } catch (error) {
-    console.error(`❌ ${year}년 공휴일 API 오류 (${source}):`, error.message);
+    logger.error('holiday api error', { year, source, error: error.message });
 
     // 오류 시 기본 데이터 제공
     const fallbackData = getDefaultHolidayData(year);
@@ -527,33 +545,34 @@ const PORT = Number(process.env.PORT);
 if (!PORT) {
   throw new Error('환경변수 PORT가 설정되지 않았습니다 (.env.production).');
 }
+logger.info('realtime server port configured', { port: PORT });
 server.listen(PORT, () => {
   const publicUrl = process.env.SERVER_PUBLIC_URL || process.env.BACKEND_URL;
   if (publicUrl) {
-    console.log(`🚀 HR 시스템 실시간 서버 실행: ${publicUrl}`);
-    console.log(`📊 상태 확인: ${publicUrl}/api/health`);
+    logger.info('realtime server running', { url: publicUrl });
+    logger.info('realtime health endpoint', { url: `${publicUrl}/api/health` });
   } else {
-    console.log(`🚀 HR 시스템 실시간 서버가 포트 ${PORT}에서 실행중입니다.`);
+    logger.info('realtime server running', { port: PORT });
   }
-  console.log(`🔄 실시간 대체공휴일 업데이트 시스템 활성화됨`);
+  logger.info('realtime schedulers active');
 
   // Graceful shutdown hooks (PM2 대응)
   function gracefulShutdown(signal) {
-    console.log(`\n📴 Received ${signal}. Shutting down gracefully...`);
+    logger.info('shutdown signal received', { signal });
 
     // 소켓 먼저 닫기
     io.close(() => {
-      console.log('✅ Socket.io server closed');
+      logger.info('socket.io server closed');
     });
 
     server.close(() => {
-      console.log('✅ HTTP server closed');
+      logger.info('http server closed');
       process.exit(0);
     });
 
     // 타임아웃 후 강제 종료
     setTimeout(() => {
-      console.error('⏰ Shutdown timeout. Forcing exit.');
+      logger.error('shutdown timeout forcing exit');
       process.exit(1);
     }, 10000).unref();
   }
@@ -563,12 +582,12 @@ server.listen(PORT, () => {
   });
 
   // 스케줄러 시작
-  console.log('\n⏰ 스케줄러 초기화 중...');
+  logger.info('schedulers initializing');
   startBackupScheduler(); // 자동 백업 비활성화됨 (GitHub Actions 사용)
   startDataRetentionScheduler();
   startAnnualLeaveExpiryScheduler();
   startSelfPingScheduler(); // Railway sleep 방지 (매일 오전 5시)
-  console.log('✅ 모든 스케줄러 시작 완료\n');
+  logger.info('schedulers started');
 });
 
 module.exports = { app, server, io };

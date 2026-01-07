@@ -61,6 +61,12 @@ module.exports = {
       // ==================== 로그 통합 ====================
       merge_logs: true, // 여러 워커의 로그를 하나 파일로 통합
 
+      // ==================== 로그 로테이션 (pm2-logrotate 사용 시)
+      // pm2 install pm2-logrotate
+      // pm2 set pm2-logrotate:max_size 20M
+      // pm2 set pm2-logrotate:retain 7
+      // pm2 set pm2-logrotate:compress true
+
       // ==================== 고급 설정 ====================
       cwd: './', // 작업 디렉토리
       interpreter: 'node', // Node.js 사용
