@@ -157,15 +157,46 @@ Password: admin123
 
 ## 📦 배포 가이드
 
-### 빠른 배포
+### 자동 배포 (CI/CD) - 권장 방법 ⚡
 
-상세한 배포 가이드는 다음 문서를 참고하세요:
+**main 브랜치에 push하면 GitHub Actions가 자동으로 배포합니다!**
+
+```bash
+git add .
+git commit -m "변경사항 설명"
+git push origin main
+```
+
+**배포 프로세스**:
+1. ✅ 테스트 실행 (`npm test`)
+2. 🚀 Frontend → Vercel 자동 배포
+3. 🚀 Backend → Railway 자동 배포
+4. 📱 Android APK 빌드 및 GitHub Releases 업로드
+
+**워크플로우 파일**:
+- `.github/workflows/ci-deploy.yml` - Vercel/Railway 배포
+- `.github/workflows/mobile-build.yml` - Android APK 빌드
+
+### 수동 배포
+
+```bash
+# Frontend만 배포
+npm run deploy:frontend          # 프로덕션
+npm run deploy:frontend:preview  # 미리보기
+
+# Backend는 Railway CLI 사용
+railway up
+```
+
+### 상세 배포 가이드
+
+처음 배포하거나 상세한 설정이 필요한 경우:
 
 📖 **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)** - 단계별 배포 체크리스트
 📖 **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - 상세 배포 가이드
 📖 **[ENV_VARIABLES.md](./ENV_VARIABLES.md)** - 환경 변수 설정 가이드
 
-### 배포 순서
+### 초기 배포 순서
 
 1. **MongoDB Atlas** 설정
    - 클러스터 생성 (M0 무료)
@@ -174,16 +205,29 @@ Password: admin123
 
 2. **Railway** 백엔드 배포
    - GitHub 리포지토리 연결
-   - 환경 변수 설정
+   - 환경 변수 설정 (MONGODB_URI, OPENAI_API_KEY 등)
    - 자동 배포
 
 3. **Vercel** 프론트엔드 배포
    - GitHub 리포지토리 연결
-   - 환경 변수 설정
+   - 환경 변수 설정 (REACT_APP_API_URL 등)
    - 자동 배포
 
-4. **CORS 설정 업데이트**
+4. **GitHub Actions Secrets** 설정
+   - `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_ORG_ID`
+   - `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`
+
+5. **CORS 설정 업데이트**
    - Railway의 `FRONTEND_URL`을 Vercel URL로 변경
+
+### 재배포가 필요한 경우
+
+| 변경 사항 | 배포 대상 | 방법 |
+|----------|----------|------|
+| React 컴포넌트 수정 | Frontend | `git push origin main` |
+| API 엔드포인트 수정 | Backend | `git push origin main` |
+| 환경 변수 변경 | Frontend/Backend | Vercel/Railway 대시보드에서 수정 후 재배포 |
+| Capacitor 설정 변경 | Mobile | `git push origin main` |
 
 ---
 
