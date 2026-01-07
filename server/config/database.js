@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
 /**
  * MongoDB 연결 함수
@@ -22,25 +23,27 @@ const connectDB = async () => {
 
     const conn = await mongoose.connect(mongoURI, options);
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`📦 Database: ${conn.connection.name}`);
+    logger.info('mongodb connected', {
+      host: conn.connection.host,
+      db: conn.connection.name,
+    });
 
     // 연결 이벤트 리스너
     mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
+      logger.error('mongodb connection error', { error: err.message });
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️ MongoDB disconnected');
+      logger.warn('mongodb disconnected');
     });
 
     mongoose.connection.on('reconnected', () => {
-      console.log('🔄 MongoDB reconnected');
+      logger.info('mongodb reconnected');
     });
 
     return conn;
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
+    logger.error('mongodb connection failed', { error: error.message });
     // 개발 환경에서는 프로세스를 종료하지 않고 계속 실행
     if (process.env.NODE_ENV === 'production') {
       process.exit(1);
@@ -54,9 +57,9 @@ const connectDB = async () => {
 const disconnectDB = async () => {
   try {
     await mongoose.connection.close();
-    console.log('MongoDB connection closed');
+    logger.info('mongodb connection closed');
   } catch (error) {
-    console.error('Error closing MongoDB connection:', error);
+    logger.error('error closing mongodb connection', { error: error.message });
   }
 };
 

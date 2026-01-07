@@ -383,7 +383,10 @@ io.on('connection', (socket) => {
 
   // 에러 처리
   socket.on('error', (error) => {
-    logger.error('socket error', { userId: socket.userId, error: error.message });
+    logger.error('socket error', {
+      userId: socket.userId,
+      error: error.message,
+    });
   });
 });
 

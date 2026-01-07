@@ -26,6 +26,7 @@ const routes = require('./routes');
 const http = require('http');
 const { Server } = require('socket.io');
 const logger = require('./utils/logger');
+const { connectDB } = require('./config/database');
 
 // ================== 시간대 설정 ==================
 // 한국 시간대(KST, UTC+9)로 설정
@@ -149,39 +150,47 @@ async function checkAndPublishScheduledNotices() {
   }
 }
 
-// ================== DB 연결 ==================
-const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI;
-if (!mongoURI) {
-  logger.error('MONGO_URI/MONGODB_URI not set (.env.production)');
-  process.exit(1);
-}
+// ================== DB 연결 + 서버 시작 ==================
 // const { startBackupScheduler } = require('./utils/backupScheduler');
 const { startAnnualLeaveScheduler } = require('./utils/annualLeaveScheduler');
 const { startSelfPingScheduler } = require('./utils/selfPing');
 
-mongoose
-  .connect(mongoURI)
-  .then(async () => {
-    logger.info('mongodb connected');
+async function bootstrap() {
+  await connectDB();
 
-    // 서버 시작 시 즉시 체크
-    await checkAndPublishScheduledNotices();
-    logger.info('scheduled notice initial check done');
+  // 서버 시작 시 즉시 체크
+  await checkAndPublishScheduledNotices();
+  logger.info('scheduled notice initial check done');
 
-    // 1분마다 주기적으로 체크 (60000ms = 1분)
-    setInterval(checkAndPublishScheduledNotices, 60000);
-    logger.info('scheduled notice auto-check started', { intervalMs: 60000 });
+  // 1분마다 주기적으로 체크 (60000ms = 1분)
+  setInterval(checkAndPublishScheduledNotices, 60000);
+  logger.info('scheduled notice auto-check started', { intervalMs: 60000 });
 
-    // 백업 스케줄러 시작 (비활성화 - 수동 백업만 사용)
-    // startBackupScheduler();
+  // 백업 스케줄러 시작 (비활성화 - 수동 백업만 사용)
+  // startBackupScheduler();
 
-    // 연차 만료 알림 스케줄러 시작
-    startAnnualLeaveScheduler(io);
+  // 연차 만료 알림 스케줄러 시작
+  startAnnualLeaveScheduler(io);
 
-    // Self-ping 스케줄러 시작 (환경변수에 따라 동작)
-    startSelfPingScheduler();
-  })
-  .catch((err) => logger.error('mongodb connection failed', { error: err.message }));
+  // Self-ping 스케줄러 시작 (환경변수에 따라 동작)
+  startSelfPingScheduler();
+
+  // 서버 리스닝 시작
+  server.listen(PORT, () => {
+    const publicUrl = process.env.SERVER_PUBLIC_URL || process.env.BACKEND_URL;
+    if (publicUrl) {
+      logger.info('server running', { url: publicUrl });
+    } else {
+      logger.info('server running', { port: PORT });
+    }
+    logger.info('socket.io ready');
+  });
+}
+
+bootstrap().catch((err) => {
+  logger.error('server bootstrap failed', { error: err.message });
+  process.exit(1);
+});
 
 // ================== 라우트 ==================
 app.use('/api', routes);
@@ -217,17 +226,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('❌ 클라이언트 연결 해제:', socket.id);
   });
-});
-
-// ================== 서버 시작 ==================
-server.listen(PORT, () => {
-  const publicUrl = process.env.SERVER_PUBLIC_URL || process.env.BACKEND_URL;
-  if (publicUrl) {
-    logger.info('server running', { url: publicUrl });
-  } else {
-    logger.info('server running', { port: PORT });
-  }
-  logger.info('socket.io ready');
 });
 
 // ================== Graceful Shutdown (PM2 대응) ==================
