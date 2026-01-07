@@ -8,10 +8,18 @@ const BACKEND_URL = process.env.RAILWAY_STATIC_URL
 
 /**
  * Self-ping to prevent Railway sleep
+ * Windows PC + PM2: IS_INTERNAL_SERVER=true 시 비활성화 (항상 온라인)
  */
 function performSelfPing() {
   if (process.env.NODE_ENV !== 'production') {
     console.log('⏭️  Self-ping 스킵 (개발 환경)');
+    return;
+  }
+
+  // Windows PC 사내 서버(IS_INTERNAL_SERVER=true)에서는 self-ping 불필요
+  // Railway에서는 이 환경변수가 없으므로 self-ping 계속 작동
+  if (process.env.IS_INTERNAL_SERVER === 'true') {
+    console.log('⏭️  Self-ping 스킵 (사내 PC 서버 - 항상 온라인)');
     return;
   }
 
