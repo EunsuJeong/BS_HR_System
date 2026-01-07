@@ -41,7 +41,9 @@ const server = http.createServer(app);
 // Socket.io CORS 설정 (환경변수 기반)
 const socketAllowedOrigins = [
   process.env.FRONTEND_URL,
-  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()) : []),
+  ...(process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+    : []),
 ].filter(Boolean);
 
 const io = new Server(server, {
@@ -69,7 +71,9 @@ if (!PORT) {
 // CORS 설정 - 환경변수 기반
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()) : []),
+  ...(process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+    : []),
 ].filter(Boolean);
 
 app.use(
@@ -147,7 +151,9 @@ async function checkAndPublishScheduledNotices() {
 // ================== DB 연결 ==================
 const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI;
 if (!mongoURI) {
-  console.error('❌ 환경변수 MONGO_URI 또는 MONGODB_URI가 설정되지 않았습니다 (.env.production).');
+  console.error(
+    '❌ 환경변수 MONGO_URI 또는 MONGODB_URI가 설정되지 않았습니다 (.env.production).'
+  );
   process.exit(1);
 }
 // const { startBackupScheduler } = require('./utils/backupScheduler');
@@ -186,6 +192,15 @@ app.get('/', (req, res) =>
   res.send('부성스틸 AI 인사관리 서버 정상 동작 중 ✅')
 );
 
+// 헬스 체크 (서버 생존 여부 확인용)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Health check 엔드포인트
 app.get('/api/health', (req, res) => {
   res.json({
@@ -214,4 +229,36 @@ server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
   }
   console.log(`🔌 Socket.io ready for real-time updates`);
+});
+
+// ================== Graceful Shutdown (PM2 대응) ==================
+function gracefulShutdown(signal) {
+  console.log(`\n📴 Received ${signal}. Shutting down gracefully...`);
+
+  // 더 이상 신규 요청을 받지 않도록 서버 닫기
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+
+    // MongoDB 연결 종료
+    mongoose.connection
+      .close()
+      .then(() => {
+        console.log('✅ MongoDB connection closed');
+        process.exit(0);
+      })
+      .catch((err) => {
+        console.error('❌ Error closing MongoDB connection:', err);
+        process.exit(1);
+      });
+  });
+
+  // 타임아웃 후 강제 종료 (PM2 등 신호 재전송 대비)
+  setTimeout(() => {
+    console.error('⏰ Shutdown timeout. Forcing exit.');
+    process.exit(1);
+  }, 10000).unref();
+}
+
+['SIGTERM', 'SIGINT'].forEach((signal) => {
+  process.on(signal, () => gracefulShutdown(signal));
 });

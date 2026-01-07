@@ -22,8 +22,12 @@ require('dotenv').config(envPath ? { path: envPath } : {});
 
 // 스케줄러
 const { startBackupScheduler } = require('./utils/backupScheduler');
-const { startDataRetentionScheduler } = require('./utils/dataRetentionScheduler');
-const { startAnnualLeaveExpiryScheduler } = require('./utils/annualLeaveScheduler');
+const {
+  startDataRetentionScheduler,
+} = require('./utils/dataRetentionScheduler');
+const {
+  startAnnualLeaveExpiryScheduler,
+} = require('./utils/annualLeaveScheduler');
 const { startSelfPingScheduler } = require('./utils/selfPing');
 
 const app = express();
@@ -34,7 +38,9 @@ app.use(
   cors({
     origin: [
       process.env.FRONTEND_URL,
-      ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()) : []),
+      ...(process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+        : []),
     ].filter(Boolean),
     credentials: true,
   })
@@ -47,7 +53,9 @@ const io = new Server(server, {
   cors: {
     origin: [
       process.env.FRONTEND_URL,
-      ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()) : []),
+      ...(process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+        : []),
     ].filter(Boolean),
     methods: ['GET', 'POST'],
     credentials: true,
@@ -57,7 +65,9 @@ const io = new Server(server, {
 // JWT 시크릿 키 (실제 환경에서는 환경변수로 관리)
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('환경변수 JWT_SECRET이 설정되지 않았습니다 (.env.production).');
+  throw new Error(
+    '환경변수 JWT_SECRET이 설정되지 않았습니다 (.env.production).'
+  );
 }
 
 // 실시간 동기화 이벤트 타입 정의
@@ -370,6 +380,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// 기본 헬스 체크 (서버 생존 여부 확인용)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/api/connected-users', (req, res) => {
   const users = Array.from(connectedUsers.entries()).map(([userId, data]) => ({
     userId,
@@ -517,6 +536,31 @@ server.listen(PORT, () => {
     console.log(`🚀 HR 시스템 실시간 서버가 포트 ${PORT}에서 실행중입니다.`);
   }
   console.log(`🔄 실시간 대체공휴일 업데이트 시스템 활성화됨`);
+
+  // Graceful shutdown hooks (PM2 대응)
+  function gracefulShutdown(signal) {
+    console.log(`\n📴 Received ${signal}. Shutting down gracefully...`);
+
+    // 소켓 먼저 닫기
+    io.close(() => {
+      console.log('✅ Socket.io server closed');
+    });
+
+    server.close(() => {
+      console.log('✅ HTTP server closed');
+      process.exit(0);
+    });
+
+    // 타임아웃 후 강제 종료
+    setTimeout(() => {
+      console.error('⏰ Shutdown timeout. Forcing exit.');
+      process.exit(1);
+    }, 10000).unref();
+  }
+
+  ['SIGTERM', 'SIGINT'].forEach((signal) => {
+    process.on(signal, () => gracefulShutdown(signal));
+  });
 
   // 스케줄러 시작
   console.log('\n⏰ 스케줄러 초기화 중...');

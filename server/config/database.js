@@ -8,7 +8,9 @@ const connectDB = async () => {
     // 두 환경변수 모두 지원: MONGO_URI(신규) / MONGODB_URI(기존)
     const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI;
     if (!mongoURI) {
-      throw new Error('환경변수 MONGO_URI 또는 MONGODB_URI가 설정되지 않았습니다 (.env.production).');
+      throw new Error(
+        '환경변수 MONGO_URI 또는 MONGODB_URI가 설정되지 않았습니다 (.env.production).'
+      );
     }
 
     const options = {
