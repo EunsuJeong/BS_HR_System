@@ -259,7 +259,9 @@ function gracefulShutdown(signal) {
   // 타임아웃 후 강제 종료 (PM2 등 신호 재전송 대비)
   const shutdownTimeout = Number(process.env.SHUTDOWN_TIMEOUT_MS) || 10000;
   setTimeout(() => {
-    logger.error('shutdown timeout forcing exit', { timeoutMs: shutdownTimeout });
+    logger.error('shutdown timeout forcing exit', {
+      timeoutMs: shutdownTimeout,
+    });
     process.exit(1);
   }, shutdownTimeout).unref();
 }

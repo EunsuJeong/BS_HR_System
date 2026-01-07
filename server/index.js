@@ -220,7 +220,7 @@ io.on('connection', (socket) => {
         subscriberCount: roomSubscriptions.get(room).size,
       });
     } catch (error) {
-      console.error('구독 오류:', error);
+      logger.error('구독 오류', { error: error.message });
       socket.emit('attendance:error', {
         message: '구독 중 오류가 발생했습니다.',
         error: error.message,
@@ -246,7 +246,7 @@ io.on('connection', (socket) => {
 
       logger.info('room unsubscribed', { userId: socket.userId, room });
     } catch (error) {
-      console.error('구독 해제 오류:', error);
+      logger.error('구독 해제 오류', { error: error.message });
     }
   });
 
@@ -288,7 +288,7 @@ io.on('connection', (socket) => {
 
       logger.info('attendance update broadcasted', { room });
     } catch (error) {
-      console.error('근태 데이터 업데이트 오류:', error);
+      logger.error('근태 데이터 업데이트 오류', { error: error.message });
       socket.emit('attendance:error', {
         message: '근태 데이터 업데이트 중 오류가 발생했습니다.',
         error: error.message,
@@ -335,7 +335,7 @@ io.on('connection', (socket) => {
 
       logger.info('bulk update broadcasted', { room });
     } catch (error) {
-      console.error('대량 데이터 업데이트 오류:', error);
+      logger.error('대량 데이터 업데이트 오류', { error: error.message });
       socket.emit('bulk_import:error', {
         message: '대량 데이터 업데이트 중 오류가 발생했습니다.',
         error: error.message,
@@ -355,7 +355,7 @@ io.on('connection', (socket) => {
         updatedAt: new Date(),
       });
     } catch (error) {
-      console.error('직원 상태 업데이트 오류:', error);
+      logger.error('직원 상태 업데이트 오류', { error: error.message });
     }
   });
 
@@ -576,7 +576,9 @@ server.listen(PORT, () => {
     // 타임아웃 후 강제 종료
     const shutdownTimeout = Number(process.env.SHUTDOWN_TIMEOUT_MS) || 10000;
     setTimeout(() => {
-      logger.error('shutdown timeout forcing exit', { timeoutMs: shutdownTimeout });
+      logger.error('shutdown timeout forcing exit', {
+        timeoutMs: shutdownTimeout,
+      });
       process.exit(1);
     }, shutdownTimeout).unref();
   }
