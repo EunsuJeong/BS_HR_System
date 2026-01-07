@@ -60,8 +60,9 @@ railway up
 ### 배포 시 주의사항
 
 1. **환경 변수 확인**
-   - Vercel: `REACT_APP_API_URL`, `REACT_APP_SOCKET_URL`
-   - Railway: `MONGODB_URI`, `PORT`, `OPENAI_API_KEY`, `FRONTEND_URL`
+   - Vercel: `REACT_APP_API_BASE_URL`, `REACT_APP_SOCKET_URL`
+   - Railway: `MONGO_URI`, `PORT`, `OPENAI_API_KEY`, `FRONTEND_URL`
+   - **보안:** OpenAI API 키는 **절대로** 프론트엔드에 노출하지 마세요. `OPENAI_API_KEY`는 백엔드(Railway)에만 보관하고, 프론트엔드는 백엔드를 통해 AI 기능을 호출해야 합니다.
 
 2. **CORS 설정**
    - `server/server.js`에서 `FRONTEND_URL` 확인
