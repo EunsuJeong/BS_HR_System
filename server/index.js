@@ -574,23 +574,29 @@ server.listen(PORT, () => {
     });
 
     // 타임아웃 후 강제 종료
+    const shutdownTimeout = Number(process.env.SHUTDOWN_TIMEOUT_MS) || 10000;
     setTimeout(() => {
-      logger.error('shutdown timeout forcing exit');
+      logger.error('shutdown timeout forcing exit', { timeoutMs: shutdownTimeout });
       process.exit(1);
-    }, 10000).unref();
+    }, shutdownTimeout).unref();
   }
 
   ['SIGTERM', 'SIGINT'].forEach((signal) => {
     process.on(signal, () => gracefulShutdown(signal));
   });
 
-  // 스케줄러 시작
-  logger.info('schedulers initializing');
-  startBackupScheduler(); // 자동 백업 비활성화됨 (GitHub Actions 사용)
-  startDataRetentionScheduler();
-  startAnnualLeaveExpiryScheduler();
-  startSelfPingScheduler(); // Railway sleep 방지 (매일 오전 5시)
-  logger.info('schedulers started');
+  // PM2 클러스터 모드에서 스케줄러는 첫 번째 인스턴스에서만 실행
+  const instanceId = process.env.NODE_APP_INSTANCE || '0';
+  if (instanceId === '0') {
+    logger.info('schedulers initializing', { instanceId });
+    startBackupScheduler(); // 자동 백업 비활성화됨 (GitHub Actions 사용)
+    startDataRetentionScheduler();
+    startAnnualLeaveExpiryScheduler();
+    startSelfPingScheduler(); // Railway sleep 방지 (매일 오전 5시)
+    logger.info('schedulers started');
+  } else {
+    logger.info('skipping schedulers on worker instance', { instanceId });
+  }
 });
 
 module.exports = { app, server, io };

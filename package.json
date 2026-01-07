@@ -49,7 +49,7 @@
   },
   "scripts": {
     "start:mongodb": "node start-mongodb.js",
-    "start": "concurrently \"npm run start:mongodb\" \"nodemon server/server.js\" \"craco start\"",
+    "start": "concurrently \"nodemon server/server.js\" \"craco start\"",
     "start:frontend": "craco start",
     "build": "craco build",
     "test": "craco test",

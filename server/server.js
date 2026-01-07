@@ -169,11 +169,18 @@ async function bootstrap() {
   // 백업 스케줄러 시작 (비활성화 - 수동 백업만 사용)
   // startBackupScheduler();
 
-  // 연차 만료 알림 스케줄러 시작
-  startAnnualLeaveScheduler(io);
+  // PM2 클러스터 모드에서 스케줄러는 첫 번째 인스턴스에서만 실행
+  const instanceId = process.env.NODE_APP_INSTANCE || '0';
+  if (instanceId === '0') {
+    logger.info('initializing schedulers', { instanceId });
+    // 연차 만료 알림 스케줄러 시작
+    startAnnualLeaveScheduler(io);
 
-  // Self-ping 스케줄러 시작 (환경변수에 따라 동작)
-  startSelfPingScheduler();
+    // Self-ping 스케줄러 시작 (환경변수에 따라 동작)
+    startSelfPingScheduler();
+  } else {
+    logger.info('skipping schedulers on worker instance', { instanceId });
+  }
 
   // 서버 리스닝 시작
   server.listen(PORT, () => {
@@ -221,10 +228,10 @@ app.get('/api/health', (req, res) => {
 
 // ================== Socket.io 연결 관리 ==================
 io.on('connection', (socket) => {
-  console.log('✅ 클라이언트 연결:', socket.id);
+  logger.info('socket.io client connected', { socketId: socket.id });
 
   socket.on('disconnect', () => {
-    console.log('❌ 클라이언트 연결 해제:', socket.id);
+    logger.info('socket.io client disconnected', { socketId: socket.id });
   });
 });
 
@@ -250,10 +257,11 @@ function gracefulShutdown(signal) {
   });
 
   // 타임아웃 후 강제 종료 (PM2 등 신호 재전송 대비)
+  const shutdownTimeout = Number(process.env.SHUTDOWN_TIMEOUT_MS) || 10000;
   setTimeout(() => {
-    logger.error('shutdown timeout forcing exit');
+    logger.error('shutdown timeout forcing exit', { timeoutMs: shutdownTimeout });
     process.exit(1);
-  }, 10000).unref();
+  }, shutdownTimeout).unref();
 }
 
 ['SIGTERM', 'SIGINT'].forEach((signal) => {
