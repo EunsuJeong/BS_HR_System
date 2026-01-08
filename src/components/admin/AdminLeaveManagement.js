@@ -1121,7 +1121,15 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">사용일수</th>
+                    <th className="text-center py-1 px-2">
+                      사용일수
+                      <button
+                        onClick={() => handleLeaveSort('leaveDays')}
+                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        ▼
+                      </button>
+                    </th>
                     <th className="text-center py-1 px-2">
                       유형
                       <button

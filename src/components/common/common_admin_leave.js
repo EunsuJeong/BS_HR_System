@@ -1555,6 +1555,28 @@ export const sortLeaveRequests = (
         aVal = a.status;
         bVal = b.status;
         break;
+      case 'leaveDays':
+        // 사용일수 계산: 연차는 실제 일수, 반차는 0.5
+        if (a.type === '연차') {
+          const aStart = new Date(a.startDate);
+          const aEnd = new Date(a.endDate);
+          aVal = Math.abs((aEnd - aStart) / (1000 * 60 * 60 * 24)) + 1;
+        } else if (a.type && a.type.startsWith('반차')) {
+          aVal = 0.5;
+        } else {
+          aVal = 0;
+        }
+
+        if (b.type === '연차') {
+          const bStart = new Date(b.startDate);
+          const bEnd = new Date(b.endDate);
+          bVal = Math.abs((bEnd - bStart) / (1000 * 60 * 60 * 24)) + 1;
+        } else if (b.type && b.type.startsWith('반차')) {
+          bVal = 0.5;
+        } else {
+          bVal = 0;
+        }
+        break;
       default:
         return 0;
     }
