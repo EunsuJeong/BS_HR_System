@@ -1039,12 +1039,15 @@ const AdminEmployeeManagement = ({
                     <td className="text-center py-1 px-2 text-gray-600 text-xs">
                       {emp.lastLogin
                         ? (() => {
+                            // DB에서 가져온 UTC 시간을 KST(Asia/Seoul)로 변환하여 표시
                             const date = new Date(emp.lastLogin);
-                            const yy = String(date.getFullYear()).slice(-2);
-                            const mm = String(date.getMonth() + 1).padStart(2, '0');
-                            const dd = String(date.getDate()).padStart(2, '0');
-                            const hh = String(date.getHours()).padStart(2, '0');
-                            const min = String(date.getMinutes()).padStart(2, '0');
+                            // toLocaleString으로 KST 기준 시간 문자열 생성 후 다시 Date로 파싱
+                            const kstDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+                            const yy = String(kstDate.getFullYear()).slice(-2);
+                            const mm = String(kstDate.getMonth() + 1).padStart(2, '0');
+                            const dd = String(kstDate.getDate()).padStart(2, '0');
+                            const hh = String(kstDate.getHours()).padStart(2, '0');
+                            const min = String(kstDate.getMinutes()).padStart(2, '0');
                             return `${yy}-${mm}-${dd} ${hh}:${min}`;
                           })()
                         : '-'}

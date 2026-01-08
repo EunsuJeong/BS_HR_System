@@ -92,6 +92,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
                 phone: savedEmployee.phone || '',
                 address: savedEmployee.address || '',
                 password: updatedData.password || emp.password,
+                lastLogin: savedEmployee.lastLogin, // 마지막 로그인 시각
               }
             : emp
         );
@@ -251,6 +252,10 @@ export const useEmployeeManagement = (dependencies = {}) => {
           case 'password':
             aVal = a.password || '';
             bVal = b.password || '';
+            break;
+          case 'lastLogin':
+            aVal = a.lastLogin ? new Date(a.lastLogin) : new Date(0);
+            bVal = b.lastLogin ? new Date(b.lastLogin) : new Date(0);
             break;
           default:
             return 0;
@@ -509,6 +514,10 @@ export const sortEmployees = (
       case 'password':
         aVal = a.password || '';
         bVal = b.password || '';
+        break;
+      case 'lastLogin':
+        aVal = a.lastLogin ? new Date(a.lastLogin) : new Date(0);
+        bVal = b.lastLogin ? new Date(b.lastLogin) : new Date(0);
         break;
       default:
         return 0;

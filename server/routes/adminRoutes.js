@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const moment = require('moment-timezone');
 const Admin = require('../models/hr/admins');
 
 // ==========================================
@@ -200,8 +201,8 @@ router.post('/admins/login', async (req, res) => {
       });
     }
 
-    // ✅ 마지막 로그인 시간 업데이트
-    admin.lastLogin = new Date();
+    // ✅ 마지막 로그인 시간 업데이트 (KST 기준)
+    admin.lastLogin = moment.tz('Asia/Seoul').toDate();
     await admin.save();
 
     console.log(`✅ [Admins API] 로그인 성공: ${admin.name}`);

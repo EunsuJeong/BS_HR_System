@@ -20,10 +20,20 @@ const employeeSchema = new mongoose.Schema(
     leaveDate: Date,
     phone: String,
     address: String,
-    leaveEntitled: Number, // 부여된 연차
-    leaveUsed: Number,     // 사용한 연차 (관리자가 직접 설정한 기준값, 기본값 0)
+
+    // 연차 관련 필드
+    leaveEntitled: Number,      // 부여된 연차
+    leaveUsed: Number,          // 사용한 연차 (관리자가 직접 설정한 기준값, 기본값 0)
+    annualLeaveStart: String,   // 연차 시작일 (YYYY-MM-DD)
+    annualLeaveEnd: String,     // 연차 종료일 (YYYY-MM-DD)
+    baseAnnual: Number,         // 기본 연차
+    carryOverLeave: Number,     // 이월 연차
+    remainAnnual: Number,       // 남은 연차
+    totalAnnual: Number,        // 총 연차
+    usedAnnual: Number,         // 사용한 연차 (계산값)
+
     evalScore: Number,
-    lastLogin: Date, // 마지막 로그인 시간
+    lastLogin: Date, // 마지막 로그인 시간 (KST)
     createdAt: { type: Date, default: Date.now },
   },
   { collection: 'employees' }

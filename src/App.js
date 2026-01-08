@@ -641,6 +641,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              lastLogin: emp.lastLogin, // 마지막 로그인 시각
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
               // ✅ 호환성을 위한 매핑 필드
@@ -712,6 +713,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              lastLogin: emp.lastLogin, // 마지막 로그인 시각
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
               // ✅ 호환성을 위한 매핑 필드
@@ -3203,6 +3205,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              lastLogin: emp.lastLogin, // 마지막 로그인 시각
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
               // ✅ 호환성을 위한 매핑 필드
@@ -3248,6 +3251,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              lastLogin: emp.lastLogin, // 마지막 로그인 시각
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
               // ✅ 호환성을 위한 매핑 필드
@@ -3293,6 +3297,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              lastLogin: emp.lastLogin, // 마지막 로그인 시각
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
               // ✅ 호환성을 위한 매핑 필드
@@ -4886,6 +4891,7 @@ const HRManagementSystem = () => {
               payType: emp.salaryType,
               status: emp.status,
               address: emp.address,
+              lastLogin: emp.lastLogin, // 마지막 로그인 시각
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
               leaveUsed: emp.leaveUsed,
               // ✅ 호환성을 위한 매핑 필드
