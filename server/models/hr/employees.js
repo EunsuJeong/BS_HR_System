@@ -23,6 +23,7 @@ const employeeSchema = new mongoose.Schema(
     leaveEntitled: Number, // 부여된 연차
     leaveUsed: Number,     // 사용한 연차 (관리자가 직접 설정한 기준값, 기본값 0)
     evalScore: Number,
+    lastLogin: Date, // 마지막 로그인 시간
     createdAt: { type: Date, default: Date.now },
   },
   { collection: 'employees' }

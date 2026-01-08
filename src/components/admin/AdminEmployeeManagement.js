@@ -618,6 +618,23 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
+                  <th className="text-center py-2 px-1">
+                    마지막 로그인
+                    <button
+                      onClick={() => handleSort('lastLogin')}
+                      className={`ml-1 text-xs hover:text-gray-700 ${
+                        employeeSortField === 'lastLogin'
+                          ? 'text-blue-600'
+                          : 'text-gray-500'
+                      }`}
+                    >
+                      {employeeSortField === 'lastLogin'
+                        ? employeeSortOrder === 'asc'
+                          ? '▲'
+                          : '▼'
+                        : '▼'}
+                    </button>
+                  </th>
                   <th className="text-center py-2 px-1">관리</th>
                 </tr>
               </thead>
@@ -1019,6 +1036,19 @@ const AdminEmployeeManagement = ({
                     ) : (
                       <td className="text-center py-1 px-2">****</td>
                     )}
+                    <td className="text-center py-1 px-2 text-gray-600 text-xs">
+                      {emp.lastLogin
+                        ? (() => {
+                            const date = new Date(emp.lastLogin);
+                            const yy = String(date.getFullYear()).slice(-2);
+                            const mm = String(date.getMonth() + 1).padStart(2, '0');
+                            const dd = String(date.getDate()).padStart(2, '0');
+                            const hh = String(date.getHours()).padStart(2, '0');
+                            const min = String(date.getMinutes()).padStart(2, '0');
+                            return `${yy}-${mm}-${dd} ${hh}:${min}`;
+                          })()
+                        : '-'}
+                    </td>
                     <td className="text-center py-1 px-2">
                       <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap justify-center">
                         {editingEmpId === emp.id ? (

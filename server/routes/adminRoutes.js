@@ -200,6 +200,10 @@ router.post('/admins/login', async (req, res) => {
       });
     }
 
+    // ✅ 마지막 로그인 시간 업데이트
+    admin.lastLogin = new Date();
+    await admin.save();
+
     console.log(`✅ [Admins API] 로그인 성공: ${admin.name}`);
 
     // 비밀번호 제외하고 반환

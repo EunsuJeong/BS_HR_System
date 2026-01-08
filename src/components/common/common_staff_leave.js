@@ -197,15 +197,31 @@ export const useStaffLeave = (dependencies = {}) => {
       days = 1;
     }
 
-    // 연차가 차감되는 유형에 대해서만 잔여 연차 확인
-    if (
-      days > 0 &&
-      remainAnnualLeave < days
-    ) {
+    // ✅ 대기 상태의 연차도 차감해서 실제 사용 가능한 연차 계산
+    const pendingLeave = leaveRequests
+      .filter(
+        (lr) =>
+          lr.employeeId === currentUser.id &&
+          lr.status === '대기' &&
+          (lr.type === '연차' || lr.type.startsWith('반차'))
+      )
+      .reduce((sum, lr) => {
+        if (lr.type === '연차') {
+          return sum + (lr.requestedDays || lr.days || 1);
+        } else if (lr.type.startsWith('반차')) {
+          return sum + 0.5;
+        }
+        return sum;
+      }, 0);
+
+    const availableLeave = remainAnnualLeave - pendingLeave;
+
+    // 연차가 차감되는 유형에 대해서만 잔여 연차 확인 (대기 상태도 포함)
+    if (days > 0 && availableLeave < days) {
       setLeaveFormError(
         getText(
-          '잔여 연차가 부족합니다.',
-          'Insufficient remaining annual leave.'
+          `잔여 연차가 부족합니다. (사용 가능: ${availableLeave}일, 신청: ${days}일)`,
+          `Insufficient remaining annual leave. (Available: ${availableLeave} days, Requested: ${days} days)`
         )
       );
       return;

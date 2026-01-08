@@ -29,6 +29,7 @@ const adminSchema = new mongoose.Schema(
         'system',
       ],
     },
+    lastLogin: Date, // 마지막 로그인 시간
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },

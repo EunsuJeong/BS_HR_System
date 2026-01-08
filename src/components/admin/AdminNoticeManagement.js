@@ -283,13 +283,15 @@ const AdminNoticeManagement = ({
           <div className="flex-1 overflow-y-auto">
             <table className="w-full text-sm table-fixed">
               <colgroup>
-                <col style={{ width: '180px' }} />
+                <col style={{ width: '150px' }} />
+                <col style={{ width: '80px' }} />
                 <col />
                 <col style={{ width: '150px' }} />
               </colgroup>
               <thead className="bg-gray-100">
                 <tr>
                   <th className="text-center py-2 px-1">날 짜</th>
+                  <th className="text-center py-2 px-1">조회수</th>
                   <th className="text-center py-2 px-1">제 목</th>
                   <th className="text-center py-2 px-1">관 리</th>
                 </tr>
@@ -312,6 +314,9 @@ const AdminNoticeManagement = ({
                             (n.createdAt
                               ? new Date(n.createdAt).toISOString().slice(0, 10)
                               : '')}
+                        </td>
+                        <td className="text-center py-2 px-1 text-gray-400 text-xs">
+                          👁 {n.viewCount || 0}
                         </td>
                         <td
                           className="text-left py-2 px-1 cursor-pointer hover:text-blue-600 hover:underline font-medium"

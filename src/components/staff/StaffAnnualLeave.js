@@ -83,7 +83,8 @@ const StaffAnnualLeave = ({
   };
 
   // 관리자 모드의 연차 관리 데이터와 동기화된 정보 사용
-  const totalAnnualLeave = currentUser?.totalAnnualLeave || 0;
+  // ✅ 총연차는 기본연차만 표시 (이월연차 제외)
+  const totalAnnualLeave = currentUser?.baseAnnual || currentUser?.totalAnnualLeave || 0;
   const usedAnnualLeave = currentUser?.usedAnnualLeave || 0;
   const remainAnnualLeave = currentUser?.remainingAnnualLeave || 0;
 

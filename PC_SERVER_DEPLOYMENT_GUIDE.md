@@ -1,5 +1,7 @@
 # 🖥️ Windows PC + PM2 배포 가이드
 
+브랜치: pc-server-no-railway (Railway 의존성 제거, 사내 서버 단독 운영)
+
 부성스틸 AI 인사관리 시스템을 Windows 사내 PC에서 PM2를 사용해 운영하는 완벽한 가이드입니다.
 
 ---
@@ -7,12 +9,14 @@
 ## 📋 사전 준비
 
 ### 필수 설치 항목
+
 - [ ] Node.js 18.x 이상 ([https://nodejs.org](https://nodejs.org))
 - [ ] npm (Node.js 설치 시 자동 포함)
 - [ ] Git (버전 관리용)
 - [ ] PM2 (`npm install -g pm2`)
 
 ### 확인 사항
+
 ```bash
 # 터미널에서 확인
 node --version          # v18.x.x 이상
@@ -81,6 +85,7 @@ HOLIDAY_API_KEY=your-key-here
 ```
 
 **주의사항**:
+
 - `MONGO_URI`의 비밀번호에 특수문자가 있으면 URL 인코딩 필요 (@→%40, :→%3A)
 - `JWT_SECRET`은 최소 32자 이상의 강력한 랜덤 문자열 (온라인 생성 도구 사용: https://randomkeygen.com)
 - `.env` 파일은 `.gitignore`에 포함되어 있으므로 Git에 커밋되지 않음
@@ -175,18 +180,18 @@ DISABLE_ESLINT_PLUGIN=true
 
 ### 기본 명령
 
-| 명령 | 설명 |
-|-----|------|
-| `pm2 start pm2.config.js` | 설정 파일로 시작 |
-| `pm2 list` | 실행 중인 프로세스 목록 |
-| `pm2 stop bs-hr-backend` | 프로세스 중지 |
-| `pm2 restart bs-hr-backend` | 프로세스 재시작 |
-| `pm2 reload bs-hr-backend` | 무중단 재시작 (클러스터 모드) |
-| `pm2 delete bs-hr-backend` | 프로세스 삭제 |
-| `pm2 logs bs-hr-backend` | 로그 확인 |
-| `pm2 monit` | 모니터링 대시보드 (실시간 CPU/메모리) |
-| `pm2 save` | 설정 저장 |
-| `pm2 startup` | 자동 시작 설정 |
+| 명령                        | 설명                                  |
+| --------------------------- | ------------------------------------- |
+| `pm2 start pm2.config.js`   | 설정 파일로 시작                      |
+| `pm2 list`                  | 실행 중인 프로세스 목록               |
+| `pm2 stop bs-hr-backend`    | 프로세스 중지                         |
+| `pm2 restart bs-hr-backend` | 프로세스 재시작                       |
+| `pm2 reload bs-hr-backend`  | 무중단 재시작 (클러스터 모드)         |
+| `pm2 delete bs-hr-backend`  | 프로세스 삭제                         |
+| `pm2 logs bs-hr-backend`    | 로그 확인                             |
+| `pm2 monit`                 | 모니터링 대시보드 (실시간 CPU/메모리) |
+| `pm2 save`                  | 설정 저장                             |
+| `pm2 startup`               | 자동 시작 설정                        |
 
 ### 로그 관리
 
@@ -349,19 +354,23 @@ pm2 restart bs-hr-backend
 ## 🔐 보안 권장사항
 
 ### 1. 환경 변수 보안
+
 - [ ] `.env` 파일 권한 설정 (소유자만 읽을 수 있도록)
 - [ ] 강력한 JWT_SECRET 사용 (최소 32자)
 - [ ] 정기적으로 API 키 갱신
 
 ### 2. 방화벽 설정
+
 - [ ] 필요한 포트(5000)만 개방
 - [ ] 사내 IP 대역에서만 접근 제한 (선택)
 
 ### 3. MongoDB 보안
+
 - [ ] 강력한 비밀번호 사용
 - [ ] Network Access에서 IP 제한 (선택)
 
 ### 4. 정기 점검
+
 - [ ] 로그 모니터링
 - [ ] 성능 모니터링 (CPU, 메모리)
 - [ ] 정기 백업
@@ -370,15 +379,15 @@ pm2 restart bs-hr-backend
 
 ## 📌 Railway에서 이전했을 때 체크리스트
 
-| 항목 | 상태 | 비고 |
-|-----|------|------|
-| IS_INTERNAL_SERVER=true | ✅ | .env 설정 필수 |
-| .env 파일 생성 | ✅ | 실제 값으로 설정 |
-| MongoDB 연결 확인 | ✅ | MONGO_URI 테스트 |
-| PM2 시작됨 | ✅ | pm2 list 확인 |
-| 방화벽 개방됨 | ✅ | 포트 5000 |
-| 프론트엔드 URL 업데이트 | ✅ | Vercel REACT_APP_API_BASE_URL |
-| 헬스 체크 성공 | ✅ | /api/health 응답 |
+| 항목                    | 상태 | 비고                          |
+| ----------------------- | ---- | ----------------------------- |
+| IS_INTERNAL_SERVER=true | ✅   | .env 설정 필수                |
+| .env 파일 생성          | ✅   | 실제 값으로 설정              |
+| MongoDB 연결 확인       | ✅   | MONGO_URI 테스트              |
+| PM2 시작됨              | ✅   | pm2 list 확인                 |
+| 방화벽 개방됨           | ✅   | 포트 5000                     |
+| 프론트엔드 URL 업데이트 | ✅   | Vercel REACT_APP_API_BASE_URL |
+| 헬스 체크 성공          | ✅   | /api/health 응답              |
 
 ---
 
@@ -448,6 +457,7 @@ pm2 logs bs-hr-backend --err
 **성공적인 배포를 기원합니다! 🚀**
 
 질문이나 문제가 있으면 로그를 먼저 확인하세요:
+
 ```bash
 pm2 logs bs-hr-backend
 ```

@@ -15,6 +15,13 @@ export const NoticeAPI = {
   // 공지사항 삭제
   delete: async (noticeId) => api.del('/communication/notices/' + noticeId),
 
+  // 조회수 증가 (일반직원만 카운트)
+  incrementViewCount: async (noticeId, employeeId, isAdmin = false) =>
+    api.post('/communication/notices/' + noticeId + '/view', {
+      employeeId,
+      isAdmin,
+    }),
+
   // 파일 업로드 (단일)
   uploadFile: async (file) => {
     const formData = new FormData();

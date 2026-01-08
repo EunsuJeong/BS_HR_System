@@ -6,6 +6,7 @@ import {
   getFileIcon,
   downloadFile,
 } from '../common/common_staff_notice';
+import { NoticeAPI } from '../../api/communication';
 
 /**
  * STAFF ② 공지사항 컴포넌트
@@ -14,6 +15,7 @@ import {
 const StaffNotice = ({
   currentUser,
   notices,
+  setNotices,
   getText,
   devLog,
   readAnnouncements,
@@ -27,12 +29,55 @@ const StaffNotice = ({
   const [noticePage, setNoticePage] = useState(1);
   const noticeScrollRef = useRef(null);
 
+  // 조회수가 이미 증가된 공지사항 ID를 추적 (중복 방지)
+  const viewedNoticesRef = useRef(new Set());
+
   // 팝업이 열리거나 페이지가 변경될 때 스크롤을 맨 위로
   useEffect(() => {
     if (showNoticePopup && noticeScrollRef.current) {
       noticeScrollRef.current.scrollTop = 0;
     }
   }, [showNoticePopup, noticePage]);
+
+  // 조회수 증가 처리 (1회만 실행)
+  const handleIncrementViewCount = async (noticeId) => {
+    // 이미 조회수가 증가된 공지사항이면 스킵
+    if (viewedNoticesRef.current.has(noticeId)) {
+      return;
+    }
+
+    try {
+      const employeeId = currentUser?.id || currentUser?.employeeId;
+      const isAdmin = currentUser?.role === 'admin' || currentUser?.isAdmin;
+
+      if (!employeeId) {
+        return;
+      }
+
+      // API 호출
+      const result = await NoticeAPI.incrementViewCount(
+        noticeId,
+        employeeId,
+        isAdmin
+      );
+
+      // 중복 방지를 위해 Set에 추가
+      viewedNoticesRef.current.add(noticeId);
+
+      // 로컬 state 업데이트 (즉시 UI 반영)
+      if (setNotices && result?.viewCount !== undefined) {
+        setNotices((prev) =>
+          prev.map((n) =>
+            n.id === noticeId || n._id === noticeId
+              ? { ...n, viewCount: result.viewCount }
+              : n
+          )
+        );
+      }
+    } catch (error) {
+      // 에러 무시 (프로덕션 환경 등)
+    }
+  };
 
   return (
     <>
@@ -76,6 +121,10 @@ const StaffNotice = ({
                       if (isUnread) {
                         markNoticeAsRead(notice.id);
                       }
+                      // 조회수 증가 (첫 펼침 시에만)
+                      if (!expandedNotices.has(notice.id)) {
+                        handleIncrementViewCount(notice.id);
+                      }
                       toggleNotice(notice.id);
                     }}
                     className="flex items-center justify-between p-2 hover:bg-blue-50 rounded-lg cursor-pointer"
@@ -97,6 +146,9 @@ const StaffNotice = ({
                       )}
                     </div>
                     <div className="text-2xs flex items-center ml-2">
+                      <span className="text-gray-400 mr-1.5">
+                        👁 {notice.viewCount || 0}
+                      </span>
                       <span className="text-gray-500 mr-1">{notice.date}</span>
                       <span
                         className={`transform transition-transform duration-200 ${
@@ -164,7 +216,10 @@ const StaffNotice = ({
                                     </div>
                                     {fileUrl && (
                                       <a
-                                        href={`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/communication/download/${fileUrl
+                                        href={`${
+                                          process.env.REACT_APP_API_BASE_URL ||
+                                          'http://localhost:5000/api'
+                                        }/communication/download/${fileUrl
                                           .split('/')
                                           .pop()}`}
                                         download={fileName}
@@ -238,6 +293,8 @@ const StaffNotice = ({
                             if (!readAnnouncements.has(notice.id)) {
                               markNoticeAsRead(notice.id);
                             }
+                            // 조회수 증가 (첫 조회 시에만)
+                            handleIncrementViewCount(notice.id);
                             setSelectedNotice(notice);
                           }}
                           className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
@@ -258,9 +315,12 @@ const StaffNotice = ({
                               </span>
                             )}
                           </div>
-                          <span className="text-2xs text-gray-500 ml-4">
-                            {notice.date}
-                          </span>
+                          <div className="text-2xs flex items-center ml-4">
+                            <span className="text-gray-400 mr-2">
+                              👁 {notice.viewCount || 0}
+                            </span>
+                            <span className="text-gray-500">{notice.date}</span>
+                          </div>
                         </div>
                       ))}
                   </div>
@@ -325,9 +385,12 @@ const StaffNotice = ({
                       <h4 className="text-xs font-semibold text-gray-800 mb-2">
                         {selectedNotice.title}
                       </h4>
-                      <p className="text-2xs text-gray-500 mb-4">
-                        {selectedNotice.date}
-                      </p>
+                      <div className="text-2xs text-gray-500 mb-4 flex items-center">
+                        <span className="text-gray-400 mr-2">
+                          👁 {selectedNotice.viewCount || 0}
+                        </span>
+                        <span>{selectedNotice.date}</span>
+                      </div>
                     </div>
                     <div className="border-t pt-4">
                       <div
@@ -452,7 +515,10 @@ const StaffNotice = ({
                                     </div>
                                     {fileUrl ? (
                                       <a
-                                        href={`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/communication/download/${fileUrl
+                                        href={`${
+                                          process.env.REACT_APP_API_BASE_URL ||
+                                          'http://localhost:5000/api'
+                                        }/communication/download/${fileUrl
                                           .split('/')
                                           .pop()}`}
                                         download={fileName}

@@ -1858,6 +1858,32 @@ const HRManagementSystem = () => {
     syncEmployeeLeaveData();
   }, [leaveRequests]);
 
+  // *[1_공통] 연차 데이터 즉시 동기화 (employees 또는 leaveRequests 변경 시)*
+  useEffect(() => {
+    if (employees.length > 0 && leaveRequests.length >= 0) {
+      devLog('🔄 연차 데이터 동기화 시작 (employees 또는 leaveRequests 변경 감지)');
+      setEmployees((prevEmployees) =>
+        prevEmployees.map((emp) => {
+          const annualData = calculateEmployeeAnnualLeaveUtil(
+            emp,
+            leaveRequests
+          );
+          return {
+            ...emp,
+            leaveYearStart: annualData.annualStart,
+            leaveYearEnd: annualData.annualEnd,
+            totalAnnualLeave: annualData.totalAnnual,
+            usedAnnualLeave: annualData.usedAnnual,
+            remainingAnnualLeave: annualData.remainAnnual,
+            carryOverLeave: annualData.carryOverLeave || 0,
+            baseAnnual: annualData.baseAnnual || annualData.totalAnnual,
+            lastLeaveSync: new Date().toISOString(),
+          };
+        })
+      );
+    }
+  }, [leaveRequests, devLog]); // employees는 의존성에서 제외 (무한 루프 방지)
+
   // *[1_공통] 매일 자정 연차 데이터 동기화*
   useEffect(() => {
     const syncAtMidnight = () => {
@@ -1870,12 +1896,28 @@ const HRManagementSystem = () => {
 
       const timer = setTimeout(() => {
         devLog('🕛 자정 연차 데이터 동기화 시작');
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
         setEmployees((prevEmployees) =>
           prevEmployees.map((emp) => {
             const annualData = calculateEmployeeAnnualLeaveUtil(
               emp,
               leaveRequests
             );
+
+            // ✅ 연차기간 갱신 시 잔여연차를 이월연차로 이동
+            let newCarryOverLeave = annualData.carryOverLeave || emp.carryOverLeave || 0;
+
+            // 오늘이 연차 기간 시작일인지 확인
+            if (annualData.annualStart === today) {
+              // 이전 잔여연차가 있으면 이월연차로 이동
+              const previousRemain = emp.remainingAnnualLeave || 0;
+              if (previousRemain > 0) {
+                newCarryOverLeave = previousRemain;
+                devLog(`📆 [연차기간 갱신] ${emp.name}: 잔여연차 ${previousRemain}일 → 이월연차로 이동`);
+              }
+            }
+
             return {
               ...emp,
               leaveYearStart: annualData.annualStart,
@@ -1883,6 +1925,8 @@ const HRManagementSystem = () => {
               totalAnnualLeave: annualData.totalAnnual,
               usedAnnualLeave: annualData.usedAnnual,
               remainingAnnualLeave: annualData.remainAnnual,
+              carryOverLeave: newCarryOverLeave,
+              baseAnnual: annualData.baseAnnual || annualData.totalAnnual,
               lastLeaveSync: new Date().toISOString(),
             };
           })
@@ -1900,7 +1944,7 @@ const HRManagementSystem = () => {
   }, [leaveRequests, devLog]);
 
   // *[1_공통] 로그인한 사용자의 연차 데이터 업데이트*
-  // employees 데이터가 변경되면 currentUser도 업데이트 (관리자 모드에서 직원 정보 수정 시 일반직원 모드 사원 정보에 실시간 반영)
+  // employees 데이터가 변경되거나 leaveRequests가 변경되면 currentUser도 업데이트
   useEffect(() => {
     if (currentUser && currentUser.role !== 'admin') {
       // employeeId 또는 id 필드로 직원 찾기
@@ -1914,17 +1958,31 @@ const HRManagementSystem = () => {
       );
 
       if (updatedUser) {
+        // ✅ 연차 정보 실시간 계산 (DB 데이터와 항상 동기화)
+        const annualData = calculateEmployeeAnnualLeaveUtil(
+          updatedUser,
+          leaveRequests
+        );
+
         // 모든 직원 정보를 동기화 (사원 정보, 연차 정보 등)
         const syncedUser = {
           ...updatedUser,
           employeeId: updatedUser.id, // employeeId 필드도 함께 유지
           isAdmin: false,
+          // 연차 정보 추가
+          leaveYearStart: annualData.annualStart,
+          leaveYearEnd: annualData.annualEnd,
+          totalAnnualLeave: annualData.totalAnnual,
+          usedAnnualLeave: annualData.usedAnnual,
+          remainingAnnualLeave: annualData.remainAnnual,
+          carryOverLeave: annualData.carryOverLeave || 0,
+          baseAnnual: annualData.baseAnnual || annualData.totalAnnual,
         };
         setCurrentUser(syncedUser);
         sessionStorage.setItem('currentUser', JSON.stringify(syncedUser));
       }
     }
-  }, [employees, currentUser?.id, currentUser?.employeeId, currentUser?.role]);
+  }, [employees, leaveRequests, currentUser?.id, currentUser?.employeeId, currentUser?.role]);
 
   // *[1_공통] 매일 자정 currentUser 동기화 (관리자 모드에서 직원 정보 수정 시 일반직원 모드 사원 정보에 자동 반영)*
   useMidnightScheduler(() => {
@@ -4511,6 +4569,8 @@ const HRManagementSystem = () => {
               createdAt: notice.createdAt,
               updatedAt: notice.updatedAt,
               views: notice.views || 0,
+              viewCount: notice.viewCount || 0, // ✅ 조회수 (고유 직원 수)
+              viewedBy: notice.viewedBy || [], // ✅ 조회한 직원 ID 목록
               isImportant: notice.isImportant || false,
               isScheduled: notice.isScheduled || false,
               scheduledDateTime: notice.scheduledDateTime,
@@ -6485,6 +6545,7 @@ const HRManagementSystem = () => {
             <StaffNotice
               currentUser={currentUser}
               notices={notices}
+              setNotices={setNotices}
               getText={getText}
               devLog={devLog}
               readAnnouncements={readAnnouncements}

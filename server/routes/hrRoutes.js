@@ -63,6 +63,10 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // ✅ 마지막 로그인 시간 업데이트
+    employee.lastLogin = new Date();
+    await employee.save();
+
     // 비밀번호 제외하고 응답 (id 필드를 employeeId로 매핑)
     const { password: _, ...employeeData } = employee.toObject();
     const responseData = {

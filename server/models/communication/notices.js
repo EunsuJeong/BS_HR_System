@@ -21,6 +21,9 @@ const noticeSchema = new mongoose.Schema(
     isScheduled: { type: Boolean, default: false },
     scheduledDateTime: { type: Date },
     isPublished: { type: Boolean, default: true }, // 즉시 게시는 true, 예약 게시는 false로 시작
+    // ✅ 조회수 관련 필드
+    viewedBy: { type: [String], default: [] }, // 조회한 직원 ID 목록
+    viewCount: { type: Number, default: 0 }, // 고유 조회자 수 (관리자 제외)
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },

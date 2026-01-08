@@ -410,6 +410,65 @@ router.delete('/notices/:id', async (req, res) => {
   }
 });
 
+// ✅ 공지사항 조회수 증가 (직원 1회 조회만 카운트)
+router.post('/notices/:id/view', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { employeeId, isAdmin } = req.body;
+
+    if (!employeeId) {
+      return res.status(400).json({ message: '직원 ID가 필요합니다.' });
+    }
+
+    // ✅ 관리자는 조회수 카운트 안 함
+    if (isAdmin) {
+      console.log('👤 [조회수] 관리자 조회 - 카운트 제외:', employeeId);
+      return res.json({
+        message: '관리자 조회는 카운트되지 않습니다.',
+        viewCount: 0
+      });
+    }
+
+    const notice = await Notice.findById(id);
+
+    if (!notice) {
+      return res.status(404).json({ message: '공지사항을 찾을 수 없습니다.' });
+    }
+
+    // ✅ 이미 조회한 직원인지 확인
+    const viewedBy = notice.viewedBy || [];
+    const alreadyViewed = viewedBy.includes(employeeId);
+
+    if (alreadyViewed) {
+      console.log('👁️ [조회수] 이미 조회한 직원:', employeeId, '- 카운트 제외');
+      return res.json({
+        message: '이미 조회한 공지사항입니다.',
+        viewCount: notice.viewCount || viewedBy.length
+      });
+    }
+
+    // ✅ 첫 조회 - viewedBy에 추가 및 viewCount 증가
+    const updatedNotice = await Notice.findByIdAndUpdate(
+      id,
+      {
+        $addToSet: { viewedBy: employeeId }, // 중복 방지
+        $inc: { viewCount: 1 }, // 카운트 증가
+      },
+      { new: true }
+    );
+
+    console.log(`✅ [조회수] 증가: ${employeeId} - 공지 "${notice.title.substring(0, 20)}..." (조회수: ${updatedNotice.viewCount})`);
+
+    res.json({
+      message: '조회수가 증가되었습니다.',
+      viewCount: updatedNotice.viewCount
+    });
+  } catch (error) {
+    console.error('❌ 조회수 증가 오류:', error);
+    res.status(500).json({ message: '조회수 증가 중 오류가 발생했습니다.' });
+  }
+});
+
 // ==========================================
 // 알림 (Notifications) API
 // ==========================================
