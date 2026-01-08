@@ -17,7 +17,7 @@ const parseDateString = (dateStr) => {
   if (!dateStr) return null;
   // moment-timezone을 사용하여 KST 기준 00:00:00으로 Date 객체 생성
   // DB에는 UTC로 저장되지만, KST로 읽을 때 정확한 날짜가 표시됨
-  return moment.tz(dateStr, "YYYY-MM-DD", "Asia/Seoul").startOf("day").toDate();
+  return moment.tz(dateStr, 'YYYY-MM-DD', 'Asia/Seoul').startOf('day').toDate();
 };
 
 // Date 객체를 YYYY-MM-DD 문자열로 변환 (로컬 시간대 기준)
@@ -99,7 +99,9 @@ router.put('/employees/:employeeId/password', async (req, res) => {
     const { employeeId } = req.params;
     const { currentPassword, newPassword } = req.body;
 
-    console.log(`🔐 [Employees API] 비밀번호 변경 요청: employeeId=${employeeId}`);
+    console.log(
+      `🔐 [Employees API] 비밀번호 변경 요청: employeeId=${employeeId}`
+    );
 
     // 직원 찾기
     const employee = await Employee.findOne({ employeeId });
@@ -145,18 +147,19 @@ router.get('/employees', async (_, res) => {
     // ✅ 캐시 방지 헤더 설정 (강력 새로고침 시에도 최신 데이터 제공)
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
+      Pragma: 'no-cache',
+      Expires: '0',
     });
 
     const employees = await Employee.find();
     // leaveUsed를 usedLeave로도 매핑 (프론트엔드 호환성)
-    const employeesWithMapping = employees.map(emp => {
+    const employeesWithMapping = employees.map((emp) => {
       const empObj = emp.toObject();
       // ✅ leaveUsed 값이 있으면 그대로 사용, 없으면 0 (null/undefined 모두 처리)
-      const leaveUsedValue = empObj.leaveUsed !== undefined && empObj.leaveUsed !== null
-        ? empObj.leaveUsed
-        : 0;
+      const leaveUsedValue =
+        empObj.leaveUsed !== undefined && empObj.leaveUsed !== null
+          ? empObj.leaveUsed
+          : 0;
 
       empObj.usedLeave = leaveUsedValue;
       // leaveUsed도 그대로 유지 (양방향 호환성)
@@ -170,8 +173,12 @@ router.get('/employees', async (_, res) => {
       const sample = employeesWithMapping[0];
       console.log(`  - employeeId: ${sample.employeeId}`);
       console.log(`  - name: ${sample.name}`);
-      console.log(`  - leaveUsed: ${sample.leaveUsed} (타입: ${typeof sample.leaveUsed})`);
-      console.log(`  - usedLeave: ${sample.usedLeave} (타입: ${typeof sample.usedLeave})`);
+      console.log(
+        `  - leaveUsed: ${sample.leaveUsed} (타입: ${typeof sample.leaveUsed})`
+      );
+      console.log(
+        `  - usedLeave: ${sample.usedLeave} (타입: ${typeof sample.usedLeave})`
+      );
     }
 
     // 일관성있는 API 응답 형식 사용
@@ -214,7 +221,10 @@ router.put('/employees/:id', async (req, res) => {
     // findOneAndUpdate를 사용하여 직접 업데이트
     // MongoDB _id 또는 employeeId로 조회
     let query;
-    if (mongoose.Types.ObjectId.isValid(req.params.id) && req.params.id.length === 24) {
+    if (
+      mongoose.Types.ObjectId.isValid(req.params.id) &&
+      req.params.id.length === 24
+    ) {
       // MongoDB ObjectId 형식인 경우
       query = { _id: req.params.id };
     } else {
@@ -222,14 +232,10 @@ router.put('/employees/:id', async (req, res) => {
       query = { employeeId: req.params.id };
     }
 
-    const employee = await Employee.findOneAndUpdate(
-      query,
-      req.body,
-      {
-        new: true, // 업데이트된 문서 반환
-        runValidators: true, // 스키마 검증 실행
-      }
-    );
+    const employee = await Employee.findOneAndUpdate(query, req.body, {
+      new: true, // 업데이트된 문서 반환
+      runValidators: true, // 스키마 검증 실행
+    });
 
     if (!employee) {
       console.error('❌ 직원을 찾을 수 없음. 조회 조건:', query);
@@ -1039,7 +1045,9 @@ router.post('/analyze-work-type', async (req, res) => {
     }
 
     const targetInfo = employeeId ? `직원 ${employeeId}` : '모든 직원';
-    console.log(`🔍 [근무형태 분석] ${year}년 ${month}월 ${targetInfo} 시작...`);
+    console.log(
+      `🔍 [근무형태 분석] ${year}년 ${month}월 ${targetInfo} 시작...`
+    );
 
     // 1. 해당 월의 근태 데이터 조회 (employeeId가 있으면 특정 직원만)
     const query = {
@@ -1054,7 +1062,9 @@ router.post('/analyze-work-type', async (req, res) => {
 
     const attendances = await Attendance.find(query);
 
-    console.log(`📊 [근무형태 분석] 근태 데이터 ${attendances.length}건 조회 (${targetInfo})`);
+    console.log(
+      `📊 [근무형태 분석] 근태 데이터 ${attendances.length}건 조회 (${targetInfo})`
+    );
 
     // 2. 직원별로 그룹화
     const employeeAttendance = {};
@@ -1068,7 +1078,9 @@ router.post('/analyze-work-type', async (req, res) => {
 
     // 3. 각 직원의 근무형태 분석
     const updates = [];
-    for (const [employeeId, checkInTimes] of Object.entries(employeeAttendance)) {
+    for (const [employeeId, checkInTimes] of Object.entries(
+      employeeAttendance
+    )) {
       let dayShiftCount = 0;
       let nightShiftCount = 0;
 
@@ -1133,7 +1145,9 @@ router.post('/analyze-work-type', async (req, res) => {
     }
 
     console.log(
-      `✅ [근무형태 분석] 완료: ${updatedCount}명 업데이트 (전체 ${Object.keys(employeeAttendance).length}명 중)`
+      `✅ [근무형태 분석] 완료: ${updatedCount}명 업데이트 (전체 ${
+        Object.keys(employeeAttendance).length
+      }명 중)`
     );
 
     // Socket.io 이벤트 발생
@@ -1176,10 +1190,14 @@ router.post('/migrate-usedleave', async (req, res) => {
         // annualLeave.used 값이 있으면 leaveUsed로 복사, 없으면 0
         emp.leaveUsed = emp.annualLeave?.used || 0;
         await emp.save();
-        console.log(`✅ ${emp.name} (${emp.employeeId}): leaveUsed = ${emp.leaveUsed}`);
+        console.log(
+          `✅ ${emp.name} (${emp.employeeId}): leaveUsed = ${emp.leaveUsed}`
+        );
         updatedCount++;
       } else {
-        console.log(`⏭️  ${emp.name} (${emp.employeeId}): 이미 leaveUsed 있음 (${emp.leaveUsed})`);
+        console.log(
+          `⏭️  ${emp.name} (${emp.employeeId}): 이미 leaveUsed 있음 (${emp.leaveUsed})`
+        );
         skippedCount++;
       }
     }
@@ -1229,6 +1247,59 @@ router.post('/migrate-contract-type', async (req, res) => {
       message: 'contractType 필드 마이그레이션 완료',
       updatedCount: totalUpdated,
       totalEmployees: employees.length,
+    });
+  } catch (error) {
+    console.error('❌ 마이그레이션 실패:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================
+// contractType 텍스트 변경 마이그레이션 ('정규직' -> '정규' 등)
+// ============================================================
+router.post('/migrate-contract-type-text', async (req, res) => {
+  try {
+    console.log('🔧 [마이그레이션] contractType 텍스트 변경 시작...');
+
+    const employees = await Employee.find({});
+    console.log(`   총 ${employees.length}명의 직원 발견`);
+
+    // '정규직' -> '정규'
+    const result1 = await Employee.updateMany(
+      { contractType: '정규직' },
+      { $set: { contractType: '정규' } }
+    );
+
+    // '계약직' -> '계약'
+    const result2 = await Employee.updateMany(
+      { contractType: '계약직' },
+      { $set: { contractType: '계약' } }
+    );
+
+    // '촉탁직' -> '촉탁'
+    const result3 = await Employee.updateMany(
+      { contractType: '촉탁직' },
+      { $set: { contractType: '촉탁' } }
+    );
+
+    const totalUpdated =
+      result1.modifiedCount + result2.modifiedCount + result3.modifiedCount;
+
+    console.log(`✅ [마이그레이션] 완료: ${totalUpdated}명 업데이트됨`);
+    console.log(`   - 정규직 -> 정규: ${result1.modifiedCount}명`);
+    console.log(`   - 계약직 -> 계약: ${result2.modifiedCount}명`);
+    console.log(`   - 촉탁직 -> 촉탁: ${result3.modifiedCount}명`);
+
+    res.json({
+      success: true,
+      message: 'contractType 텍스트 변경 마이그레이션 완료',
+      updatedCount: totalUpdated,
+      totalEmployees: employees.length,
+      details: {
+        regular: result1.modifiedCount,
+        contract: result2.modifiedCount,
+        temporary: result3.modifiedCount,
+      },
     });
   } catch (error) {
     console.error('❌ 마이그레이션 실패:', error);

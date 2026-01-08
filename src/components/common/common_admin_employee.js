@@ -80,7 +80,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
                 role: savedEmployee.role || '',
                 payType: savedEmployee.salaryType || '',
                 workType: savedEmployee.workType || '',
-                contractType: savedEmployee.contractType || '정규직',
+                contractType: savedEmployee.contractType || '정규',
                 joinDate: savedEmployee.joinDate
                   ? (() => {
                       const d = new Date(savedEmployee.joinDate);
@@ -319,7 +319,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
             role: newEmployee.role || '팀원',
             joinDate: newEmployee.joinDate,
             workType: newEmployee.workType || '주간',
-            contractType: newEmployee.contractType || '정규직',
+            contractType: newEmployee.contractType || '정규',
             salaryType: newEmployee.payType || '시급',
             status: newEmployee.status || '재직',
             address: newEmployee.address || '',
@@ -344,7 +344,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
             role: '',
             status: '재직',
             payType: '',
-            contractType: '정규직',
+            contractType: '정규',
             workType: '주간',
             subDepartment: '',
           });
