@@ -325,7 +325,9 @@ const AdminSuggestionManagement = ({
                           {isEditing ? (
                             <input
                               type="text"
-                              value={editingSuggestionData.employeeId || s.employeeId}
+                              value={
+                                editingSuggestionData.employeeId || s.employeeId
+                              }
                               onChange={(e) =>
                                 setEditingSuggestionData((prev) => ({
                                   ...prev,
@@ -358,7 +360,9 @@ const AdminSuggestionManagement = ({
                         <td className="text-center py-2 px-2">
                           {isEditing ? (
                             <select
-                              value={editingSuggestionData.department || s.department}
+                              value={
+                                editingSuggestionData.department || s.department
+                              }
                               onChange={(e) =>
                                 setEditingSuggestionData((prev) => ({
                                   ...prev,
@@ -396,7 +400,7 @@ const AdminSuggestionManagement = ({
                             getSuggestionCategoryText(s.type, 'ko')
                           )}
                         </td>
-                        <td className="text-center py-2 px-2">
+                        <td className="text-left py-2 px-2">
                           {isEditing ? (
                             <textarea
                               value={editingSuggestionData.content || s.content}
@@ -406,35 +410,37 @@ const AdminSuggestionManagement = ({
                                   content: e.target.value,
                                 }))
                               }
-                              className="w-full px-2 py-1 border rounded text-center"
+                              className="w-full px-2 py-1 border rounded"
                               rows="2"
                             />
                           ) : (
-                            <span className="max-w-xs truncate block">
+                            <div className="max-w-xs text-left whitespace-normal break-words line-clamp-3">
                               {s.content}
-                            </span>
+                            </div>
                           )}
                         </td>
-                        <td className="text-center py-2 px-2">
+                        <td className="text-left py-2 px-2">
                           {isEditing ? (
                             <input
                               type="text"
-                              value={editingSuggestionData.remark || s.remark || ''}
+                              value={
+                                editingSuggestionData.remark || s.remark || ''
+                              }
                               onChange={(e) =>
                                 setEditingSuggestionData((prev) => ({
                                   ...prev,
                                   remark: e.target.value,
                                 }))
                               }
-                              className="w-32 px-2 py-1 border rounded text-center"
+                              className="w-full px-2 py-1 border rounded"
                             />
                           ) : (
-                            <span
-                              className="truncate max-w-[150px]"
+                            <div
+                              className="max-w-[150px] text-left whitespace-normal break-words line-clamp-3"
                               title={s.remark || '-'}
                             >
                               {s.remark || '-'}
-                            </span>
+                            </div>
                           )}
                         </td>
                         <td className="text-center py-1 px-2">
