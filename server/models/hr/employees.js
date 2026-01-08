@@ -15,6 +15,11 @@ const employeeSchema = new mongoose.Schema(
       enum: ['주간', '야간', '주간/야간'],
       default: '주간',
     },
+    contractType: {
+      type: String,
+      enum: ['정규직', '계약직', '촉탁직'],
+      default: '정규직',
+    },
     status: { type: String, enum: ['재직', '휴직', '퇴사'], default: '재직' },
     joinDate: Date,
     leaveDate: Date,

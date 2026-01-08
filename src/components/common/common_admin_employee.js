@@ -78,6 +78,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
                 role: savedEmployee.role || '',
                 payType: savedEmployee.salaryType || '',
                 workType: savedEmployee.workType || '',
+                contractType: savedEmployee.contractType || '정규직',
                 joinDate: savedEmployee.joinDate
                   ? new Date(savedEmployee.joinDate).toISOString().split('T')[0]
                   : '',
@@ -228,6 +229,10 @@ export const useEmployeeManagement = (dependencies = {}) => {
           case 'payType':
             aVal = a.payType || '';
             bVal = b.payType || '';
+            break;
+          case 'contractType':
+            aVal = a.contractType || '정규직';
+            bVal = b.contractType || '정규직';
             break;
           case 'joinDate':
             aVal = new Date(a.joinDate);
@@ -490,6 +495,10 @@ export const sortEmployees = (
       case 'payType':
         aVal = a.payType || '';
         bVal = b.payType || '';
+        break;
+      case 'contractType':
+        aVal = a.contractType || '정규직';
+        bVal = b.contractType || '정규직';
         break;
       case 'joinDate':
         aVal = new Date(a.joinDate);

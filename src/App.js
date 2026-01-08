@@ -639,6 +639,7 @@ const HRManagementSystem = () => {
               joinDate: formatDateToString(emp.joinDate),
               workType: emp.workType,
               payType: emp.salaryType,
+              contractType: emp.contractType || '정규직', // 계약형태
               status: emp.status,
               address: emp.address,
               lastLogin: emp.lastLogin, // 마지막 로그인 시각
@@ -711,6 +712,7 @@ const HRManagementSystem = () => {
               joinDate: formatDateToString(emp.joinDate),
               workType: emp.workType,
               payType: emp.salaryType,
+              contractType: emp.contractType || '정규직', // 계약형태
               status: emp.status,
               address: emp.address,
               lastLogin: emp.lastLogin, // 마지막 로그인 시각
@@ -3203,6 +3205,7 @@ const HRManagementSystem = () => {
               joinDate: formatDateToString(emp.joinDate),
               workType: emp.workType,
               payType: emp.salaryType,
+              contractType: emp.contractType || '정규직', // 계약형태
               status: emp.status,
               address: emp.address,
               lastLogin: emp.lastLogin, // 마지막 로그인 시각
@@ -3249,6 +3252,7 @@ const HRManagementSystem = () => {
               joinDate: formatDateToString(emp.joinDate),
               workType: emp.workType,
               payType: emp.salaryType,
+              contractType: emp.contractType || '정규직', // 계약형태
               status: emp.status,
               address: emp.address,
               lastLogin: emp.lastLogin, // 마지막 로그인 시각
@@ -3295,6 +3299,7 @@ const HRManagementSystem = () => {
               joinDate: formatDateToString(emp.joinDate),
               workType: emp.workType,
               payType: emp.salaryType,
+              contractType: emp.contractType || '정규직', // 계약형태
               status: emp.status,
               address: emp.address,
               lastLogin: emp.lastLogin, // 마지막 로그인 시각
@@ -4343,6 +4348,7 @@ const HRManagementSystem = () => {
               joinDate: formatDateToString(emp.joinDate),
               workType: emp.workType,
               payType: emp.salaryType,
+              contractType: emp.contractType || '정규직', // 계약형태
               status: emp.status,
               address: emp.address,
               // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
@@ -4424,6 +4430,7 @@ const HRManagementSystem = () => {
                 joinDate: formatDateToString(emp.joinDate),
                 workType: emp.workType,
                 payType: emp.salaryType,
+              contractType: emp.contractType || '정규직', // 계약형태
                 status: emp.status,
                 address: emp.address,
                 // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
@@ -4889,6 +4896,7 @@ const HRManagementSystem = () => {
               joinDate: formatDateToString(emp.joinDate),
               workType: emp.workType,
               payType: emp.salaryType,
+              contractType: emp.contractType || '정규직', // 계약형태
               status: emp.status,
               address: emp.address,
               lastLogin: emp.lastLogin, // 마지막 로그인 시각

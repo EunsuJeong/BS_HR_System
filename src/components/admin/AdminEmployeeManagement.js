@@ -499,6 +499,23 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
+                  <th className="text-center py-2 px-1 whitespace-nowrap leading-none text-xs md:text-[12px] min-w-[80px]">
+                    계약형태
+                    <button
+                      onClick={() => handleSort('contractType')}
+                      className={`ml-1 text-xs hover:text-gray-700 ${
+                        employeeSortField === 'contractType'
+                          ? 'text-blue-600'
+                          : 'text-gray-500'
+                      }`}
+                    >
+                      {employeeSortField === 'contractType'
+                        ? employeeSortOrder === 'asc'
+                          ? '▲'
+                          : '▼'
+                        : '▼'}
+                    </button>
+                  </th>
                   <th className="text-center py-2 px-1">
                     입사일
                     <button
@@ -848,6 +865,28 @@ const AdminEmployeeManagement = ({
                     ) : (
                       <td className="text-center py-1 px-2 w-14 max-w-14 whitespace-nowrap">
                         {emp.payType || '-'}
+                      </td>
+                    )}
+                    {editingEmpId === emp.id ? (
+                      <td className="text-center py-1 px-2 w-14 max-w-14">
+                        <select
+                          className="border rounded px-2 py-1 w-20 text-xs"
+                          value={editForm.contractType || '정규직'}
+                          onChange={(e) =>
+                            setEditForm((f) => ({
+                              ...f,
+                              contractType: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="정규직">정규직</option>
+                          <option value="계약직">계약직</option>
+                          <option value="촉탁직">촉탁직</option>
+                        </select>
+                      </td>
+                    ) : (
+                      <td className="text-center py-1 px-2 w-14 max-w-14 whitespace-nowrap">
+                        {emp.contractType || '정규직'}
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
@@ -1266,6 +1305,20 @@ const AdminEmployeeManagement = ({
                     {payType}
                   </option>
                 ))}
+              </select>
+              <select
+                value={newEmployee.contractType || '정규직'}
+                onChange={(e) =>
+                  setNewEmployee({
+                    ...newEmployee,
+                    contractType: e.target.value,
+                  })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="정규직">정규직</option>
+                <option value="계약직">계약직</option>
+                <option value="촉탁직">촉탁직</option>
               </select>
               <input
                 type="date"
