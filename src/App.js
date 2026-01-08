@@ -1866,7 +1866,9 @@ const HRManagementSystem = () => {
   // *[1_공통] 연차 데이터 즉시 동기화 (employees 또는 leaveRequests 변경 시)*
   useEffect(() => {
     if (employees.length > 0 && leaveRequests.length >= 0) {
-      devLog('🔄 연차 데이터 동기화 시작 (employees 또는 leaveRequests 변경 감지)');
+      devLog(
+        '🔄 연차 데이터 동기화 시작 (employees 또는 leaveRequests 변경 감지)'
+      );
       setEmployees((prevEmployees) =>
         prevEmployees.map((emp) => {
           const annualData = calculateEmployeeAnnualLeaveUtil(
@@ -1911,7 +1913,8 @@ const HRManagementSystem = () => {
             );
 
             // ✅ 연차기간 갱신 시 잔여연차를 이월연차로 이동
-            let newCarryOverLeave = annualData.carryOverLeave || emp.carryOverLeave || 0;
+            let newCarryOverLeave =
+              annualData.carryOverLeave || emp.carryOverLeave || 0;
 
             // 오늘이 연차 기간 시작일인지 확인
             if (annualData.annualStart === today) {
@@ -1919,7 +1922,9 @@ const HRManagementSystem = () => {
               const previousRemain = emp.remainingAnnualLeave || 0;
               if (previousRemain > 0) {
                 newCarryOverLeave = previousRemain;
-                devLog(`📆 [연차기간 갱신] ${emp.name}: 잔여연차 ${previousRemain}일 → 이월연차로 이동`);
+                devLog(
+                  `📆 [연차기간 갱신] ${emp.name}: 잔여연차 ${previousRemain}일 → 이월연차로 이동`
+                );
               }
             }
 
@@ -1987,7 +1992,13 @@ const HRManagementSystem = () => {
         sessionStorage.setItem('currentUser', JSON.stringify(syncedUser));
       }
     }
-  }, [employees, leaveRequests, currentUser?.id, currentUser?.employeeId, currentUser?.role]);
+  }, [
+    employees,
+    leaveRequests,
+    currentUser?.id,
+    currentUser?.employeeId,
+    currentUser?.role,
+  ]);
 
   // *[1_공통] 매일 자정 currentUser 동기화 (관리자 모드에서 직원 정보 수정 시 일반직원 모드 사원 정보에 자동 반영)*
   useMidnightScheduler(() => {
@@ -4431,7 +4442,7 @@ const HRManagementSystem = () => {
                 joinDate: formatDateToString(emp.joinDate),
                 workType: emp.workType,
                 payType: emp.salaryType,
-              contractType: emp.contractType || '정규직', // 계약형태
+                contractType: emp.contractType || '정규직', // 계약형태
                 status: emp.status,
                 address: emp.address,
                 // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)

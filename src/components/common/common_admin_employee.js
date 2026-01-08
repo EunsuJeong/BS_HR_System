@@ -50,6 +50,8 @@ export const useEmployeeManagement = (dependencies = {}) => {
           employeePayload.salaryType = updatedData.payType;
         if (updatedData.workType)
           employeePayload.workType = updatedData.workType;
+        if (updatedData.contractType)
+          employeePayload.contractType = updatedData.contractType;
         if (updatedData.joinDate)
           employeePayload.joinDate = updatedData.joinDate;
         if (updatedData.resignDate)
@@ -80,14 +82,24 @@ export const useEmployeeManagement = (dependencies = {}) => {
                 workType: savedEmployee.workType || '',
                 contractType: savedEmployee.contractType || '정규직',
                 joinDate: savedEmployee.joinDate
-                  ? new Date(savedEmployee.joinDate).toISOString().split('T')[0]
+                  ? (() => {
+                      const d = new Date(savedEmployee.joinDate);
+                      const year = d.getFullYear();
+                      const month = String(d.getMonth() + 1).padStart(2, '0');
+                      const day = String(d.getDate()).padStart(2, '0');
+                      return `${year}-${month}-${day}`;
+                    })()
                   : '',
                 resignDate:
                   savedEmployee.leaveDate &&
                   savedEmployee.leaveDate !== '1970-01-01T00:00:00.000Z'
-                    ? new Date(savedEmployee.leaveDate)
-                        .toISOString()
-                        .split('T')[0]
+                    ? (() => {
+                        const d = new Date(savedEmployee.leaveDate);
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                      })()
                     : '',
                 status: savedEmployee.status,
                 phone: savedEmployee.phone || '',
@@ -307,6 +319,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
             role: newEmployee.role || '팀원',
             joinDate: newEmployee.joinDate,
             workType: newEmployee.workType || '주간',
+            contractType: newEmployee.contractType || '정규직',
             salaryType: newEmployee.payType || '시급',
             status: newEmployee.status || '재직',
             address: newEmployee.address || '',
