@@ -1198,4 +1198,42 @@ router.post('/migrate-usedleave', async (req, res) => {
   }
 });
 
+// ============================================================
+// contractType 필드 추가 마이그레이션 (모든 직원에게 '정규직' 기본값 설정)
+// ============================================================
+router.post('/migrate-contract-type', async (req, res) => {
+  try {
+    console.log('🔧 [마이그레이션] contractType 필드 추가 시작...');
+
+    const employees = await Employee.find({});
+    console.log(`   총 ${employees.length}명의 직원 발견`);
+
+    // contractType이 없는 직원만 업데이트
+    const result = await Employee.updateMany(
+      { contractType: { $exists: false } },
+      { $set: { contractType: '정규직' } }
+    );
+
+    // contractType이 null이거나 빈 문자열인 경우도 업데이트
+    const result2 = await Employee.updateMany(
+      { $or: [{ contractType: null }, { contractType: '' }] },
+      { $set: { contractType: '정규직' } }
+    );
+
+    const totalUpdated = result.modifiedCount + result2.modifiedCount;
+
+    console.log(`✅ [마이그레이션] 완료: ${totalUpdated}명 업데이트됨`);
+
+    res.json({
+      success: true,
+      message: 'contractType 필드 마이그레이션 완료',
+      updatedCount: totalUpdated,
+      totalEmployees: employees.length,
+    });
+  } catch (error) {
+    console.error('❌ 마이그레이션 실패:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
