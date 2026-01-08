@@ -284,7 +284,15 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">근속년수</th>
+                    <th className="text-center py-1 px-2">
+                      근속년수
+                      <button
+                        onClick={() => handleAnnualLeaveSort('workPeriod')}
+                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        ▼
+                      </button>
+                    </th>
                     <th className="text-center py-1 px-2">
                       근무형태
                       <button
@@ -303,10 +311,42 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">연차시작일</th>
-                    <th className="text-center py-1 px-2">연차종료일</th>
-                    <th className="text-center py-1 px-2">기본연차</th>
-                    <th className="text-center py-1 px-2">이월연차</th>
+                    <th className="text-center py-1 px-2">
+                      연차시작일
+                      <button
+                        onClick={() => handleAnnualLeaveSort('annualStart')}
+                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        ▼
+                      </button>
+                    </th>
+                    <th className="text-center py-1 px-2">
+                      연차종료일
+                      <button
+                        onClick={() => handleAnnualLeaveSort('annualEnd')}
+                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        ▼
+                      </button>
+                    </th>
+                    <th className="text-center py-1 px-2">
+                      기본연차
+                      <button
+                        onClick={() => handleAnnualLeaveSort('baseAnnual')}
+                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        ▼
+                      </button>
+                    </th>
+                    <th className="text-center py-1 px-2">
+                      이월연차
+                      <button
+                        onClick={() => handleAnnualLeaveSort('carryOverLeave')}
+                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        ▼
+                      </button>
+                    </th>
                     <th className="text-center py-1 px-2">
                       총연차
                       <button
@@ -385,7 +425,12 @@ const AdminLeaveManagement = ({
                       if (
                         annualLeaveSortField === 'totalAnnual' ||
                         annualLeaveSortField === 'usedAnnual' ||
-                        annualLeaveSortField === 'remainAnnual'
+                        annualLeaveSortField === 'remainAnnual' ||
+                        annualLeaveSortField === 'workPeriod' ||
+                        annualLeaveSortField === 'annualStart' ||
+                        annualLeaveSortField === 'annualEnd' ||
+                        annualLeaveSortField === 'baseAnnual' ||
+                        annualLeaveSortField === 'carryOverLeave'
                       ) {
                         const aAnnual = calculateEmployeeAnnualLeave(
                           a,
@@ -395,18 +440,33 @@ const AdminLeaveManagement = ({
                           b,
                           leaveRequests
                         );
-                        aValue =
-                          annualLeaveSortField === 'totalAnnual'
-                            ? aAnnual.totalAnnual
-                            : annualLeaveSortField === 'usedAnnual'
-                            ? aAnnual.usedAnnual
-                            : aAnnual.remainAnnual;
-                        bValue =
-                          annualLeaveSortField === 'totalAnnual'
-                            ? bAnnual.totalAnnual
-                            : annualLeaveSortField === 'usedAnnual'
-                            ? bAnnual.usedAnnual
-                            : bAnnual.remainAnnual;
+
+                        if (annualLeaveSortField === 'totalAnnual') {
+                          aValue = aAnnual.totalAnnual;
+                          bValue = bAnnual.totalAnnual;
+                        } else if (annualLeaveSortField === 'usedAnnual') {
+                          aValue = aAnnual.usedAnnual;
+                          bValue = bAnnual.usedAnnual;
+                        } else if (annualLeaveSortField === 'remainAnnual') {
+                          aValue = aAnnual.remainAnnual;
+                          bValue = bAnnual.remainAnnual;
+                        } else if (annualLeaveSortField === 'workPeriod') {
+                          // 근속년수: years * 12 + months로 계산하여 월 단위로 비교
+                          aValue = aAnnual.years * 12 + aAnnual.months;
+                          bValue = bAnnual.years * 12 + bAnnual.months;
+                        } else if (annualLeaveSortField === 'annualStart') {
+                          aValue = new Date(aAnnual.annualStart || '9999-12-31');
+                          bValue = new Date(bAnnual.annualStart || '9999-12-31');
+                        } else if (annualLeaveSortField === 'annualEnd') {
+                          aValue = new Date(aAnnual.annualEnd || '9999-12-31');
+                          bValue = new Date(bAnnual.annualEnd || '9999-12-31');
+                        } else if (annualLeaveSortField === 'baseAnnual') {
+                          aValue = aAnnual.baseAnnual || (aAnnual.totalAnnual - (aAnnual.carryOverLeave || 0));
+                          bValue = bAnnual.baseAnnual || (bAnnual.totalAnnual - (bAnnual.carryOverLeave || 0));
+                        } else if (annualLeaveSortField === 'carryOverLeave') {
+                          aValue = aAnnual.carryOverLeave || 0;
+                          bValue = bAnnual.carryOverLeave || 0;
+                        }
                       } else {
                         aValue =
                           a[annualLeaveSortField] || a.employeeNumber || a.id;
