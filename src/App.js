@@ -786,6 +786,7 @@ const HRManagementSystem = () => {
     subDepartment: '',
     role: '',
     workType: '주간',
+    contractType: '정규직',
     payType: '연봉',
     annualSalary: '',
     hourlyWage: '',

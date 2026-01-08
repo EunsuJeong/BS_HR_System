@@ -331,6 +331,8 @@ export const useEmployeeManagement = (dependencies = {}) => {
             role: '',
             status: '재직',
             payType: '',
+            contractType: '정규직',
+            workType: '주간',
             subDepartment: '',
           });
           setShowNewEmployeeModal(false);
