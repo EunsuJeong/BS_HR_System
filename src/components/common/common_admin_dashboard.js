@@ -4216,16 +4216,15 @@ export const getWorkLifeBalanceDataByYearUtil = (
       }
     });
 
-    monthlyData.violations[month] = violationCount;
+    // ✅ 메인 화면과 동일하게 백분율(%)로 계산
+    monthlyData.violations[month] = filteredEmps.length > 0
+      ? Math.round((violationCount / filteredEmps.length) * 100)
+      : 0;
 
-    // ✅ 스트레스 지수: 메인 화면과 동일한 로직 적용
+    // ✅ 스트레스 지수: 메인 화면과 동일한 로직 적용 (filteredEmps 재사용)
     // 각 월별로 해당 월 데이터만 사용하여 계산
     let totalStress = 0;
     let employeesWithData = 0;
-
-    const filteredEmps = employees.filter(
-      (e) => !['이철균', '이현주'].includes(e.name)
-    );
 
     filteredEmps.forEach((emp) => {
       let stressScore = 0;
