@@ -13,7 +13,7 @@ import {
   EXCLUDE_EXTRA_RANKS,
   EXCLUDE_TIME,
   excludeBreakTimes,
-  roundDownToHalfHour
+  roundDownToHalfHour,
 } from './common_common';
 import { SafetyAccidentAPI } from '../../api/safety';
 import { NotificationAPI } from '../../api/communication';
@@ -1241,7 +1241,8 @@ export const useDashboardActions = ({
       try {
         // AttendanceAPI import가 필요하지만, 이 파일에서는 직접 import할 수 없으므로
         // api client를 동적으로 import하거나 BASE_URL을 사용
-        const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+        const BASE_URL =
+          process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 
         const promises = [];
         for (let month = 1; month <= monthsToLoad; month++) {
@@ -2978,7 +2979,10 @@ export const calculateAverageOvertimeHoursUtil = ({
 
     // 현재 월의 모든 날짜를 순회하며 초과근무시간 집계
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(
+        2,
+        '0'
+      )}-${String(day).padStart(2, '0')}`;
       const attendance = getAttendanceForEmployee(emp.id, dateStr);
 
       if (attendance && attendance.checkIn && attendance.checkOut) {
@@ -3233,8 +3237,16 @@ export const calculateStressIndexUtil = ({
     let weekStartDay = 1;
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const attendance = getAttendanceForEmployee(emp.id, currentYear, currentMonth + 1, day);
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(
+        2,
+        '0'
+      )}-${String(day).padStart(2, '0')}`;
+      const attendance = getAttendanceForEmployee(
+        emp.id,
+        currentYear,
+        currentMonth + 1,
+        day
+      );
 
       if (attendance && attendance.checkIn && attendance.checkOut) {
         hasWorkData = true;
@@ -3262,9 +3274,10 @@ export const calculateStressIndexUtil = ({
     }
 
     // 주별 평균 근무시간
-    const avgWeeklyHours = weeklyHoursList.length > 0
-      ? weeklyHoursList.reduce((a, b) => a + b, 0) / weeklyHoursList.length
-      : 0;
+    const avgWeeklyHours =
+      weeklyHoursList.length > 0
+        ? weeklyHoursList.reduce((a, b) => a + b, 0) / weeklyHoursList.length
+        : 0;
 
     if (avgWeeklyHours >= 52) {
       stressScore += 30;
@@ -3315,7 +3328,12 @@ export const calculateStressIndexUtil = ({
     let onTimeCheckouts = 0;
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const attendance = getAttendanceForEmployee(emp.id, currentYear, currentMonth + 1, day);
+      const attendance = getAttendanceForEmployee(
+        emp.id,
+        currentYear,
+        currentMonth + 1,
+        day
+      );
 
       if (attendance && attendance.checkIn && attendance.checkOut) {
         workDays++;
@@ -3324,15 +3342,20 @@ export const calculateStressIndexUtil = ({
         const checkOutTime = attendance.checkOut;
 
         // 출근시간으로 주간/야간 판정
-        const checkInMinutes = parseInt(checkInTime.split(':')[0]) * 60 + parseInt(checkInTime.split(':')[1]);
+        const checkInMinutes =
+          parseInt(checkInTime.split(':')[0]) * 60 +
+          parseInt(checkInTime.split(':')[1]);
         const isDayShift = checkInMinutes >= 180 && checkInMinutes < 900; // 03:00-15:00
 
         // 정시퇴근 판정
-        const checkOutMinutes = parseInt(checkOutTime.split(':')[0]) * 60 + parseInt(checkOutTime.split(':')[1]);
+        const checkOutMinutes =
+          parseInt(checkOutTime.split(':')[0]) * 60 +
+          parseInt(checkOutTime.split(':')[1]);
 
         if (isDayShift) {
           // 주간: 18:00 이전 퇴근
-          if (checkOutMinutes <= 1080) { // 18:00 = 1080분
+          if (checkOutMinutes <= 1080) {
+            // 18:00 = 1080분
             onTimeCheckouts++;
           }
         } else {
@@ -3359,13 +3382,16 @@ export const calculateStressIndexUtil = ({
 
     // === 4. 건의사항 승인률 (10점) - 해당월 기준 ===
     const mySuggestions = suggestions.filter((sug) => {
-      if (sug.employeeId !== emp.id && sug.employeeId !== emp.employeeNumber) return false;
+      if (sug.employeeId !== emp.id && sug.employeeId !== emp.employeeNumber)
+        return false;
       const sugDate = new Date(sug.createdAt || sug.date);
       return sugDate >= monthStart && sugDate <= monthEnd;
     });
 
     if (mySuggestions.length > 0) {
-      const approvedCount = mySuggestions.filter((sug) => sug.status === '승인').length;
+      const approvedCount = mySuggestions.filter(
+        (sug) => sug.status === '승인'
+      ).length;
       const approvalRate = (approvedCount / mySuggestions.length) * 100;
 
       if (approvalRate < 25) {
@@ -3385,10 +3411,17 @@ export const calculateStressIndexUtil = ({
     let shiftPattern = { day: 0, night: 0 }; // 출근 패턴 분석
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const attendance = getAttendanceForEmployee(emp.id, currentYear, currentMonth + 1, day);
+      const attendance = getAttendanceForEmployee(
+        emp.id,
+        currentYear,
+        currentMonth + 1,
+        day
+      );
 
       if (attendance && attendance.checkIn) {
-        const checkInMinutes = parseInt(attendance.checkIn.split(':')[0]) * 60 + parseInt(attendance.checkIn.split(':')[1]);
+        const checkInMinutes =
+          parseInt(attendance.checkIn.split(':')[0]) * 60 +
+          parseInt(attendance.checkIn.split(':')[1]);
 
         // 출근 패턴 분류
         if (checkInMinutes >= 180 && checkInMinutes < 900) {
@@ -3416,11 +3449,19 @@ export const calculateStressIndexUtil = ({
     let currentConsecutiveDays = 0;
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const attendance = getAttendanceForEmployee(emp.id, currentYear, currentMonth + 1, day);
+      const attendance = getAttendanceForEmployee(
+        emp.id,
+        currentYear,
+        currentMonth + 1,
+        day
+      );
 
       if (attendance && attendance.checkIn) {
         currentConsecutiveDays++;
-        maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+        maxConsecutiveDays = Math.max(
+          maxConsecutiveDays,
+          currentConsecutiveDays
+        );
       } else {
         currentConsecutiveDays = 0;
       }
@@ -3435,22 +3476,31 @@ export const calculateStressIndexUtil = ({
     let absentCount = 0;
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const attendance = getAttendanceForEmployee(emp.id, currentYear, currentMonth + 1, day);
+      const attendance = getAttendanceForEmployee(
+        emp.id,
+        currentYear,
+        currentMonth + 1,
+        day
+      );
 
       if (attendance) {
         if (attendance.checkIn) {
-          const checkInMinutes = parseInt(attendance.checkIn.split(':')[0]) * 60 + parseInt(attendance.checkIn.split(':')[1]);
+          const checkInMinutes =
+            parseInt(attendance.checkIn.split(':')[0]) * 60 +
+            parseInt(attendance.checkIn.split(':')[1]);
           const isDayShift = checkInMinutes >= 180 && checkInMinutes < 900;
 
           // 지각 판정
           if (isDayShift) {
             // 주간: 08:31 이후 출근
-            if (checkInMinutes > 510) { // 08:30 = 510분
+            if (checkInMinutes > 510) {
+              // 08:30 = 510분
               lateCount++;
             }
           } else {
             // 야간: 19:01 이후 출근
-            if (checkInMinutes > 1140 && checkInMinutes < 1440) { // 19:00 = 1140분
+            if (checkInMinutes > 1140 && checkInMinutes < 1440) {
+              // 19:00 = 1140분
               lateCount++;
             }
           }
@@ -3504,12 +3554,18 @@ export const send52HourViolationAlert = (
   devLog
 ) => {
   const alertMessages = {
-    48: `${employeeName}님의 주간 근무시간이 48시간에 도달했습니다. 현재 ${currentHours.toFixed(1)}시간입니다.`,
-    50: `${employeeName}님의 주간 근무시간이 50시간에 도달했습니다. 현재 ${currentHours.toFixed(1)}시간입니다.`,
-    52: `⚠️ ${employeeName}님의 주간 근무시간이 52시간을 초과했습니다! 현재 ${currentHours.toFixed(1)}시간입니다.`,
-    violation: `🚨 ${employeeName}님의 주간 근무시간이 ${currentHours.toFixed(1)}시간으로 법정 기준을 ${
-      (currentHours - 52).toFixed(1)
-    }시간 초과했습니다!`,
+    48: `${employeeName}님의 주간 근무시간이 48시간에 도달했습니다. 현재 ${currentHours.toFixed(
+      1
+    )}시간입니다.`,
+    50: `${employeeName}님의 주간 근무시간이 50시간에 도달했습니다. 현재 ${currentHours.toFixed(
+      1
+    )}시간입니다.`,
+    52: `⚠️ ${employeeName}님의 주간 근무시간이 52시간을 초과했습니다! 현재 ${currentHours.toFixed(
+      1
+    )}시간입니다.`,
+    violation: `🚨 ${employeeName}님의 주간 근무시간이 ${currentHours.toFixed(
+      1
+    )}시간으로 법정 기준을 ${(currentHours - 52).toFixed(1)}시간 초과했습니다!`,
   };
 
   const alertLevel =
@@ -3585,7 +3641,9 @@ export const send52HourViolationAlert = (
     try {
       const notificationLogData = {
         notificationType: '시스템',
-        title: `근무시간 ${currentHours >= 52 ? '위반' : '경고'} 알림 - ${employeeName}`,
+        title: `근무시간 ${
+          currentHours >= 52 ? '위반' : '경고'
+        } 알림 - ${employeeName}`,
         content: alertMessages[alertLevel],
         status: '진행중', // 직원들이 볼 수 있도록 '진행중' 상태로 저장
         startDate: new Date().toISOString().split('T')[0],
@@ -4043,7 +4101,9 @@ export const getWorkLifeBalanceDataByYearUtil = (
 
       // ✅ 메인 화면과 동일한 로직 적용
       for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(
+          day
+        ).padStart(2, '0')}`;
         const attendance = getAttendanceForEmployee(
           emp.id,
           year,
@@ -4158,52 +4218,49 @@ export const getWorkLifeBalanceDataByYearUtil = (
 
     monthlyData.violations[month] = violationCount;
 
+    // ✅ 스트레스 지수: 메인 화면과 동일한 로직 적용
+    // 각 월별로 해당 월 데이터만 사용하여 계산
     let totalStress = 0;
     let employeesWithData = 0;
 
-    employees.forEach((emp) => {
-      let empStressScore = 0;
+    const filteredEmps = employees.filter(
+      (e) => !['이철균', '이현주'].includes(e.name)
+    );
+
+    filteredEmps.forEach((emp) => {
+      let stressScore = 0;
       let hasWorkData = false;
 
-      let totalWeeklyMinutes = 0;
-      let weekCount = 0;
+      // 날짜 범위 설정 (해당 월)
+      const yearStart = new Date(year, 0, 1);
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
+
+      // === 1. 근무시간 (30점) - 해당월 주별 평균 ===
+      let weeklyHoursList = [];
+      let currentWeekMinutes = 0;
 
       for (let day = 1; day <= daysInMonth; day++) {
-        const attendanceData = getAttendanceForEmployee(
-          emp.id,
-          year,
-          month + 1,
-          day
-        );
-        if (
-          attendanceData &&
-          attendanceData.checkIn &&
-          attendanceData.checkOut
-        ) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const attendance = getAttendanceForEmployee(emp.id, year, month + 1, day);
+
+        if (attendance && attendance.checkIn && attendance.checkOut) {
           hasWorkData = true;
           const dailyWage = calcDailyWage(
-            attendanceData.checkIn,
-            attendanceData.checkOut,
-            emp.workType || 'day',
-            `${year}-${String(month + 1).padStart(2, '0')}-${String(
-              day
-            ).padStart(2, '0')}`
+            emp.id,
+            dateStr,
+            attendance.checkIn,
+            attendance.checkOut
           );
-          totalWeeklyMinutes += dailyWage.totalWorkMinutes || 0;
+          currentWeekMinutes += dailyWage.totalWorkMinutes || 0;
         }
 
         const dayOfWeek = new Date(year, month, day).getDay();
         if (dayOfWeek === 0 || day === daysInMonth) {
-          if (totalWeeklyMinutes > 0) {
-            const weeklyHours = totalWeeklyMinutes / 60;
-            if (weeklyHours > 52) {
-              empStressScore += Math.min(40, (weeklyHours - 52) * 3);
-            } else if (weeklyHours > 40) {
-              empStressScore += (weeklyHours - 40) * 1.5;
-            }
-            weekCount++;
+          if (currentWeekMinutes > 0) {
+            weeklyHoursList.push(currentWeekMinutes / 60);
           }
-          totalWeeklyMinutes = 0;
+          currentWeekMinutes = 0;
         }
       }
 
@@ -4211,23 +4268,27 @@ export const getWorkLifeBalanceDataByYearUtil = (
         return;
       }
 
-      if (weekCount > 0) {
-        empStressScore = empStressScore / weekCount;
+      // 주별 평균 근무시간
+      const avgWeeklyHours =
+        weeklyHoursList.length > 0
+          ? weeklyHoursList.reduce((a, b) => a + b, 0) / weeklyHoursList.length
+          : 0;
+
+      if (avgWeeklyHours >= 52) {
+        stressScore += 30;
+      } else if (avgWeeklyHours >= 46) {
+        stressScore += 20;
+      } else if (avgWeeklyHours >= 40) {
+        stressScore += 10;
       }
 
-      // 2. 연차 사용률 기반 스트레스 (해당 월)
-      const monthStart = new Date(year, month, 1);
-      const monthEnd = new Date(year, month + 1, 0);
-      const monthUsedLeave = leaveRequests
+      // === 2. 연차사용률 (20점) - 연초부터 누적 ===
+      const usedLeave = leaveRequests
         .filter((lr) => {
           if (lr.employeeId !== emp.id || lr.status !== '승인') return false;
-          if (
-            !lr.type ||
-            (!lr.type.includes('연차') && !lr.type.includes('반차'))
-          )
-            return false;
+          if (!lr.type || (!lr.type.includes('연차') && !lr.type.includes('반차'))) return false;
           const leaveDate = new Date(lr.startDate);
-          return leaveDate >= monthStart && leaveDate <= monthEnd;
+          return leaveDate >= yearStart && leaveDate <= monthEnd;
         })
         .reduce((sum, lr) => {
           if (lr.type === '연차') {
@@ -4239,78 +4300,152 @@ export const getWorkLifeBalanceDataByYearUtil = (
         }, 0);
 
       const totalLeave = calculateAnnualLeave(emp.joinDate);
-      const leaveUsageRate =
-        totalLeave > 0 ? (monthUsedLeave / totalLeave) * 100 : 0;
+      const leaveUsageRate = totalLeave > 0 ? (usedLeave / totalLeave) * 100 : 0;
 
-      if (leaveUsageRate < 30) {
-        empStressScore += 30;
-      } else if (leaveUsageRate < 50) {
-        empStressScore += 20;
-      } else if (leaveUsageRate < 70) {
-        empStressScore += 10;
+      if (leaveUsageRate < 20) {
+        stressScore += 20;
+      } else if (leaveUsageRate < 40) {
+        stressScore += 15;
+      } else if (leaveUsageRate < 60) {
+        stressScore += 10;
+      } else if (leaveUsageRate < 80) {
+        stressScore += 5;
       }
 
-      if (emp.position === '사장' || emp.position === '부사장') {
-        empStressScore += 15;
-      } else if (emp.position === '이사' || emp.position === '부장') {
-        empStressScore += 10;
-      } else if (emp.position === '과장' || emp.position === '차장') {
-        empStressScore += 5;
+      // === 3. 정시퇴근율 (20점) - 해당월 기준 ===
+      let workDays = 0;
+      let onTimeCheckouts = 0;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const attendance = getAttendanceForEmployee(emp.id, year, month + 1, day);
+
+        if (attendance && attendance.checkIn && attendance.checkOut) {
+          workDays++;
+
+          const checkInTime = attendance.checkIn;
+          const checkOutTime = attendance.checkOut;
+
+          const checkInMinutes =
+            parseInt(checkInTime.split(':')[0]) * 60 + parseInt(checkInTime.split(':')[1]);
+          const isDayShift = checkInMinutes >= 180 && checkInMinutes < 900;
+
+          const checkOutMinutes =
+            parseInt(checkOutTime.split(':')[0]) * 60 + parseInt(checkOutTime.split(':')[1]);
+
+          if (isDayShift) {
+            if (checkOutMinutes <= 1080) {
+              onTimeCheckouts++;
+            }
+          } else {
+            if (checkOutMinutes <= 270) {
+              onTimeCheckouts++;
+            }
+          }
+        }
       }
 
-      // 4. 안전사고 기반 스트레스 (해당 월)
+      const onTimeRate = workDays > 0 ? (onTimeCheckouts / workDays) * 100 : 0;
+
+      if (onTimeRate < 20) {
+        stressScore += 20;
+      } else if (onTimeRate < 40) {
+        stressScore += 15;
+      } else if (onTimeRate < 60) {
+        stressScore += 10;
+      } else if (onTimeRate < 80) {
+        stressScore += 5;
+      }
+
+      // === 4. 건의사항 승인률 (10점) - 해당월 기준 ===
+      const mySuggestions = suggestions.filter((sug) => {
+        if (sug.employeeId !== emp.id && sug.employeeId !== emp.employeeNumber) return false;
+        const sugDate = new Date(sug.createdAt || sug.date);
+        return sugDate >= monthStart && sugDate <= monthEnd;
+      });
+
+      if (mySuggestions.length > 0) {
+        const approvedCount = mySuggestions.filter((sug) => sug.status === '승인').length;
+        const approvalRate = (approvedCount / mySuggestions.length) * 100;
+
+        if (approvalRate < 25) {
+          stressScore += 10;
+        } else if (approvalRate < 50) {
+          stressScore += 7;
+        } else if (approvalRate < 75) {
+          stressScore += 3;
+        }
+      }
+
+      // === 5. 야간/연속근무 (10점) - 해당월 기준 ===
+      let nightWorkCount = 0;
+      let shiftPattern = { day: 0, night: 0 };
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const attendance = getAttendanceForEmployee(emp.id, year, month + 1, day);
+
+        if (attendance && attendance.checkIn) {
+          const checkInMinutes =
+            parseInt(attendance.checkIn.split(':')[0]) * 60 + parseInt(attendance.checkIn.split(':')[1]);
+
+          if (checkInMinutes >= 180 && checkInMinutes < 900) {
+            shiftPattern.day++;
+          } else {
+            shiftPattern.night++;
+          }
+
+          if (checkInMinutes >= 900 || checkInMinutes < 180) {
+            nightWorkCount++;
+          }
+        }
+      }
+
+      const isShiftWorker = shiftPattern.day > 0 && shiftPattern.night > 0;
+
+      if (isShiftWorker && nightWorkCount >= 15) {
+        stressScore += 5;
+      }
+
+      // 연속근무일수
+      let maxConsecutiveDays = 0;
+      let currentConsecutiveDays = 0;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const attendance = getAttendanceForEmployee(emp.id, year, month + 1, day);
+        if (attendance && attendance.checkIn) {
+          currentConsecutiveDays++;
+          maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+        } else {
+          currentConsecutiveDays = 0;
+        }
+      }
+
+      if (maxConsecutiveDays >= 20) {
+        stressScore += 5;
+      } else if (maxConsecutiveDays >= 15) {
+        stressScore += 3;
+      }
+
+      // === 6. 기타 요소 (10점) - 해당월 기준 ===
+      // 6-1. 안전사고
       if (Array.isArray(safetyAccidents)) {
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0);
         const monthAccidents = safetyAccidents.filter((accident) => {
           if (!accident.date) return false;
           const accidentDate = new Date(accident.date);
           return accidentDate >= monthStart && accidentDate <= monthEnd;
         });
         if (monthAccidents.length > 0) {
-          empStressScore += Math.min(15, monthAccidents.length * 5);
+          stressScore += Math.min(5, monthAccidents.length * 2);
         }
       }
 
-      // 5. 건의사항 기반 스트레스 (해당 월)
-      if (Array.isArray(suggestions)) {
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0);
-        const empSuggestions = suggestions.filter((sug) => {
-          const isEmpSuggestion =
-            sug.employeeId === emp.id || sug.employeeId === emp.employeeNumber;
-          if (!isEmpSuggestion) return false;
-          if (!sug.applyDate && !sug.createdAt) return false;
-          const sugDate = new Date(sug.applyDate || sug.createdAt);
-          return sugDate >= monthStart && sugDate <= monthEnd;
-        });
-        const pendingSuggestions = empSuggestions.filter(
-          (sug) => sug.status === '대기'
-        );
-        const rejectedSuggestions = empSuggestions.filter(
-          (sug) => sug.status === '반려'
-        );
-        if (pendingSuggestions.length > 0) {
-          empStressScore += Math.min(10, pendingSuggestions.length * 3);
-        }
-        if (rejectedSuggestions.length > 0) {
-          empStressScore += Math.min(10, rejectedSuggestions.length * 5);
-        }
-      }
-
-      // 6. 평가 점수 기반 스트레스 (해당 월)
+      // 6-2. 평가점수
       if (Array.isArray(evaluations)) {
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0);
         const empEvaluations = evaluations.filter((evaluation) => {
           const isEmpEval =
-            evaluation.employeeId === emp.id ||
-            evaluation.employeeId === emp.employeeNumber;
+            evaluation.employeeId === emp.id || evaluation.employeeId === emp.employeeNumber;
           if (!isEmpEval) return false;
           if (!evaluation.evaluationDate && !evaluation.createdAt) return false;
-          const evalDate = new Date(
-            evaluation.evaluationDate || evaluation.createdAt
-          );
+          const evalDate = new Date(evaluation.evaluationDate || evaluation.createdAt);
           return evalDate >= monthStart && evalDate <= monthEnd;
         });
         if (empEvaluations.length > 0) {
@@ -4321,31 +4456,32 @@ export const getWorkLifeBalanceDataByYearUtil = (
           })[0];
           const totalScore = latestEval.totalScore || 0;
           if (totalScore < 60) {
-            empStressScore += 15;
+            stressScore += 3;
           } else if (totalScore < 70) {
-            empStressScore += 10;
+            stressScore += 2;
           } else if (totalScore < 80) {
-            empStressScore += 5;
+            stressScore += 1;
           }
         }
       }
 
-      // 7. 중요 공지 미확인 기반 스트레스 (해당 월)
+      // 6-3. 중요 공지 미확인
       if (Array.isArray(notices)) {
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0);
         const importantNotices = notices.filter((notice) => {
           if (!notice.isImportant && !notice.important) return false;
           if (!notice.createdAt && !notice.date) return false;
           const noticeDate = new Date(notice.createdAt || notice.date);
           return noticeDate >= monthStart && noticeDate <= monthEnd;
         });
-        if (importantNotices.length > 0) {
-          empStressScore += Math.min(10, importantNotices.length * 2);
+        const unreadNotices = importantNotices.filter(
+          (notice) => !notice.viewedBy || !notice.viewedBy.includes(emp.id)
+        );
+        if (unreadNotices.length > 0) {
+          stressScore += Math.min(2, unreadNotices.length);
         }
       }
 
-      totalStress += Math.min(100, empStressScore);
+      totalStress += Math.min(100, stressScore);
       employeesWithData++;
     });
 
@@ -4503,16 +4639,17 @@ export const getWorkLifeDetailDataUtil = (
 
   // isHoliday 함수 - getWorkTypeForDate가 있으면 근태 관리 로직 사용, 없으면 기본 함수 사용
   const isHoliday = getWorkTypeForDate
-    ? ((date) => {
+    ? (date) => {
         const [y, m, d] = date.split('-').map(Number);
         const workType = getWorkTypeForDate(y, m, d);
         return workType === 'holiday';
-      })
-    : (isHolidayFn || ((date) => {
+      }
+    : isHolidayFn ||
+      ((date) => {
         const dateObj = new Date(date);
         const dayOfWeek = dateObj.getDay();
         return dayOfWeek === 0 || dayOfWeek === 6; // 주말만 휴일로 판정
-      }));
+      });
 
   if (metric === '평균 특근시간') {
     filteredEmps.forEach((emp) => {
@@ -4871,8 +5008,7 @@ export const getWorkLifeDetailDataUtil = (
         }
       }
 
-      const onTimeRate =
-        workDays > 0 ? (onTimeCheckouts / workDays) * 100 : 0;
+      const onTimeRate = workDays > 0 ? (onTimeCheckouts / workDays) * 100 : 0;
 
       if (onTimeRate < 20) {
         stressDetails.정시퇴근율 = 20;
