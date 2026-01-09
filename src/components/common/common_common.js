@@ -5527,6 +5527,13 @@ export const getWorkPeriodText = (hireDate) => {
   const now = new Date();
   let years = now.getFullYear() - start.getFullYear();
   let months = now.getMonth() - start.getMonth();
+  let days = now.getDate() - start.getDate();
+
+  // 일 단위 계산: 현재 일자가 입사일자보다 작으면 한 달을 차감
+  if (days < 0) {
+    months -= 1;
+  }
+
   if (months < 0) {
     years -= 1;
     months += 12;
@@ -5770,6 +5777,13 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
   const now = new Date();
   let years = now.getFullYear() - hireDate.getFullYear();
   let months = now.getMonth() - hireDate.getMonth();
+  let days = now.getDate() - hireDate.getDate();
+
+  // 일 단위 계산: 현재 일자가 입사일자보다 작으면 한 달을 차감
+  if (days < 0) {
+    months -= 1;
+  }
+
   if (months < 0) {
     years -= 1;
     months += 12;
