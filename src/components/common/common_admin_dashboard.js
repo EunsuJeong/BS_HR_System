@@ -2983,7 +2983,12 @@ export const calculateAverageOvertimeHoursUtil = ({
         2,
         '0'
       )}-${String(day).padStart(2, '0')}`;
-      const attendance = getAttendanceForEmployee(emp.id, dateStr);
+      const attendance = getAttendanceForEmployee(
+        emp.id,
+        currentYear,
+        currentMonth + 1,
+        day
+      );
 
       if (attendance && attendance.checkIn && attendance.checkOut) {
         const dailyWage = calcDailyWage(
@@ -4217,9 +4222,10 @@ export const getWorkLifeBalanceDataByYearUtil = (
     });
 
     // ✅ 메인 화면과 동일하게 백분율(%)로 계산
-    monthlyData.violations[month] = filteredEmps.length > 0
-      ? Math.round((violationCount / filteredEmps.length) * 100)
-      : 0;
+    monthlyData.violations[month] =
+      filteredEmps.length > 0
+        ? Math.round((violationCount / filteredEmps.length) * 100)
+        : 0;
 
     // ✅ 스트레스 지수: 메인 화면과 동일한 로직 적용 (filteredEmps 재사용)
     // 각 월별로 해당 월 데이터만 사용하여 계산
@@ -4240,8 +4246,15 @@ export const getWorkLifeBalanceDataByYearUtil = (
       let currentWeekMinutes = 0;
 
       for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const attendance = getAttendanceForEmployee(emp.id, year, month + 1, day);
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(
+          day
+        ).padStart(2, '0')}`;
+        const attendance = getAttendanceForEmployee(
+          emp.id,
+          year,
+          month + 1,
+          day
+        );
 
         if (attendance && attendance.checkIn && attendance.checkOut) {
           hasWorkData = true;
@@ -4285,7 +4298,11 @@ export const getWorkLifeBalanceDataByYearUtil = (
       const usedLeave = leaveRequests
         .filter((lr) => {
           if (lr.employeeId !== emp.id || lr.status !== '승인') return false;
-          if (!lr.type || (!lr.type.includes('연차') && !lr.type.includes('반차'))) return false;
+          if (
+            !lr.type ||
+            (!lr.type.includes('연차') && !lr.type.includes('반차'))
+          )
+            return false;
           const leaveDate = new Date(lr.startDate);
           return leaveDate >= yearStart && leaveDate <= monthEnd;
         })
@@ -4299,7 +4316,8 @@ export const getWorkLifeBalanceDataByYearUtil = (
         }, 0);
 
       const totalLeave = calculateAnnualLeave(emp.joinDate);
-      const leaveUsageRate = totalLeave > 0 ? (usedLeave / totalLeave) * 100 : 0;
+      const leaveUsageRate =
+        totalLeave > 0 ? (usedLeave / totalLeave) * 100 : 0;
 
       if (leaveUsageRate < 20) {
         stressScore += 20;
@@ -4316,7 +4334,12 @@ export const getWorkLifeBalanceDataByYearUtil = (
       let onTimeCheckouts = 0;
 
       for (let day = 1; day <= daysInMonth; day++) {
-        const attendance = getAttendanceForEmployee(emp.id, year, month + 1, day);
+        const attendance = getAttendanceForEmployee(
+          emp.id,
+          year,
+          month + 1,
+          day
+        );
 
         if (attendance && attendance.checkIn && attendance.checkOut) {
           workDays++;
@@ -4325,11 +4348,13 @@ export const getWorkLifeBalanceDataByYearUtil = (
           const checkOutTime = attendance.checkOut;
 
           const checkInMinutes =
-            parseInt(checkInTime.split(':')[0]) * 60 + parseInt(checkInTime.split(':')[1]);
+            parseInt(checkInTime.split(':')[0]) * 60 +
+            parseInt(checkInTime.split(':')[1]);
           const isDayShift = checkInMinutes >= 180 && checkInMinutes < 900;
 
           const checkOutMinutes =
-            parseInt(checkOutTime.split(':')[0]) * 60 + parseInt(checkOutTime.split(':')[1]);
+            parseInt(checkOutTime.split(':')[0]) * 60 +
+            parseInt(checkOutTime.split(':')[1]);
 
           if (isDayShift) {
             if (checkOutMinutes <= 1080) {
@@ -4357,13 +4382,16 @@ export const getWorkLifeBalanceDataByYearUtil = (
 
       // === 4. 건의사항 승인률 (10점) - 해당월 기준 ===
       const mySuggestions = suggestions.filter((sug) => {
-        if (sug.employeeId !== emp.id && sug.employeeId !== emp.employeeNumber) return false;
+        if (sug.employeeId !== emp.id && sug.employeeId !== emp.employeeNumber)
+          return false;
         const sugDate = new Date(sug.createdAt || sug.date);
         return sugDate >= monthStart && sugDate <= monthEnd;
       });
 
       if (mySuggestions.length > 0) {
-        const approvedCount = mySuggestions.filter((sug) => sug.status === '승인').length;
+        const approvedCount = mySuggestions.filter(
+          (sug) => sug.status === '승인'
+        ).length;
         const approvalRate = (approvedCount / mySuggestions.length) * 100;
 
         if (approvalRate < 25) {
@@ -4380,11 +4408,17 @@ export const getWorkLifeBalanceDataByYearUtil = (
       let shiftPattern = { day: 0, night: 0 };
 
       for (let day = 1; day <= daysInMonth; day++) {
-        const attendance = getAttendanceForEmployee(emp.id, year, month + 1, day);
+        const attendance = getAttendanceForEmployee(
+          emp.id,
+          year,
+          month + 1,
+          day
+        );
 
         if (attendance && attendance.checkIn) {
           const checkInMinutes =
-            parseInt(attendance.checkIn.split(':')[0]) * 60 + parseInt(attendance.checkIn.split(':')[1]);
+            parseInt(attendance.checkIn.split(':')[0]) * 60 +
+            parseInt(attendance.checkIn.split(':')[1]);
 
           if (checkInMinutes >= 180 && checkInMinutes < 900) {
             shiftPattern.day++;
@@ -4409,10 +4443,18 @@ export const getWorkLifeBalanceDataByYearUtil = (
       let currentConsecutiveDays = 0;
 
       for (let day = 1; day <= daysInMonth; day++) {
-        const attendance = getAttendanceForEmployee(emp.id, year, month + 1, day);
+        const attendance = getAttendanceForEmployee(
+          emp.id,
+          year,
+          month + 1,
+          day
+        );
         if (attendance && attendance.checkIn) {
           currentConsecutiveDays++;
-          maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+          maxConsecutiveDays = Math.max(
+            maxConsecutiveDays,
+            currentConsecutiveDays
+          );
         } else {
           currentConsecutiveDays = 0;
         }
@@ -4441,10 +4483,13 @@ export const getWorkLifeBalanceDataByYearUtil = (
       if (Array.isArray(evaluations)) {
         const empEvaluations = evaluations.filter((evaluation) => {
           const isEmpEval =
-            evaluation.employeeId === emp.id || evaluation.employeeId === emp.employeeNumber;
+            evaluation.employeeId === emp.id ||
+            evaluation.employeeId === emp.employeeNumber;
           if (!isEmpEval) return false;
           if (!evaluation.evaluationDate && !evaluation.createdAt) return false;
-          const evalDate = new Date(evaluation.evaluationDate || evaluation.createdAt);
+          const evalDate = new Date(
+            evaluation.evaluationDate || evaluation.createdAt
+          );
           return evalDate >= monthStart && evalDate <= monthEnd;
         });
         if (empEvaluations.length > 0) {
