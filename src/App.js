@@ -1816,7 +1816,7 @@ const HRManagementSystem = () => {
 
   // *[2_관리자 모드] 2.6.0_연차 계산 wrapper (utils/leaveCalculations.js로 분리됨)*
   const calculateEmployeeAnnualLeave = (employee) => {
-    return calculateEmployeeAnnualLeaveUtil(employee, leaveRequests, getAttendanceForEmployee);
+    return calculateEmployeeAnnualLeaveUtil(employee, leaveRequests);
   };
 
   // *[2_관리자 모드] 2.5_연차 갱신 알림 수신자 래퍼 함수*

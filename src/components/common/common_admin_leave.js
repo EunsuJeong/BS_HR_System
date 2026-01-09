@@ -1599,10 +1599,9 @@ export const sortLeaveRequests = (
  * 직원 연차 계산
  * @param {Object} employee - 직원 정보
  * @param {Array} leaveRequests - 연차 신청 목록
- * @param {Function} getAttendanceForEmployee - 근태 데이터 조회 함수 (월차 계산용)
  * @returns {Object} 연차 정보 (총 연차, 사용 연차, 잔여 연차 등)
  */
-export const calculateEmployeeAnnualLeave = (employee, leaveRequests, getAttendanceForEmployee = null) => {
+export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
   const hireDate = new Date(employee.hireDate || employee.joinDate);
 
   if (isNaN(hireDate.getTime())) {
@@ -1672,21 +1671,11 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests, getAttenda
   if (employee.contractType === '촉탁') {
     defaultTotalAnnual = 15;
   } else if (years < 1) {
-    // ✅ 1년 미만: 월차 계산 (만근 기준)
-    if (getAttendanceForEmployee) {
-      // 근태 데이터가 있으면 실제 만근 기준으로 계산
-      defaultTotalAnnual = calculateMonthlyLeave({
-        employeeId: employee.id,
-        hireDate: hireDate,
-        currentDate: currentDate,
-        getAttendanceForEmployee: getAttendanceForEmployee,
-        leaveRequests: leaveRequests,
-      });
-    } else {
-      // 근태 데이터가 없으면 기존 로직 사용 (하위 호환성)
-      const totalMonths = years * 12 + months;
-      defaultTotalAnnual = Math.min(totalMonths, 11); // 최대 11개 (1년 미만)
-    }
+    // ✅ 1년 미만: 월차 계산 (월이 지나면 자동 발생)
+    defaultTotalAnnual = calculateMonthlyLeave({
+      hireDate: hireDate,
+      currentDate: currentDate,
+    });
   } else {
     defaultTotalAnnual = 15; // 기본 15일
 
@@ -1891,7 +1880,6 @@ export const exportLeaveHistoryToXLSX = (leaveData, formatDateByLang) => {
  * - filterLeaveRequests: 연차 신청 목록 필터링 함수
  * - sortLeaveRequests: 연차 신청 목록 정렬 함수
  * - calculateEmployeeAnnualLeave: 직원 연차 계산 함수
- * - checkMonthlyFullAttendance: 월별 만근 여부 확인 함수
  * - calculateMonthlyLeave: 1년 미만 직원 월차 계산 함수
  * - exportEmployeeLeaveStatusToXLSX: 직원 연차 현황 엑셀 다운로드
  * - exportLeaveHistoryToXLSX: 연차 신청 내역 엑셀 다운로드
@@ -1902,81 +1890,19 @@ export const exportLeaveHistoryToXLSX = (leaveData, formatDateByLang) => {
 // ============================================================
 
 /**
- * 특정 월의 만근 여부를 확인하는 함수
+ * 1년 미만 직원의 월차 계산 함수 (월이 지나면 자동 발생)
  * @param {Object} params - 매개변수
- * @param {string} params.employeeId - 직원 ID
- * @param {number} params.year - 연도
- * @param {number} params.month - 월 (1-12)
- * @param {Function} params.getAttendanceForEmployee - 근태 데이터 조회 함수
- * @param {Array} params.leaveRequests - 연차 신청 목록 (결근/조퇴 제외용)
- * @returns {boolean} 만근 여부
- */
-export const checkMonthlyFullAttendance = ({
-  employeeId,
-  year,
-  month,
-  getAttendanceForEmployee,
-  leaveRequests = [],
-}) => {
-  // 해당 월의 일수 구하기
-  const daysInMonth = new Date(year, month, 0).getDate();
-  
-  let workDays = 0;
-  let attendedDays = 0;
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month - 1, day);
-    const dayOfWeek = date.getDay(); // 0: 일요일, 6: 토요일
-
-    // 주말 제외
-    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-
-    workDays++;
-
-    // 근태 데이터 조회
-    const attendance = getAttendanceForEmployee(employeeId, year, month, day);
-    
-    // 승인된 연차/반차는 출근으로 인정
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const approvedLeave = leaveRequests.find(
-      (leave) =>
-        leave.employeeId === employeeId &&
-        leave.startDate <= dateStr &&
-        leave.endDate >= dateStr &&
-        leave.status === '승인' &&
-        (leave.type === '연차' || leave.type?.includes('반차'))
-    );
-
-    // 출근 기록이 있거나, 승인된 연차/반차가 있으면 출근으로 인정
-    if (attendance?.checkIn || approvedLeave) {
-      attendedDays++;
-    }
-  }
-
-  // 평일 전부 출근했으면 만근
-  return workDays > 0 && attendedDays === workDays;
-};
-
-/**
- * 1년 미만 직원의 월차 계산 함수
- * @param {Object} params - 매개변수
- * @param {string} params.employeeId - 직원 ID
  * @param {Date} params.hireDate - 입사일
  * @param {Date} params.currentDate - 현재 날짜
- * @param {Function} params.getAttendanceForEmployee - 근태 데이터 조회 함수
- * @param {Array} params.leaveRequests - 연차 신청 목록
  * @returns {number} 월차 개수
  */
 export const calculateMonthlyLeave = ({
-  employeeId,
   hireDate,
   currentDate = new Date(),
-  getAttendanceForEmployee,
-  leaveRequests = [],
 }) => {
   const hire = new Date(hireDate);
   const current = new Date(currentDate);
-  
+
   // 연차 시작일 계산 (입사 후 1년)
   const annualStartDate = new Date(
     hire.getFullYear() + 1,
@@ -2005,34 +1931,24 @@ export const calculateMonthlyLeave = ({
     startYear = nextMonth.getFullYear();
   }
 
-  // 현재 월까지 반복하면서 만근 확인
+  // 현재 월까지 반복하면서 월차 카운트
   let checkYear = startYear;
   let checkMonth = startMonth;
 
   while (true) {
     const checkDate = new Date(checkYear, checkMonth - 1, 1);
-    
+
     // 현재 월보다 미래면 종료
     if (checkDate > current) break;
-    
+
     // 연차 시작일 이후면 종료 (월차 소멸)
     if (checkDate >= annualStartDate) break;
 
-    // 해당 월이 완전히 지났는지 확인 (예: 2월 만근 → 3월 1일에 월차 발생)
-    const lastDayOfMonth = new Date(checkYear, checkMonth, 0);
-    if (current >= new Date(checkYear, checkMonth, 1)) {
-      // 만근 확인
-      const isFullAttendance = checkMonthlyFullAttendance({
-        employeeId,
-        year: checkYear,
-        month: checkMonth,
-        getAttendanceForEmployee,
-        leaveRequests,
-      });
-
-      if (isFullAttendance) {
-        monthlyLeaveCount++;
-      }
+    // 해당 월이 완전히 지났으면 월차 1일 발생
+    // 예: 2월부터 카운트 → 3월 1일 이후면 월차 1일
+    const nextMonthStart = new Date(checkYear, checkMonth, 1);
+    if (current >= nextMonthStart) {
+      monthlyLeaveCount++;
     }
 
     // 다음 달로 이동
