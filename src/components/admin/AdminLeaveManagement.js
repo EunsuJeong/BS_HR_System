@@ -303,9 +303,9 @@ const AdminLeaveManagement = ({
                       </button>
                     </th>
                     <th className="text-center py-1 px-2">
-                      상태
+                      계약형태
                       <button
-                        onClick={() => handleAnnualLeaveSort('status')}
+                        onClick={() => handleAnnualLeaveSort('contractType')}
                         className="ml-1 text-xs text-gray-500 hover:text-gray-700"
                       >
                         ▼
@@ -662,23 +662,22 @@ const AdminLeaveManagement = ({
                             {isEditing ? (
                               <select
                                 value={
-                                  editAnnualData.status || emp.status || '재직'
+                                  editAnnualData.contractType || emp.contractType || '정규'
                                 }
                                 onChange={(e) =>
                                   setEditAnnualData((prev) => ({
                                     ...prev,
-                                    status: e.target.value,
+                                    contractType: e.target.value,
                                   }))
                                 }
                                 className="w-20 px-2 py-1 border rounded text-center"
                               >
-                                <option value="재직">재직</option>
-                                <option value="휴직">휴직</option>
-                                <option value="퇴직">퇴직</option>
-                                <option value="대기">대기</option>
+                                <option value="정규">정규</option>
+                                <option value="계약">계약</option>
+                                <option value="촉탁">촉탁</option>
                               </select>
                             ) : (
-                              emp.status || '재직'
+                              emp.contractType || '정규'
                             )}
                           </td>
                           <td className="text-center py-1 px-2">
