@@ -4038,38 +4038,35 @@ export const getWorkLifeBalanceDataByYearUtil = (
     let totalOvertimeHours = 0;
     let employeeCount = 0;
 
-    employees.forEach((emp, empIndex) => {
+    employees.forEach((emp) => {
       let empOvertimeHours = 0;
-      let empDaysWorked = 0;
 
+      // ✅ 메인 화면과 동일한 로직 적용
       for (let day = 1; day <= daysInMonth; day++) {
-        const attendanceData = getAttendanceForEmployee(
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const attendance = getAttendanceForEmployee(
           emp.id,
           year,
           month + 1,
           day
         );
-        if (
-          attendanceData &&
-          attendanceData.checkIn &&
-          attendanceData.checkOut
-        ) {
-          empDaysWorked++;
 
-          // calcDailyWage의 totalWorkMinutes 사용
+        if (attendance && attendance.checkIn && attendance.checkOut) {
           const dailyWage = calcDailyWage(
-            attendanceData.checkIn,
-            attendanceData.checkOut,
-            emp.workType || 'day',
-            `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            emp.id,
+            dateStr,
+            attendance.checkIn,
+            attendance.checkOut
           );
 
-          // totalWorkMinutes에서 기본 8시간을 뺀 나머지가 특근시간
-          if (dailyWage && dailyWage.totalWorkMinutes) {
-            const totalHours = dailyWage.totalWorkMinutes / 60;
-            const overtimeHours = Math.max(0, totalHours - 8);
-            empOvertimeHours += overtimeHours;
-          }
+          // 모든 초과근무 시간 합산 (메인 화면과 동일)
+          empOvertimeHours +=
+            (dailyWage.earlyHours || 0) + // 조출
+            (dailyWage.overtimeHours || 0) + // 연장
+            (dailyWage.holidayHours || 0) + // 특근
+            (dailyWage.nightHours || 0) + // 심야
+            (dailyWage.overtimeNightHours || 0) + // 연장+심야
+            (dailyWage.holidayOvertimeHours || 0); // 특근+연장
         }
       }
 
@@ -4081,7 +4078,7 @@ export const getWorkLifeBalanceDataByYearUtil = (
 
     monthlyData.overtime[month] =
       employeeCount > 0
-        ? Math.round((totalOvertimeHours / employeeCount) * 100) / 100
+        ? Math.round((totalOvertimeHours / employeeCount) * 10) / 10
         : 0;
 
     monthlyData.leaveUsage[month] = calculateMonthlyLeaveUsageRate(
