@@ -262,7 +262,7 @@ const AdminSuggestionManagement = ({
                     ▼
                   </button>
                 </th>
-                <th className="text-center py-1 px-2 min-w-[250px]">
+                <th className="text-center py-1 px-2 min-w-[350px]">
                   내용
                   <button
                     onClick={() => handleSuggestionSort('content')}
@@ -271,7 +271,7 @@ const AdminSuggestionManagement = ({
                     ▼
                   </button>
                 </th>
-                <th className="text-center py-1 px-2 min-w-[200px]">
+                <th className="text-center py-1 px-2 min-w-[120px]">
                   비고
                   <button
                     onClick={() => handleSuggestionSort('remark')}
@@ -419,7 +419,7 @@ const AdminSuggestionManagement = ({
                             </div>
                           )}
                         </td>
-                        <td className="text-left py-2 px-2">
+                        <td className="text-center py-2 px-2">
                           {isEditing ? (
                             <input
                               type="text"
@@ -432,11 +432,11 @@ const AdminSuggestionManagement = ({
                                   remark: e.target.value,
                                 }))
                               }
-                              className="w-full px-2 py-1 border rounded"
+                              className="w-full px-2 py-1 border rounded text-center"
                             />
                           ) : (
                             <div
-                              className="max-w-[150px] text-left whitespace-normal break-words line-clamp-3"
+                              className="max-w-[100px] text-center whitespace-normal break-words line-clamp-2 mx-auto"
                               title={s.remark || '-'}
                             >
                               {s.remark || '-'}
