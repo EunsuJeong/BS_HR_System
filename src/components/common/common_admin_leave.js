@@ -858,7 +858,9 @@ export const useAnnualLeaveManager = ({
     // ⚠️ DEPRECATED: 연차 갱신 로직이 서버로 이동되었습니다.
     // 📍 서버: server/utils/annualLeaveScheduler.js
     // 📍 매일 오전 8시에 자동 실행 (cron 스케줄러)
-    devLog('[연차관리] ⚠️ 프론트엔드 연차 갱신 로직은 deprecated - 서버에서 처리 중');
+    devLog(
+      '[연차관리] ⚠️ 프론트엔드 연차 갱신 로직은 deprecated - 서버에서 처리 중'
+    );
 
     // 최초 실행 - DISABLED (서버에서 처리)
     // checkAnnualLeavePeriodExpiry();
@@ -1665,7 +1667,10 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
 
   let defaultTotalAnnual = 0;
 
-  if (years < 1) {
+  // ✅ 촉탁직은 근속연수 무관하게 기본연차 15일 고정
+  if (employee.contractType === '촉탁') {
+    defaultTotalAnnual = 15;
+  } else if (years < 1) {
     const totalMonths = years * 12 + months;
     defaultTotalAnnual = Math.min(totalMonths, 11); // 최대 11개 (1년 미만)
   } else {

@@ -196,12 +196,12 @@ router.get('/notices', async (req, res) => {
     const notices = await Notice.find(query).sort({ createdAt: -1 });
 
     // 첨부파일 크기 정보 추가
-    const noticesWithFileSize = notices.map(notice => {
+    const noticesWithFileSize = notices.map((notice) => {
       const noticeObj = notice.toObject();
 
       // attachments에 파일 크기 추가
       if (noticeObj.attachments && noticeObj.attachments.length > 0) {
-        noticeObj.attachments = noticeObj.attachments.map(att => {
+        noticeObj.attachments = noticeObj.attachments.map((att) => {
           if (att.url && !att.size) {
             try {
               const fileName = att.url.split('/').pop();
@@ -210,7 +210,7 @@ router.get('/notices', async (req, res) => {
                 const stats = fs.statSync(filePath);
                 return {
                   ...att,
-                  size: stats.size
+                  size: stats.size,
                 };
               }
             } catch (err) {
@@ -223,7 +223,7 @@ router.get('/notices', async (req, res) => {
 
       // files 필드도 동일하게 처리
       if (noticeObj.files && noticeObj.files.length > 0) {
-        noticeObj.files = noticeObj.files.map(file => {
+        noticeObj.files = noticeObj.files.map((file) => {
           if (file.url && !file.size) {
             try {
               const fileName = file.url.split('/').pop();
@@ -232,7 +232,7 @@ router.get('/notices', async (req, res) => {
                 const stats = fs.statSync(filePath);
                 return {
                   ...file,
-                  size: stats.size
+                  size: stats.size,
                 };
               }
             } catch (err) {
@@ -425,7 +425,7 @@ router.post('/notices/:id/view', async (req, res) => {
       console.log('👤 [조회수] 관리자 조회 - 카운트 제외:', employeeId);
       return res.json({
         message: '관리자 조회는 카운트되지 않습니다.',
-        viewCount: 0
+        viewCount: 0,
       });
     }
 
@@ -443,7 +443,7 @@ router.post('/notices/:id/view', async (req, res) => {
       console.log('👁️ [조회수] 이미 조회한 직원:', employeeId, '- 카운트 제외');
       return res.json({
         message: '이미 조회한 공지사항입니다.',
-        viewCount: notice.viewCount || viewedBy.length
+        viewCount: notice.viewCount || viewedBy.length,
       });
     }
 
@@ -457,11 +457,16 @@ router.post('/notices/:id/view', async (req, res) => {
       { new: true }
     );
 
-    console.log(`✅ [조회수] 증가: ${employeeId} - 공지 "${notice.title.substring(0, 20)}..." (조회수: ${updatedNotice.viewCount})`);
+    console.log(
+      `✅ [조회수] 증가: ${employeeId} - 공지 "${notice.title.substring(
+        0,
+        20
+      )}..." (조회수: ${updatedNotice.viewCount})`
+    );
 
     res.json({
       message: '조회수가 증가되었습니다.',
-      viewCount: updatedNotice.viewCount
+      viewCount: updatedNotice.viewCount,
     });
   } catch (error) {
     console.error('❌ 조회수 증가 오류:', error);
@@ -536,8 +541,10 @@ router.post('/notifications', async (req, res) => {
 
     // 시스템 알림(자동 알림)인 경우에도 startDate, endDate, repeatCycle 추가
     if (notificationType === '시스템') {
-      notificationData.startDate = startDate || new Date().toISOString().split('T')[0];
-      notificationData.endDate = endDate || new Date().toISOString().split('T')[0];
+      notificationData.startDate =
+        startDate || new Date().toISOString().split('T')[0];
+      notificationData.endDate =
+        endDate || new Date().toISOString().split('T')[0];
       notificationData.repeatCycle = repeatCycle || '즉시';
       if (req.body.priority) {
         notificationData.priority = req.body.priority;
@@ -880,7 +887,7 @@ router.post('/notifications/:id/read', async (req, res) => {
       console.log('👁️ [알림 읽음] 이미 읽음:', employeeId);
       return res.json({
         message: '이미 읽은 알림입니다.',
-        notification
+        notification,
       });
     }
 
@@ -893,11 +900,16 @@ router.post('/notifications/:id/read', async (req, res) => {
       { new: true }
     );
 
-    console.log(`✅ [알림 읽음] ${employeeId} - 알림 "${notification.title.substring(0, 20)}..."`);
+    console.log(
+      `✅ [알림 읽음] ${employeeId} - 알림 "${notification.title.substring(
+        0,
+        20
+      )}..."`
+    );
 
     res.json({
       message: '알림을 읽음 처리했습니다.',
-      notification: updatedNotification
+      notification: updatedNotification,
     });
   } catch (error) {
     console.error('❌ 알림 읽음 처리 오류:', error);

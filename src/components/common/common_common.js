@@ -916,7 +916,10 @@ export const formatTimeDisplay = (timeValue) => {
   if (!timeValue && timeValue !== 0) return '';
 
   // 1. 이미 HH:MM 형식이면 그대로 반환
-  if (typeof timeValue === 'string' && /^\d{1,2}:\d{2}$/.test(timeValue.trim())) {
+  if (
+    typeof timeValue === 'string' &&
+    /^\d{1,2}:\d{2}$/.test(timeValue.trim())
+  ) {
     return timeValue.trim();
   }
 
@@ -927,7 +930,10 @@ export const formatTimeDisplay = (timeValue) => {
     const totalMinutes = Math.round(timeValue * 1440);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+      2,
+      '0'
+    )}`;
   }
 
   // 3. 문자열 소수점 형식도 처리 ("0.6472222" → 15:32)
@@ -938,7 +944,10 @@ export const formatTimeDisplay = (timeValue) => {
       const totalMinutes = Math.round(numValue * 1440);
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
-      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+        2,
+        '0'
+      )}`;
     }
   }
 
@@ -5793,7 +5802,10 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
 
   let defaultTotalAnnual = 0;
 
-  if (years < 1) {
+  // ✅ 촉탁직은 근속연수 무관하게 기본연차 15일 고정
+  if (employee.contractType === '촉탁') {
+    defaultTotalAnnual = 15;
+  } else if (years < 1) {
     const totalMonths = years * 12 + months;
     defaultTotalAnnual = Math.min(totalMonths, 11); // 최대 11개 (1년 미만)
   } else {

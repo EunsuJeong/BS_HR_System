@@ -27,9 +27,7 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage }) => {
 
     const readIds = new Set(
       employeeNotifications
-        .filter((notification) =>
-          notification.readBy?.includes(currentUser.id)
-        )
+        .filter((notification) => notification.readBy?.includes(currentUser.id))
         .map((notification) => notification._id || notification.id)
     );
     setLocalReadNotifications(readIds);
