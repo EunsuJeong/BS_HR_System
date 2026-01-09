@@ -2991,11 +2991,12 @@ export const calculateAverageOvertimeHoursUtil = ({
       );
 
       if (attendance && attendance.checkIn && attendance.checkOut) {
+        // ✅ calcDailyWage 올바른 파라미터: (startTime, endTime, workType, date)
         const dailyWage = calcDailyWage(
-          emp.id,
-          dateStr,
           attendance.checkIn,
-          attendance.checkOut
+          attendance.checkOut,
+          emp.workType || 'day',
+          dateStr
         );
 
         // 모든 초과근무 시간 합산
@@ -4081,6 +4082,11 @@ export const getWorkLifeBalanceDataByYearUtil = (
   const currentMonth = new Date().getMonth(); // 0-11 (0=1월, 8=9월)
   const currentYear = new Date().getFullYear();
 
+  // ✅ 메인 화면과 동일한 필터링 적용 (이철균, 이현주 제외)
+  const filteredEmps = employees.filter(
+    (emp) => emp.name !== '이철균' && emp.name !== '이현주'
+  );
+
   const monthlyData = {
     overtime: [],
     leaveUsage: [],
@@ -4101,7 +4107,8 @@ export const getWorkLifeBalanceDataByYearUtil = (
     let totalOvertimeHours = 0;
     let employeeCount = 0;
 
-    employees.forEach((emp) => {
+    // ✅ 메인 화면과 동일하게 filteredEmps 사용
+    filteredEmps.forEach((emp) => {
       let empOvertimeHours = 0;
 
       // ✅ 메인 화면과 동일한 로직 적용
@@ -4117,11 +4124,12 @@ export const getWorkLifeBalanceDataByYearUtil = (
         );
 
         if (attendance && attendance.checkIn && attendance.checkOut) {
+          // ✅ calcDailyWage 올바른 파라미터: (startTime, endTime, workType, date)
           const dailyWage = calcDailyWage(
-            emp.id,
-            dateStr,
             attendance.checkIn,
-            attendance.checkOut
+            attendance.checkOut,
+            emp.workType || 'day',
+            dateStr
           );
 
           // 모든 초과근무 시간 합산 (메인 화면과 동일)
@@ -4153,10 +4161,8 @@ export const getWorkLifeBalanceDataByYearUtil = (
 
     // 주 52시간 위반 건수 계산 (실제 월요일-일요일 주 단위)
     let violationCount = 0;
-    const filteredEmps = employees.filter(
-      (e) => !['이철균', '이현주'].includes(e.name)
-    );
 
+    // ✅ filteredEmps는 함수 시작 부분에서 이미 정의됨
     filteredEmps.forEach((emp, empIdx) => {
       const monthStart = new Date(year, month, 1);
       const monthEnd = new Date(year, month + 1, 0);
