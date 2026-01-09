@@ -179,6 +179,9 @@ router.get('/employees', async (_, res) => {
       console.log(
         `  - usedLeave: ${sample.usedLeave} (타입: ${typeof sample.usedLeave})`
       );
+      console.log(
+        `  - lastLogin: ${sample.lastLogin} (타입: ${typeof sample.lastLogin})`
+      );
     }
 
     // 일관성있는 API 응답 형식 사용
