@@ -657,10 +657,6 @@ const HRManagementSystem = () => {
             dbEmployees.length,
             '명'
           );
-          devLog(
-            '🔍 [초기 로드] 첫 번째 직원 lastLogin:',
-            formattedEmployees[0]?.lastLogin
-          );
         }
 
         // 2. 연차 데이터 로드
