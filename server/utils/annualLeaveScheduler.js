@@ -195,10 +195,9 @@ async function createAdminNotification(employee, originalNotification) {
 
 // ============ 연차 갱신 관련 함수 ============
 
-// 이월 연차 계산 (최대 11일)
+// 이월 연차 계산 (잔여 연차 전부)
 function calculateCarryOverLeave(remainingLeave) {
-  const maxCarryOver = 11;
-  return Math.min(Math.floor(remainingLeave), maxCarryOver);
+  return remainingLeave; // 잔여 연차 전부 이월 (소수점 포함)
 }
 
 // 다음 연차 기간 계산
@@ -243,7 +242,7 @@ async function createEmployeeRenewalNotification(employee, nextPeriod, carryOver
   const notification = new Notification({
     notificationType: '시스템',
     title: '📢 연차 기간 자동 갱신 알림',
-    content: `${employee.name}님의 연차가 새 기준으로 자동 갱신되었습니다.\n\n📅 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}\n📊 기본 연차: ${nextPeriod.totalAnnual}일\n🔄 이월 연차: ${carryOverLeave}일\n✅ 총 사용 가능 연차: ${nextPeriod.totalAnnual + carryOverLeave}일`,
+    content: `${employee.name}님의 연차가 새 기준으로 자동 갱신되었습니다.\n\n📅 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}\n📊 총 연차: ${nextPeriod.totalAnnual}일\n🔄 이월 연차: ${carryOverLeave}일 (수당 계산용)\n✅ 사용 가능 연차: ${nextPeriod.totalAnnual}일`,
     message: `연차가 자동 갱신되었습니다. 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}`,
     sender: '시스템',
     priority: 'HIGH',
@@ -289,7 +288,7 @@ async function createAdminRenewalSummary(employee, nextPeriod, carryOverLeave) {
     const adminNotif = new Notification({
       notificationType: '시스템',
       title: `📋 ${employee.name}님 연차 갱신 완료`,
-      content: `${employee.name}님의 연차가 자동 갱신되었습니다.\n\n📅 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}\n📊 기본 연차: ${nextPeriod.totalAnnual}일\n🔄 이월 연차: ${carryOverLeave}일\n✅ 총 연차: ${nextPeriod.totalAnnual + carryOverLeave}일`,
+      content: `${employee.name}님의 연차가 자동 갱신되었습니다.\n\n📅 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}\n📊 총 연차: ${nextPeriod.totalAnnual}일\n🔄 이월 연차: ${carryOverLeave}일 (수당 계산용)\n✅ 사용 가능 연차: ${nextPeriod.totalAnnual}일`,
       message: `${employee.name}님 연차 자동 갱신 완료`,
       sender: '시스템',
       priority: 'MEDIUM',
@@ -428,10 +427,10 @@ async function checkAnnualLeaveExpiry(io) {
             annualLeaveStart: nextPeriod.annualStart,
             annualLeaveEnd: nextPeriod.annualEnd,
             baseAnnual: nextPeriod.totalAnnual,
-            carryOverLeave: carryOverLeave,
-            totalAnnual: nextPeriod.totalAnnual + carryOverLeave,
+            carryOverLeave: carryOverLeave, // 기록용 (수당 계산용)
+            totalAnnual: nextPeriod.totalAnnual, // 총연차 = 기본연차
             usedAnnual: 0,
-            remainAnnual: nextPeriod.totalAnnual + carryOverLeave
+            remainAnnual: nextPeriod.totalAnnual // 잔여 = 총연차
           });
 
           // 직원 알림 생성

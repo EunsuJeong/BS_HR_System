@@ -5869,9 +5869,9 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
     months,
     totalAnnual,
     usedAnnual,
-    remainAnnual: totalAnnual - usedAnnual,
-    carryOverLeave, // 이월연차
-    baseAnnual, // 기본연차 (이월 제외)
+    remainAnnual: totalAnnual - usedAnnual, // 잔여 = 총연차 - 사용연차
+    carryOverLeave, // 이월연차 (기록용, 수당 계산용)
+    baseAnnual, // 기본연차 (총연차와 동일)
   };
 };
 

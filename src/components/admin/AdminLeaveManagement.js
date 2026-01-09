@@ -702,11 +702,7 @@ const AdminLeaveManagement = ({
                                   setEditAnnualData((prev) => ({
                                     ...prev,
                                     baseAnnual: value,
-                                    totalAnnual:
-                                      value +
-                                      (prev.carryOverLeave ||
-                                        annualData.carryOverLeave ||
-                                        0),
+                                    totalAnnual: value, // 총연차 = 기본연차
                                   }));
                                 }}
                                 className="w-16 px-2 py-1 border rounded text-center"
@@ -735,17 +731,12 @@ const AdminLeaveManagement = ({
                                   setEditAnnualData((prev) => ({
                                     ...prev,
                                     carryOverLeave: value,
-                                    totalAnnual:
-                                      (prev.baseAnnual ||
-                                        annualData.baseAnnual ||
-                                        annualData.totalAnnual -
-                                          (annualData.carryOverLeave || 0)) +
-                                      value,
+                                    // 총연차는 기본연차와 동일하므로 변경하지 않음
                                   }));
                                 }}
                                 className="w-16 px-2 py-1 border rounded text-center"
                                 min="0"
-                                max="11"
+                                step="0.5"
                               />
                             ) : (
                               <span className="text-green-600 font-medium">
@@ -767,6 +758,7 @@ const AdminLeaveManagement = ({
                                   setEditAnnualData((prev) => ({
                                     ...prev,
                                     totalAnnual: value,
+                                    baseAnnual: value, // 총연차 = 기본연차
                                     remainAnnual:
                                       value -
                                       (prev.usedAnnual !== undefined

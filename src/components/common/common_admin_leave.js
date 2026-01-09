@@ -41,14 +41,14 @@ export const useAnnualLeaveEditor = (dependencies = {}) => {
     (employeeId) => {
       const baseAnnual = editAnnualData.baseAnnual || 0;
       const carryOverLeave = editAnnualData.carryOverLeave || 0;
-      const totalAnnual = baseAnnual + carryOverLeave;
+      const totalAnnual = baseAnnual; // 총연차 = 기본연차
 
       const finalData = {
         ...editAnnualData,
         baseAnnual,
-        carryOverLeave,
+        carryOverLeave, // 이월연차는 기록용 (수당 계산용)
         totalAnnual,
-        remainAnnual: totalAnnual - (editAnnualData.usedAnnual || 0),
+        remainAnnual: totalAnnual - (editAnnualData.usedAnnual || 0), // 잔여 = 총연차 - 사용연차
       };
 
       setEmployees((prev) =>
@@ -77,7 +77,7 @@ export const useAnnualLeaveEditor = (dependencies = {}) => {
           total: totalAnnual,
           used: finalData.usedAnnual || 0,
           remaining: totalAnnual - (finalData.usedAnnual || 0),
-          carryOver: carryOverLeave,
+          carryOver: carryOverLeave, // 기록용 (수당 계산용)
           baseAnnual: baseAnnual,
           lastModified: new Date().toISOString(),
         })
@@ -493,21 +493,20 @@ export const useAnnualLeaveManager = ({
               emp,
               emp.leaveYearEnd || calculateEmployeeAnnualLeave(emp).annualEnd
             );
-            const totalAnnualWithCarryOver =
-              nextPeriod.totalAnnual + carryOverLeave;
+            const totalAnnual = nextPeriod.totalAnnual; // 총연차 = 기본연차
 
             return {
               ...emp,
               annualLeave: {
-                total: totalAnnualWithCarryOver,
+                total: totalAnnual,
                 used: 0, // 사용 연차 초기화
-                remaining: totalAnnualWithCarryOver,
-                carryOver: carryOverLeave, // 이월연차 기록
+                remaining: totalAnnual, // 잔여 = 총연차
+                carryOver: carryOverLeave, // 이월연차 기록 (수당 계산용)
                 baseAnnual: nextPeriod.totalAnnual, // 기본 연차 기록
               },
               usedAnnual: 0, // 기존 필드도 초기화
-              totalAnnual: totalAnnualWithCarryOver,
-              carryOverLeave: carryOverLeave,
+              totalAnnual: totalAnnual,
+              carryOverLeave: carryOverLeave, // 기록용
               lastAnnualReset: new Date().toISOString(), // 마지막 갱신일 기록
             };
           }
@@ -519,15 +518,15 @@ export const useAnnualLeaveManager = ({
         employees.find((e) => e.id === employeeId),
         currentAnnualData.annualEnd
       );
-      const totalAnnualWithCarryOver = nextPeriod.totalAnnual + carryOverLeave;
+      const totalAnnual = nextPeriod.totalAnnual; // 총연차 = 기본연차
 
       localStorage.setItem(
         `annualLeave_${employeeId}`,
         JSON.stringify({
-          total: totalAnnualWithCarryOver,
+          total: totalAnnual,
           used: 0,
-          remaining: totalAnnualWithCarryOver,
-          carryOver: carryOverLeave,
+          remaining: totalAnnual, // 잔여 = 총연차
+          carryOver: carryOverLeave, // 기록용 (수당 계산용)
           baseAnnual: nextPeriod.totalAnnual,
           resetDate: new Date().toISOString(),
         })
@@ -967,12 +966,12 @@ export const getNextAnnualPeriod = (employee, currentAnnualEnd = null) => {
 };
 
 /**
- * 연차 이월 한도 계산
+ * 연차 이월 계산
  * @param {number} remainingLeave - 잔여 연차
- * @returns {number} 이월 가능한 연차 (최대 11일)
+ * @returns {number} 이월 가능한 연차 (잔여 연차 전부, 소수점 포함)
  */
 export const calculateCarryOverLeave = (remainingLeave) => {
-  return Math.min(remainingLeave, 11); // 법정 이월 한도 11일
+  return remainingLeave; // 잔여 연차 전부 이월 (소수점 포함)
 };
 
 /**
@@ -1758,9 +1757,9 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
     months,
     totalAnnual,
     usedAnnual,
-    remainAnnual: totalAnnual - usedAnnual,
-    carryOverLeave, // 이월연차
-    baseAnnual, // 기본연차 (이월 제외)
+    remainAnnual: totalAnnual - usedAnnual, // 잔여 = 총연차 - 사용연차
+    carryOverLeave, // 이월연차 (기록용, 수당 계산용)
+    baseAnnual, // 기본연차 (총연차와 동일)
   };
 };
 
@@ -1862,7 +1861,7 @@ export const exportLeaveHistoryToXLSX = (leaveData, formatDateByLang) => {
  *   - getSortedLeaveRequests: 연차 신청 목록 정렬
  * - useAnnualLeaveManager: 연차 기간 만료 체크 및 자동 갱신 Hook
  * - getNextAnnualPeriod: 다음 연차 기간 정보 계산
- * - calculateCarryOverLeave: 연차 이월 한도 계산
+ * - calculateCarryOverLeave: 연차 이월 계산 (잔여 연차 전부)
  * - createAnnualRenewalNotification: 연차 갱신 알림 생성
  * - createExpiryNotification30Days: 연차 만료 예정 알림 생성 (30일 전)
  * - createExpiryNotification7Days: 연차 만료 임박 알림 생성 (7일 전)

@@ -97,7 +97,7 @@ const CommonLogin = ({
 
           <div className="mt-8 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 text-center">
-              부성스틸 HR 관리 시스템 (ver.1.0)
+              부성스틸 HR 관리 시스템(ver.1.1_260112)
             </p>
           </div>
         </div>
