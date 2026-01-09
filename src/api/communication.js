@@ -120,6 +120,12 @@ export const NotificationAPI = {
     api.put('/communication/notifications/' + notificationId + '/status', {
       status,
     }),
+
+  // 알림 읽음 처리 (일반직원용)
+  markAsRead: async (notificationId, employeeId) =>
+    api.post('/communication/notifications/' + notificationId + '/read', {
+      employeeId,
+    }),
 };
 
 export default { NoticeAPI, SuggestionAPI, NotificationAPI };

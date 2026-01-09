@@ -481,71 +481,78 @@ export const useEmployeeNotifications = ({
     updateEmployeeNotifications,
   ]);
 
-  // *[3_일반직원 모드] 3.3_알림 읽음 상태 초기화*
+  // *[3_일반직원 모드] 3.3_알림 읽음 상태 초기화* (DB 기반)
   useEffect(() => {
     if (currentUser?.id) {
       try {
-        const savedNotifications = localStorage.getItem(
-          `readNotifications_${currentUser.id}`
+        // 공지사항: viewedBy 필드 확인
+        const readNoticeIds = new Set(
+          notices
+            .filter((notice) => notice.viewedBy?.includes(currentUser.id))
+            .map((notice) => notice.id || notice._id)
         );
-        const savedAnnouncements = localStorage.getItem(
-          `readAnnouncements_${currentUser.id}`
-        );
+        setReadAnnouncements(readNoticeIds);
 
-        setReadNotifications(
-          savedNotifications
-            ? new Set(JSON.parse(savedNotifications))
-            : new Set()
+        // 알림: readBy 필드 확인
+        const readNotificationIds = new Set(
+          employeeNotifications
+            .filter((notification) =>
+              notification.readBy?.includes(currentUser.id)
+            )
+            .map((notification) => notification._id || notification.id)
         );
-        setReadAnnouncements(
-          savedAnnouncements
-            ? new Set(JSON.parse(savedAnnouncements))
-            : new Set()
-        );
+        setReadNotifications(readNotificationIds);
       } catch (error) {
-        devLog('Failed to load read states:', error);
+        devLog('Failed to load read states from DB:', error);
         setReadNotifications(new Set());
         setReadAnnouncements(new Set());
       }
     }
-  }, [currentUser?.id, setReadNotifications, setReadAnnouncements, devLog]);
+  }, [
+    currentUser?.id,
+    notices,
+    employeeNotifications,
+    setReadNotifications,
+    setReadAnnouncements,
+    devLog,
+  ]);
 
-  // *[3_일반직원 모드] 3.3_알림 읽음 처리*
+  // *[3_일반직원 모드] 3.3_알림 읽음 처리* (DB에 저장)
   const markNotificationAsRead = useCallback(
-    (notificationId) => {
-      setReadNotifications((prev) => {
-        const newSet = new Set([...prev, notificationId]);
+    async (notificationId) => {
+      if (!currentUser?.id) return;
 
-        try {
-          localStorage.setItem(
-            `readNotifications_${currentUser?.id}`,
-            JSON.stringify([...newSet])
-          );
-        } catch (error) {
-          devLog('Failed to save read notifications:', error);
-        }
-        return newSet;
-      });
+      try {
+        // DB에 읽음 상태 저장
+        await NotificationAPI.markAsRead(notificationId, currentUser.id);
+
+        // 로컬 state 업데이트
+        setReadNotifications((prev) => {
+          const newSet = new Set([...prev, notificationId]);
+          return newSet;
+        });
+      } catch (error) {
+        devLog('Failed to mark notification as read:', error);
+      }
     },
     [currentUser?.id, setReadNotifications, devLog]
   );
 
-  // *[3_일반직원 모드] 3.2_공지사항 읽음 처리*
+  // *[3_일반직원 모드] 3.2_공지사항 읽음 처리* (조회수 API 사용 - 이미 viewedBy에 저장됨)
   const markNoticeAsRead = useCallback(
-    (noticeId) => {
-      setReadAnnouncements((prev) => {
-        const newSet = new Set([...prev, noticeId]);
+    async (noticeId) => {
+      if (!currentUser?.id) return;
 
-        try {
-          localStorage.setItem(
-            `readAnnouncements_${currentUser?.id}`,
-            JSON.stringify([...newSet])
-          );
-        } catch (error) {
-          devLog('Failed to save read notices:', error);
-        }
-        return newSet;
-      });
+      try {
+        // 조회수 증가 API는 이미 viewedBy에 저장하므로 추가 API 호출 불필요
+        // 로컬 state만 업데이트
+        setReadAnnouncements((prev) => {
+          const newSet = new Set([...prev, noticeId]);
+          return newSet;
+        });
+      } catch (error) {
+        devLog('Failed to mark notice as read:', error);
+      }
     },
     [currentUser?.id, setReadAnnouncements, devLog]
   );

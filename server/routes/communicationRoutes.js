@@ -856,4 +856,53 @@ router.delete('/suggestions/:id', async (req, res) => {
   }
 });
 
+// ✅ 알림 읽음 처리 (일반직원용)
+router.post('/notifications/:id/read', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { employeeId } = req.body;
+
+    if (!employeeId) {
+      return res.status(400).json({ message: '직원 ID가 필요합니다.' });
+    }
+
+    const notification = await Notification.findById(id);
+
+    if (!notification) {
+      return res.status(404).json({ message: '알림을 찾을 수 없습니다.' });
+    }
+
+    // ✅ 이미 읽은 직원인지 확인
+    const readBy = notification.readBy || [];
+    const alreadyRead = readBy.includes(employeeId);
+
+    if (alreadyRead) {
+      console.log('👁️ [알림 읽음] 이미 읽음:', employeeId);
+      return res.json({
+        message: '이미 읽은 알림입니다.',
+        notification
+      });
+    }
+
+    // ✅ 첫 읽음 - readBy에 추가
+    const updatedNotification = await Notification.findByIdAndUpdate(
+      id,
+      {
+        $addToSet: { readBy: employeeId }, // 중복 방지
+      },
+      { new: true }
+    );
+
+    console.log(`✅ [알림 읽음] ${employeeId} - 알림 "${notification.title.substring(0, 20)}..."`);
+
+    res.json({
+      message: '알림을 읽음 처리했습니다.',
+      notification: updatedNotification
+    });
+  } catch (error) {
+    console.error('❌ 알림 읽음 처리 오류:', error);
+    res.status(500).json({ message: '알림 읽음 처리 중 오류가 발생했습니다.' });
+  }
+});
+
 module.exports = router;

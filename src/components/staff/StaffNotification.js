@@ -19,36 +19,39 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage }) => {
   );
   const notificationScrollRef = useRef(null);
 
-  // localStorage에서 읽은 알림 ID 로드
+  // localStorage에서 읽은 알림 ID 로드 → DB 기반으로 변경 (제거)
   useEffect(() => {
+    // DB의 readBy 필드를 사용하므로 localStorage 로드 불필요
+    // 직접 employeeNotifications의 readBy 필드 확인
     if (!currentUser?.id) return;
 
-    const storageKey = `readNotifications_${currentUser.id}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        const readIds = JSON.parse(stored);
-        setLocalReadNotifications(new Set(readIds));
-      } catch (error) {
-        console.error('읽은 알림 로드 실패:', error);
-      }
+    const readIds = new Set(
+      employeeNotifications
+        .filter((notification) =>
+          notification.readBy?.includes(currentUser.id)
+        )
+        .map((notification) => notification._id || notification.id)
+    );
+    setLocalReadNotifications(readIds);
+  }, [currentUser?.id, employeeNotifications]);
+
+  // 알림을 읽음으로 표시 (DB에 저장)
+  const markNotificationAsRead = async (notificationId) => {
+    if (!currentUser?.id) return;
+
+    try {
+      // DB에 읽음 상태 저장
+      await NotificationAPI.markAsRead(notificationId, currentUser.id);
+
+      // 로컬 state 업데이트
+      setLocalReadNotifications((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(notificationId);
+        return newSet;
+      });
+    } catch (error) {
+      console.error('알림 읽음 처리 실패:', error);
     }
-  }, [currentUser?.id]);
-
-  // 알림을 읽음으로 표시
-  const markNotificationAsRead = (notificationId) => {
-    if (!currentUser?.id) return;
-
-    setLocalReadNotifications((prev) => {
-      const newSet = new Set(prev);
-      newSet.add(notificationId);
-
-      // localStorage에 저장
-      const storageKey = `readNotifications_${currentUser.id}`;
-      localStorage.setItem(storageKey, JSON.stringify([...newSet]));
-
-      return newSet;
-    });
   };
 
   // 읽지 않은 알림 개수 계산
