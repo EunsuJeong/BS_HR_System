@@ -190,7 +190,8 @@ const AdminDashboard = ({
       }
 
       try {
-        const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+        const BASE_URL =
+          process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
         const month = goalDetailMonth + 1;
         const response = await fetch(
           `${BASE_URL}/attendance/monthly/${selectedYear}/${month}`
@@ -222,7 +223,8 @@ const AdminDashboard = ({
         return;
       }
 
-      const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+      const BASE_URL =
+        process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 
       // Promise.all로 병렬 처리
       const promises = [];
