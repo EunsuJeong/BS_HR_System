@@ -196,8 +196,8 @@ const StaffSuggestion = ({
       {/* 더보기 팝업 */}
       {showSuggestionMorePopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[90vw] max-h-[85vh] overflow-hidden">
-            <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center shrink-0">
               <h3 className="text-sm font-semibold text-gray-800">
                 {getText('내 건의 사항 전체 내역', 'My Suggestions')}
               </h3>
@@ -210,7 +210,7 @@ const StaffSuggestion = ({
             </div>
             <div
               ref={suggestionScrollRef}
-              className="flex-1 overflow-y-auto overflow-x-auto p-6"
+              className="flex-1 overflow-y-auto overflow-x-auto p-6 min-h-0"
             >
               <div className="overflow-x-auto">
                 <table className="min-w-[800px] w-full text-xs border-collapse">
@@ -363,7 +363,7 @@ const StaffSuggestion = ({
               </div>
             </div>
             {/* 페이지네이션 */}
-            <div className="flex justify-center items-center py-3 space-x-1">
+            <div className="flex justify-center items-center py-3 space-x-1 shrink-0 border-t border-gray-200">
               <button
                 onClick={() =>
                   setSuggestionPage(Math.max(1, suggestionPage - 1))
