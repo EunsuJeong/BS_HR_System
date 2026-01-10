@@ -34,6 +34,7 @@ const StaffSuggestion = ({
   const [editingSuggestionTitle, setEditingSuggestionTitle] = useState('');
   const [editingSuggestionRemark, setEditingSuggestionRemark] = useState('');
   const suggestionScrollRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // 팝업이 열리거나 페이지가 변경될 때 스크롤을 맨 위로
   useEffect(() => {
@@ -41,6 +42,13 @@ const StaffSuggestion = ({
       suggestionScrollRef.current.scrollTop = 0;
     }
   }, [showSuggestionMorePopup, suggestionPage]);
+
+  // applyContent가 빈 값이 되면 textarea 높이 초기화
+  useEffect(() => {
+    if (applyContent === '' && textareaRef.current) {
+      textareaRef.current.style.height = '';
+    }
+  }, [applyContent]);
 
   // fontSize에 따른 공통 클래스 반환 (버튼, input, select 모두 동일)
   const getCommonClass = () => {
@@ -118,6 +126,7 @@ const StaffSuggestion = ({
           </div>
           <div>
             <textarea
+              ref={textareaRef}
               value={applyContent}
               onChange={(e) => setApplyContent(e.target.value)}
               onInput={(e) => {
