@@ -77,6 +77,19 @@ const StaffSuggestion = ({
   const commonClass = getCommonClass();
   const placeholderClass = getPlaceholderClass();
 
+  // 20글자마다 줄바꿈 추가하는 함수
+  const addLineBreaks = (text, maxLength = 20) => {
+    if (!text) return '';
+    let result = '';
+    for (let i = 0; i < text.length; i += maxLength) {
+      result += text.slice(i, i + maxLength);
+      if (i + maxLength < text.length) {
+        result += '\n';
+      }
+    }
+    return result;
+  };
+
   return (
     <>
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-yellow-100">
@@ -214,13 +227,13 @@ const StaffSuggestion = ({
                               selectedLanguage
                             )}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
-                            {s.content}
+                          <td className="text-center py-1 px-2 whitespace-pre-wrap">
+                            {addLineBreaks(s.content)}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 whitespace-pre-wrap">
                             {(s.status === '승인' || s.status === '반려') &&
                             s.remark
-                              ? s.remark
+                              ? addLineBreaks(s.remark)
                               : '-'}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
