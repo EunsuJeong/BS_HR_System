@@ -77,9 +77,22 @@ const StaffSuggestion = ({
   const commonClass = getCommonClass();
   const placeholderClass = getPlaceholderClass();
 
-  // 20글자마다 줄바꿈 추가하는 함수
-  const addLineBreaks = (text, maxLength = 20) => {
+  // fontSize에 따라 줄바꿈 글자 수를 조정하는 함수
+  const getMaxLineLength = () => {
+    switch (fontSize) {
+      case 'small':
+        return 25;
+      case 'large':
+        return 15;
+      default:
+        return 20;
+    }
+  };
+
+  // 글자 수에 따라 줄바꿈 추가하는 함수
+  const addLineBreaks = (text) => {
     if (!text) return '';
+    const maxLength = getMaxLineLength();
     let result = '';
     for (let i = 0; i < text.length; i += maxLength) {
       result += text.slice(i, i + maxLength);
