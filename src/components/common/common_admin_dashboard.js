@@ -333,29 +333,14 @@ export const useDashboardStats = ({
   );
 
   // [2_관리자 모드] 2.1_대시보드 - 워라밸 통계
-  const workLifeBalanceStats = useMemo(
-    () => ({
-      averageOvertimeHours: calculateAverageOvertimeHours(),
-      leaveUsageRate: calculateLeaveUsageRate(),
-      weekly52HoursViolation: calculateWeekly52HoursViolation(),
-      stressIndex: calculateStressIndex(),
-    }),
-    [
-      attendanceSheetData,
-      employees,
-      leaveRequests,
-      calculateAverageOvertimeHours,
-      calculateLeaveUsageRate,
-      calculateWeekly52HoursViolation,
-      calculateStressIndex,
-    ]
-  );
+  // ⚠️ workLifeBalanceStats는 더 이상 여기서 계산하지 않음
+  // API를 통해 서버에서 캐싱된 데이터를 가져옴 (App.js 참조)
 
   return {
     dashboardStatsReal,
     calculateDashboardStats,
     goalStats,
-    workLifeBalanceStats,
+    // workLifeBalanceStats 제거됨 - API로 대체
   };
 };
 

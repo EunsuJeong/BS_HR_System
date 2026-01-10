@@ -37,6 +37,7 @@ const AdminDashboard = ({
   setShowPromptSettings,
   goalStats,
   workLifeBalanceStats,
+  workLifeBalanceLoading,
   activeTab,
   setActiveTab,
   setLeaveManagementTab,
@@ -595,63 +596,71 @@ const AdminDashboard = ({
             </button>
           </div>
           <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-700">평균 특근시간</span>
-              <span
-                className={`font-bold ${
-                  workLifeBalanceStats.averageOvertimeHours > 2
-                    ? 'text-red-600'
-                    : workLifeBalanceStats.averageOvertimeHours > 1
-                    ? 'text-orange-600'
-                    : 'text-green-600'
-                }`}
-              >
-                {workLifeBalanceStats.averageOvertimeHours.toFixed(1)}시간
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-700">연차 사용률</span>
-              <span
-                className={`font-bold ${
-                  workLifeBalanceStats.leaveUsageRate > 70
-                    ? 'text-green-600'
-                    : workLifeBalanceStats.leaveUsageRate > 50
-                    ? 'text-orange-600'
-                    : 'text-red-600'
-                }`}
-              >
-                {workLifeBalanceStats.leaveUsageRate}%
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-700">스트레스 지수</span>
-              <span
-                className={`font-bold ${
-                  workLifeBalanceStats.stressIndex > 70
-                    ? 'text-red-600'
-                    : workLifeBalanceStats.stressIndex > 50
-                    ? 'text-orange-600'
-                    : 'text-green-600'
-                }`}
-              >
-                {workLifeBalanceStats.stressIndex}점
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-700">
-                근로시간 관리 검토 대상 ({new Date().getFullYear()}-
-                {String(new Date().getMonth() + 1).padStart(2, '0')})
-              </span>
-              <span
-                className={`font-bold ${
-                  workLifeBalanceStats.weekly52HoursViolation > 0
-                    ? 'text-red-600'
-                    : 'text-green-600'
-                }`}
-              >
-                {workLifeBalanceStats.weekly52HoursViolation}%
-              </span>
-            </div>
+            {workLifeBalanceLoading || !workLifeBalanceStats ? (
+              <div className="text-center text-gray-500 py-4">
+                <div className="animate-pulse">워라밸 지표 로딩 중...</div>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-700">평균 특근시간</span>
+                  <span
+                    className={`font-bold ${
+                      workLifeBalanceStats.averageOvertimeHours > 2
+                        ? 'text-red-600'
+                        : workLifeBalanceStats.averageOvertimeHours > 1
+                        ? 'text-orange-600'
+                        : 'text-green-600'
+                    }`}
+                  >
+                    {workLifeBalanceStats.averageOvertimeHours.toFixed(1)}시간
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-700">연차 사용률</span>
+                  <span
+                    className={`font-bold ${
+                      workLifeBalanceStats.leaveUsageRate > 70
+                        ? 'text-green-600'
+                        : workLifeBalanceStats.leaveUsageRate > 50
+                        ? 'text-orange-600'
+                        : 'text-red-600'
+                    }`}
+                  >
+                    {workLifeBalanceStats.leaveUsageRate}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-700">스트레스 지수</span>
+                  <span
+                    className={`font-bold ${
+                      workLifeBalanceStats.stressIndex > 70
+                        ? 'text-red-600'
+                        : workLifeBalanceStats.stressIndex > 50
+                        ? 'text-orange-600'
+                        : 'text-green-600'
+                    }`}
+                  >
+                    {workLifeBalanceStats.stressIndex}점
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-700">
+                    근로시간 관리 검토 대상 ({new Date().getFullYear()}-
+                    {String(new Date().getMonth() + 1).padStart(2, '0')})
+                  </span>
+                  <span
+                    className={`font-bold ${
+                      workLifeBalanceStats.weekly52HoursViolation > 0
+                        ? 'text-red-600'
+                        : 'text-green-600'
+                    }`}
+                  >
+                    {workLifeBalanceStats.weekly52HoursViolation}%
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
         {/* 안전 현황 */}

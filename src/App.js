@@ -49,6 +49,7 @@ import { SafetyAccidentAPI } from './api/safety';
 import HolidayAPI from './api/holiday';
 import EvaluationAPI from './api/evaluation';
 import PayrollAPI from './api/payroll';
+import WorkLifeBalanceAPI from './api/workLifeBalance';
 import holidayService from './components/common/common_common';
 import {
   get연차갱신알림수신자,
@@ -1234,6 +1235,10 @@ const HRManagementSystem = () => {
   );
   const [dashboardStats, setDashboardStats] = useState(null);
 
+  // *[2_관리자 모드] 2.1.1-1_워라밸 지표 (API 캐싱)*
+  const [workLifeBalanceStats, setWorkLifeBalanceStats] = useState(null);
+  const [workLifeBalanceLoading, setWorkLifeBalanceLoading] = useState(false);
+
   // *[2_관리자 모드] 2.1.2_근태 기록*
   const [attendanceRecords, setAttendanceRecords] = useState([]);
 
@@ -1339,6 +1344,50 @@ const HRManagementSystem = () => {
     };
     loadDashboardAttendance();
   }, [API_BASE_URL, activeTab]);
+
+  // *[2_관리자 모드] 2.1.10-1_워라밸 지표 API 로드 useEffect*
+  useEffect(() => {
+    const loadWorkLifeBalanceStats = async () => {
+      if (activeTab !== 'dashboard') return;
+
+      setWorkLifeBalanceLoading(true);
+      try {
+        const response = await WorkLifeBalanceAPI.getCurrentStats();
+
+        if (response && response.success && response.data) {
+          // API 응답에서 필요한 데이터 추출
+          const stats = {
+            averageOvertimeHours: response.data.averageOvertimeHours || 0,
+            leaveUsageRate: response.data.leaveUsageRate || 0,
+            weekly52HoursViolation: response.data.weekly52HoursViolation || 0,
+            stressIndex: response.data.stressIndex || 0,
+          };
+          setWorkLifeBalanceStats(stats);
+          devLog('📊 워라밸 지표 로드 성공 (캐시:', response.cached, '):', stats);
+        } else {
+          devLog('⚠️ 워라밸 지표 로드 실패 - 기본값 사용');
+          setWorkLifeBalanceStats({
+            averageOvertimeHours: 0,
+            leaveUsageRate: 0,
+            weekly52HoursViolation: 0,
+            stressIndex: 0,
+          });
+        }
+      } catch (error) {
+        console.error('❌ 워라밸 지표 로드 오류:', error);
+        setWorkLifeBalanceStats({
+          averageOvertimeHours: 0,
+          leaveUsageRate: 0,
+          weekly52HoursViolation: 0,
+          stressIndex: 0,
+        });
+      } finally {
+        setWorkLifeBalanceLoading(false);
+      }
+    };
+
+    loadWorkLifeBalanceStats();
+  }, [activeTab, API_BASE_URL]);
 
   // *[2_관리자 모드] 2.1.11_알림 로그 초기화 useEffect*
   useEffect(() => {
@@ -5573,7 +5622,8 @@ const HRManagementSystem = () => {
   });
 
   // *[2_관리자 모드] 2.1_대시보드 - 통계 관리 훅*
-  const { dashboardStatsReal, goalStats, workLifeBalanceStats } =
+  // workLifeBalanceStats는 API에서 직접 로드 (state로 관리)
+  const { dashboardStatsReal, goalStats } =
     useDashboardStats({
       employees,
       dashboardDateFilter,
@@ -5971,6 +6021,7 @@ const HRManagementSystem = () => {
             showGoalDetailsPopup={showGoalDetailsPopup}
             setShowGoalDetailsPopup={setShowGoalDetailsPopup}
             workLifeBalanceStats={workLifeBalanceStats}
+            workLifeBalanceLoading={workLifeBalanceLoading}
             showWorkLifeBalancePopup={showWorkLifeBalancePopup}
             setShowWorkLifeBalancePopup={setShowWorkLifeBalancePopup}
             getTodaySafetyAccidents={getTodaySafetyAccidents}
