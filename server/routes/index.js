@@ -10,5 +10,6 @@ router.use('/system', require('./systemRoutes'));
 router.use('/attendance', require('./attendance'));
 router.use('/payroll', require('./payroll'));
 router.use('/holiday', require('./holiday'));
+router.use('/worklife', require('./workLifeBalance'));
 
 module.exports = router;

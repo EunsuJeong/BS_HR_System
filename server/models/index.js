@@ -3,6 +3,8 @@ const Employee = require('./hr/employees');
 const Admin = require('./hr/admins');
 const Attendance = require('./hr/attendance');
 const AttendanceSummary = require('./hr/attendanceSummary');
+const AttendanceStats = require('./hr/attendanceStats');
+const WorkLifeBalanceStats = require('./hr/workLifeBalanceStats');
 const Leave = require('./hr/leaves');
 const Payroll = require('./hr/payrolls');
 const Evaluation = require('./hr/evaluations');
@@ -36,6 +38,8 @@ module.exports = {
   Admin,
   Attendance,
   AttendanceSummary,
+  AttendanceStats,
+  WorkLifeBalanceStats,
   Leave,
   Payroll,
   Evaluation,
