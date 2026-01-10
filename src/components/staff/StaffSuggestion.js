@@ -74,8 +74,21 @@ const StaffSuggestion = ({
     }
   };
 
+  // fontSize에 따른 줄 간격 클래스 반환
+  const getLineHeightClass = () => {
+    switch (fontSize) {
+      case 'small':
+        return 'leading-tight'; // 1.25
+      case 'large':
+        return 'leading-loose'; // 2
+      default:
+        return 'leading-relaxed'; // 1.625
+    }
+  };
+
   const commonClass = getCommonClass();
   const placeholderClass = getPlaceholderClass();
+  const lineHeightClass = getLineHeightClass();
 
   // fontSize에 따라 줄바꿈 글자 수를 조정하는 함수
   const getMaxLineLength = () => {
@@ -240,10 +253,10 @@ const StaffSuggestion = ({
                               selectedLanguage
                             )}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-pre-wrap">
+                          <td className={`text-center py-1 px-2 whitespace-pre-wrap ${lineHeightClass}`}>
                             {addLineBreaks(s.content)}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-pre-wrap">
+                          <td className={`text-center py-1 px-2 whitespace-pre-wrap ${lineHeightClass}`}>
                             {(s.status === '승인' || s.status === '반려') &&
                             s.remark
                               ? addLineBreaks(s.remark)
