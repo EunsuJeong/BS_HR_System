@@ -15,6 +15,8 @@ const CommonLogin = ({
   setShowPassword,
   handleLogin,
   handleLanguageSelect,
+  rememberUserId,
+  setRememberUserId,
 }) => {
   // 로그인 화면
   if (!currentUser) {
@@ -73,6 +75,18 @@ const CommonLogin = ({
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
+            </div>
+
+            <div className="flex items-center">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberUserId}
+                  onChange={(e) => setRememberUserId(e.target.checked)}
+                  className="mr-2 w-4 h-4 cursor-pointer"
+                />
+                <span className="text-sm text-gray-600">아이디 저장</span>
+              </label>
             </div>
 
             {loginError && (

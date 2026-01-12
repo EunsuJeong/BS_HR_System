@@ -2710,6 +2710,7 @@ export const useAuth = (dependencies = {}) => {
     setDashboardDateFilter = () => {},
     setDashboardSelectedDate = () => {},
     formatDateToString = (date) => date.toISOString().split('T')[0],
+    rememberUserId = false,
   } = dependencies;
 
   // [1_공통] 비밀번호 변경 - 비밀번호 표시/숨김 state
@@ -2780,6 +2781,13 @@ export const useAuth = (dependencies = {}) => {
               console.error('❌ 근무형태 자동 분석 실패:', error);
             }
 
+            // 아이디 저장 처리
+            if (rememberUserId) {
+              localStorage.setItem('savedUserId', loginForm.id);
+            } else {
+              localStorage.removeItem('savedUserId');
+            }
+
             return;
           }
         }
@@ -2843,6 +2851,13 @@ export const useAuth = (dependencies = {}) => {
             }
           } catch (error) {
             console.error('❌ 로그인 시 급여 데이터 불러오기 실패:', error);
+          }
+
+          // 아이디 저장 처리
+          if (rememberUserId) {
+            localStorage.setItem('savedUserId', loginForm.id);
+          } else {
+            localStorage.removeItem('savedUserId');
           }
 
           return;

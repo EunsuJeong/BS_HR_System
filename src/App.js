@@ -808,6 +808,16 @@ const HRManagementSystem = () => {
   const [loginForm, setLoginForm] = useState({ id: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberUserId, setRememberUserId] = useState(false);
+
+  // *[1_공통] 1.3.4.2_아이디 저장 기능 - localStorage에서 저장된 아이디 불러오기*
+  useEffect(() => {
+    const savedUserId = localStorage.getItem('savedUserId');
+    if (savedUserId) {
+      setLoginForm((prev) => ({ ...prev, id: savedUserId }));
+      setRememberUserId(true);
+    }
+  }, []);
 
   // *[1_공통] 1.3.4.1_급여 내역 생성 wrapper*
   const generateSalaryHistory = (
@@ -4131,6 +4141,7 @@ const HRManagementSystem = () => {
     setDashboardDateFilter,
     setDashboardSelectedDate,
     formatDateToString,
+    rememberUserId,
   });
 
   // *[2_관리자 모드] 관리자 필터/정렬/검색*
@@ -5865,7 +5876,16 @@ const HRManagementSystem = () => {
     localStorage.removeItem('activeTab');
 
     clearPopupState();
-    setLoginForm({ id: '', password: '' });
+
+    // 아이디 저장이 체크되어 있으면 아이디 유지, 아니면 초기화
+    if (rememberUserId) {
+      localStorage.setItem('savedUserId', loginForm.id);
+      setLoginForm({ id: loginForm.id, password: '' }); // 아이디는 유지, 비밀번호만 초기화
+    } else {
+      localStorage.removeItem('savedUserId');
+      setLoginForm({ id: '', password: '' });
+    }
+
     setShowPassword(false); // 비밀번호 표시 상태 초기화
     setActiveTab('dashboard');
 
@@ -5922,6 +5942,8 @@ const HRManagementSystem = () => {
       setShowPassword={setShowPassword}
       handleLogin={handleLogin}
       handleLanguageSelect={handleLanguageSelect}
+      rememberUserId={rememberUserId}
+      setRememberUserId={setRememberUserId}
     />
   );
 
