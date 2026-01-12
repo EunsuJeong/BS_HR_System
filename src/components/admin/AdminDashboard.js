@@ -649,7 +649,7 @@ const AdminDashboard = ({
                     : 'text-green-600'
                 }`}
               >
-                {workLifeBalanceStats.weekly52HoursViolation}%
+                {workLifeBalanceStats.weekly52HoursViolation}건
               </span>
             </div>
           </div>
@@ -2857,6 +2857,53 @@ const AdminDashboard = ({
                                     </span>
                                   )}
                                 </th>
+                                <th
+                                  className="p-3 text-center font-semibold cursor-pointer hover:bg-gray-300"
+                                  onClick={() => {
+                                    setOvertimeSortConfig({
+                                      key: '특근+심야',
+                                      direction:
+                                        overtimeSortConfig.key ===
+                                          '특근+심야' &&
+                                        overtimeSortConfig.direction === 'asc'
+                                          ? 'desc'
+                                          : 'asc',
+                                    });
+                                  }}
+                                >
+                                  특근+심야{' '}
+                                  {overtimeSortConfig.key === '특근+심야' && (
+                                    <span>
+                                      {overtimeSortConfig.direction === 'asc'
+                                        ? '▲'
+                                        : '▼'}
+                                    </span>
+                                  )}
+                                </th>
+                                <th
+                                  className="p-3 text-center font-semibold cursor-pointer hover:bg-gray-300"
+                                  onClick={() => {
+                                    setOvertimeSortConfig({
+                                      key: '특근+연장+심야',
+                                      direction:
+                                        overtimeSortConfig.key ===
+                                          '특근+연장+심야' &&
+                                        overtimeSortConfig.direction === 'asc'
+                                          ? 'desc'
+                                          : 'asc',
+                                    });
+                                  }}
+                                >
+                                  특근+연장+심야{' '}
+                                  {overtimeSortConfig.key ===
+                                    '특근+연장+심야' && (
+                                    <span>
+                                      {overtimeSortConfig.direction === 'asc'
+                                        ? '▲'
+                                        : '▼'}
+                                    </span>
+                                  )}
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
@@ -2883,7 +2930,7 @@ const AdminDashboard = ({
                                   return (
                                     <tr>
                                       <td
-                                        colSpan="10"
+                                        colSpan="12"
                                         className="p-4 text-center text-gray-500"
                                       >
                                         해당 월에 특근 기록이 없습니다.
@@ -2948,6 +2995,12 @@ const AdminDashboard = ({
                                     </td>
                                     <td className="p-3 text-center text-gray-700">
                                       {item['특근+연장']}
+                                    </td>
+                                    <td className="p-3 text-center text-gray-700">
+                                      {item['특근+심야']}
+                                    </td>
+                                    <td className="p-3 text-center text-gray-700">
+                                      {item['특근+연장+심야']}
                                     </td>
                                   </tr>
                                 ));
