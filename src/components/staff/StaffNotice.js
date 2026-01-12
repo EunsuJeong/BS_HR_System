@@ -7,6 +7,7 @@ import {
   downloadFile,
 } from '../common/common_staff_notice';
 import { NoticeAPI } from '../../api/communication';
+import { linkifyText } from '../common/common_common';
 
 /**
  * STAFF ② 공지사항 컴포넌트
@@ -164,7 +165,7 @@ const StaffNotice = ({
                       <div
                         className="text-xs text-gray-700"
                         dangerouslySetInnerHTML={{
-                          __html: notice.content || '',
+                          __html: linkifyText(notice.content || ''),
                         }}
                       ></div>
 
@@ -396,7 +397,7 @@ const StaffNotice = ({
                       <div
                         className="text-xs text-gray-700 leading-relaxed"
                         dangerouslySetInnerHTML={{
-                          __html: selectedNotice.content || '',
+                          __html: linkifyText(selectedNotice.content || ''),
                         }}
                       ></div>
 

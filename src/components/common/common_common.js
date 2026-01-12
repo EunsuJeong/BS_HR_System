@@ -6949,6 +6949,42 @@ export const generateEmployees = () => {
 }; */
 
 // ============================================================
+// [1_공통] URL 자동 링크 변환 유틸
+// ============================================================
+
+/**
+ * 텍스트 내의 URL을 자동으로 하이퍼링크로 변환
+ * @param {string} text - 변환할 텍스트 (HTML 포함 가능)
+ * @returns {string} - URL이 링크로 변환된 텍스트
+ */
+export const linkifyText = (text) => {
+  if (!text) return text;
+
+  // URL 패턴 정규식 (http://, https://, www., 도메인명.확장자 등 지원)
+  const urlPattern = /(\b(https?:\/\/|www\.)[^\s<>"]+|(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/[^\s<>"]*)?)/gi;
+
+  return text.replace(urlPattern, (match) => {
+    // 이미 링크 태그 안에 있는 URL은 건너뛰기
+    const beforeMatch = text.substring(0, text.indexOf(match));
+    const lastHrefIndex = beforeMatch.lastIndexOf('href="');
+    const lastClosingATag = beforeMatch.lastIndexOf('</a>');
+
+    if (lastHrefIndex > lastClosingATag) {
+      return match; // 이미 href 안에 있음
+    }
+
+    // URL 정규화
+    let url = match;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + (url.startsWith('www.') ? url : url);
+    }
+
+    // 하이퍼링크로 변환
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline" style="color: #2563eb; text-decoration: underline;">${match}</a>`;
+  });
+};
+
+// ============================================================
 // [1_공통] EXPORTS (update-only)
 // ============================================================
 
