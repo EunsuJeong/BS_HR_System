@@ -291,11 +291,9 @@ router.get('/app-version', async (req, res) => {
     const currentVersion = req.query.current || '1.0.0';
 
     // GitHub API를 통해 최신 릴리스 정보 가져오기
-    // 주의: 실제 사용시 아래의 'YOUR_GITHUB_USERNAME'과 'YOUR_REPO_NAME'을
-    // 실제 GitHub 사용자명과 저장소 이름으로 변경하세요
     const options = {
       hostname: 'api.github.com',
-      path: '/repos/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/releases/latest',
+      path: '/repos/EunsuJeong/BS_HR_System/releases/latest',
       method: 'GET',
       headers: {
         'User-Agent': 'BS-HR-App',
