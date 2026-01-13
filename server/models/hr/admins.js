@@ -32,6 +32,13 @@ const adminSchema = new mongoose.Schema(
     lastLogin: Date, // 마지막 로그인 시간
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
+
+    // 앱 버전 정보
+    appVersion: String, // 앱 버전 또는 'PWA', 'Domain'
+    platformType: String, // 'APP', 'PWA', 'Domain'
+    platform: String, // 'web', 'ios', 'android'
+    userAgent: String, // 사용자 에이전트
+    lastVersionUpdate: Date, // 버전 정보 마지막 업데이트 시간
   },
   {
     collection: 'admins',

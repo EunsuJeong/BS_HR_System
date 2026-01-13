@@ -177,7 +177,7 @@ router.delete('/admins/:adminId', async (req, res) => {
 // ✅ 관리자 로그인 (인증)
 router.post('/admins/login', async (req, res) => {
   try {
-    const { id, password } = req.body;
+    const { id, password, versionInfo } = req.body;
     console.log(`🔐 [Admins API] 로그인 요청: id=${id}`);
 
     // adminId 또는 name으로 검색
@@ -203,6 +203,18 @@ router.post('/admins/login', async (req, res) => {
 
     // ✅ 마지막 로그인 시간 업데이트 (KST 기준)
     admin.lastLogin = moment.tz('Asia/Seoul').toDate();
+
+    // ✅ 앱 버전 정보 업데이트
+    if (versionInfo) {
+      admin.appVersion = versionInfo.version || 'Domain';
+      admin.platformType = versionInfo.platformType || 'Domain';
+      admin.platform = versionInfo.platform || 'web';
+      admin.userAgent = versionInfo.userAgent || '';
+      admin.lastVersionUpdate = new Date();
+
+      console.log(`📱 [로그인] ${admin.name} (관리자) - 버전: ${admin.appVersion}, 플랫폼: ${admin.platformType}`);
+    }
+
     await admin.save();
 
     console.log(`✅ [Admins API] 로그인 성공: ${admin.name}`);

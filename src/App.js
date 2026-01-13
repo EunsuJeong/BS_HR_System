@@ -140,6 +140,7 @@ import StaffScheduleAttendance from './components/staff/StaffScheduleAttendance'
 import StaffSalary from './components/staff/StaffSalary';
 import StaffSuggestion from './components/staff/StaffSuggestion';
 import StaffEvaluation from './components/staff/StaffEvaluation';
+import UpdateNotification from './components/UpdateNotification';
 import {
   createCompanyWageRules,
   EXCLUDE_TIME,
@@ -6543,6 +6544,7 @@ const HRManagementSystem = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <UpdateNotification />
       {currentUser && currentUser?.isAdmin ? (
         /* ================================
    [2_관리자 모드] 관리자 모드 UI 시작

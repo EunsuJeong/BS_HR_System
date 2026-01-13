@@ -33,7 +33,7 @@ const formatDateToString = (date) => {
 // ✅ 로그인 (직원 인증)
 router.post('/login', async (req, res) => {
   try {
-    const { id, password } = req.body;
+    const { id, password, versionInfo } = req.body;
 
     // 직원 이름 또는 employeeId로 검색
     const employee = await Employee.findOne({
@@ -65,6 +65,18 @@ router.post('/login', async (req, res) => {
 
     // ✅ 마지막 로그인 시간 업데이트 (KST 기준)
     employee.lastLogin = moment.tz('Asia/Seoul').toDate();
+
+    // ✅ 앱 버전 정보 업데이트
+    if (versionInfo) {
+      employee.appVersion = versionInfo.version || 'Domain';
+      employee.platformType = versionInfo.platformType || 'Domain';
+      employee.platform = versionInfo.platform || 'web';
+      employee.userAgent = versionInfo.userAgent || '';
+      employee.lastVersionUpdate = new Date();
+
+      console.log(`📱 [로그인] ${employee.name} - 버전: ${employee.appVersion}, 플랫폼: ${employee.platformType}`);
+    }
+
     await employee.save();
 
     // 비밀번호 제외하고 응답 (id 필드를 employeeId로 매핑)

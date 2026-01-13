@@ -8,6 +8,7 @@ import { useSocket } from '../../contexts/SocketContext';
 import Holidays from 'date-holidays';
 import EmployeeAPI from '../../api/employee';
 import PayrollAPI from '../../api/payroll';
+import { getVersionInfo } from '../../utils/appUpdate';
 
 // ============================================================
 // [1_공통] CONSTANTS - 회사 표준 규정 및 근무시간
@@ -2723,6 +2724,9 @@ export const useAuth = (dependencies = {}) => {
     async (e) => {
       e.preventDefault();
 
+      // 버전 정보 가져오기
+      const versionInfo = await getVersionInfo();
+
       // 1. 관리자 로그인 확인 (DB API 사용)
       try {
         const adminResponse = await fetch(
@@ -2733,6 +2737,7 @@ export const useAuth = (dependencies = {}) => {
             body: JSON.stringify({
               id: loginForm.id,
               password: loginForm.password,
+              versionInfo,
             }),
           }
         );
@@ -2800,6 +2805,7 @@ export const useAuth = (dependencies = {}) => {
         const response = await EmployeeAPI.login({
           id: loginForm.id,
           password: loginForm.password,
+          versionInfo,
         });
 
         if (response.success) {

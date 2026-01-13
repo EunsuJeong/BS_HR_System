@@ -283,3 +283,115 @@ router.get('/backups', async (req, res) => {
     });
   }
 });
+
+// ✅ 앱 버전 체크 (GitHub Releases)
+router.get('/app-version', async (req, res) => {
+  try {
+    const https = require('https');
+    const currentVersion = req.query.current || '1.0.0';
+
+    // GitHub API를 통해 최신 릴리스 정보 가져오기
+    // 주의: 실제 사용시 아래의 'YOUR_GITHUB_USERNAME'과 'YOUR_REPO_NAME'을
+    // 실제 GitHub 사용자명과 저장소 이름으로 변경하세요
+    const options = {
+      hostname: 'api.github.com',
+      path: '/repos/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/releases/latest',
+      method: 'GET',
+      headers: {
+        'User-Agent': 'BS-HR-App',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    };
+
+    const githubRequest = https.request(options, (githubRes) => {
+      let data = '';
+
+      githubRes.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      githubRes.on('end', () => {
+        try {
+          if (githubRes.statusCode === 200) {
+            const release = JSON.parse(data);
+            const latestVersion = release.tag_name.replace('v', ''); // 'v1.0.1' -> '1.0.1'
+
+            // APK 파일 찾기
+            const apkAsset = release.assets.find(asset =>
+              asset.name.endsWith('.apk') || asset.name.includes('app-release')
+            );
+
+            const response = {
+              success: true,
+              currentVersion,
+              latestVersion,
+              updateAvailable: compareVersions(currentVersion, latestVersion) < 0,
+              releaseNotes: release.body || '업데이트 내용이 없습니다.',
+              downloadUrl: apkAsset ? apkAsset.browser_download_url : null,
+              fileSize: apkAsset ? apkAsset.size : null,
+              publishedAt: release.published_at
+            };
+
+            console.log(`✅ [GET /system/app-version] 버전 체크 완료: 현재 ${currentVersion}, 최신 ${latestVersion}`);
+            res.json(response);
+          } else {
+            // GitHub API 오류 시 기본 응답
+            console.log(`⚠️ [GET /system/app-version] GitHub API 오류: ${githubRes.statusCode}`);
+            res.json({
+              success: true,
+              currentVersion,
+              latestVersion: currentVersion,
+              updateAvailable: false,
+              message: '업데이트 확인 중 오류가 발생했습니다.'
+            });
+          }
+        } catch (parseError) {
+          console.error('❌ [GET /system/app-version] JSON 파싱 오류:', parseError);
+          res.json({
+            success: true,
+            currentVersion,
+            latestVersion: currentVersion,
+            updateAvailable: false,
+            message: '업데이트 확인 중 오류가 발생했습니다.'
+          });
+        }
+      });
+    });
+
+    githubRequest.on('error', (error) => {
+      console.error('❌ [GET /system/app-version] GitHub API 요청 오류:', error);
+      res.json({
+        success: true,
+        currentVersion,
+        latestVersion: currentVersion,
+        updateAvailable: false,
+        message: '업데이트 확인 중 오류가 발생했습니다.'
+      });
+    });
+
+    githubRequest.end();
+  } catch (error) {
+    console.error('❌ [GET /system/app-version] 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '버전 체크 중 오류가 발생했습니다.',
+      details: error.message
+    });
+  }
+});
+
+// 버전 비교 함수 (semantic versioning)
+function compareVersions(v1, v2) {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const part1 = parts1[i] || 0;
+    const part2 = parts2[i] || 0;
+
+    if (part1 < part2) return -1;
+    if (part1 > part2) return 1;
+  }
+
+  return 0;
+}
