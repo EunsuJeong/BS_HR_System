@@ -1,0 +1,120 @@
+name: Android Release Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # v1.1.0 같은 태그 push 시 실행
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build React app
+        run: npm run build
+        env:
+          CI: false  # 경고를 무시하고 빌드
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Sign APK (optional)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: echo "APK signing skipped - using debug keystore"
+        # 프로덕션에서는 여기서 APK 서명 추가
+
+      - name: Rename APK
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          mv android/app/build/outputs/apk/release/app-release.apk bs-hr-v${VERSION}.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bs-hr-apk
+          path: bs-hr-*.apk
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: bs-hr-*.apk
+          body: |
+            ## 주요 변경사항
+
+            - ✨ 앱 내 자동 업데이트 확인 기능 추가
+            - 📱 새 버전 출시 시 자동 알림 표시
+            - 🔄 원클릭 업데이트 지원
+            - 📊 사용자 버전 추적 기능 추가
+
+            ## 설치 방법
+
+            1. 아래 APK 파일 다운로드
+            2. 파일 실행하여 설치
+            3. 기존 앱 위에 덮어쓰기 설치됩니다
+
+            ## 중요 안내
+
+            ⚠️ **이번 한 번만 수동으로 업데이트하시면, 다음 버전부터는 앱에서 자동으로 업데이트 알림이 표시됩니다!**
+
+            ## 기술 정보
+
+            - **버전:** ${{ github.ref_name }}
+            - **빌드 날짜:** ${{ github.event.head_commit.timestamp }}
+            - **플랫폼:** Android
+            - **최소 요구사항:** Android 7.0 이상
+
+            ## 변경 로그
+
+            ### 추가
+            - 자동 업데이트 체크 기능
+            - 사용자 버전 추적 시스템
+            - 플랫폼 타입 감지 (APP/PWA/Domain)
+
+            ### 개선
+            - 로그인 시 버전 정보 자동 저장
+            - GitHub Releases 연동
+
+            ## 문제 해결
+
+            설치 중 "알 수 없는 출처" 경고가 표시되면:
+            1. 설정 > 보안
+            2. "알 수 없는 출처 허용" 활성화
+            3. 다시 설치 진행
+
+            문의사항이 있으시면 관리자에게 연락 주세요.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
