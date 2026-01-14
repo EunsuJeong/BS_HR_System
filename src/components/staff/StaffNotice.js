@@ -147,9 +147,9 @@ const StaffNotice = ({
                       )}
                     </div>
                     <div className="text-2xs flex items-center ml-2">
-                      <span className="text-gray-400 mr-1.5">
+                      {/* <span className="text-gray-400 mr-1.5">
                         👁 {notice.viewCount || 0}
-                      </span>
+                      </span> */}
                       <span className="text-gray-500 mr-1">{notice.date}</span>
                       <span
                         className={`transform transition-transform duration-200 ${
@@ -317,9 +317,9 @@ const StaffNotice = ({
                             )}
                           </div>
                           <div className="text-2xs flex items-center ml-4">
-                            <span className="text-gray-400 mr-2">
+                            {/* <span className="text-gray-400 mr-2">
                               👁 {notice.viewCount || 0}
-                            </span>
+                            </span> */}
                             <span className="text-gray-500">{notice.date}</span>
                           </div>
                         </div>
@@ -387,9 +387,9 @@ const StaffNotice = ({
                         {selectedNotice.title}
                       </h4>
                       <div className="text-2xs text-gray-500 mb-4 flex items-center">
-                        <span className="text-gray-400 mr-2">
+                        {/* <span className="text-gray-400 mr-2">
                           👁 {selectedNotice.viewCount || 0}
-                        </span>
+                        </span> */}
                         <span>{selectedNotice.date}</span>
                       </div>
                     </div>
