@@ -79,11 +79,14 @@ jobs:
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/}
+            IS_PRERELEASE=false
           else
             VERSION="v$(date +'%Y.%m.%d')-${GITHUB_SHA::7}"
+            IS_PRERELEASE=true
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "date=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
 
       - name: Rename APK
         run: |
@@ -112,7 +115,7 @@ jobs:
             https://eunsujeong.github.io/BS_HR_System/
 
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.version.outputs.is_prerelease }}
           files: |
             android/app/build/outputs/apk/debug/BS-HR-System-${{ steps.version.outputs.version }}.apk
         env:
