@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   checkForUpdate,
-  downloadAndInstallUpdate,
-  shouldShowUpdateAlert,
-  saveLastCheckTime,
-  getLastCheckTime
+  downloadAndInstallUpdate
 } from '../utils/appUpdate';
 import { Capacitor } from '@capacitor/core';
 
@@ -17,16 +14,28 @@ const UpdateNotification = () => {
     checkUpdate();
   }, []);
 
+  // 건너뛴 버전 확인
+  const getSkippedVersion = () => {
+    try {
+      return localStorage.getItem('skippedVersion');
+    } catch (error) {
+      console.error('건너뛴 버전 가져오기 오류:', error);
+      return null;
+    }
+  };
+
+  // 건너뛴 버전 저장
+  const saveSkippedVersion = (version) => {
+    try {
+      localStorage.setItem('skippedVersion', version);
+    } catch (error) {
+      console.error('건너뛴 버전 저장 오류:', error);
+    }
+  };
+
   const checkUpdate = async () => {
     // 모바일 플랫폼이 아니면 체크하지 않음
     if (!Capacitor.isNativePlatform()) {
-      return;
-    }
-
-    // 마지막 체크 시간 확인
-    const lastChecked = getLastCheckTime();
-    if (!shouldShowUpdateAlert(lastChecked)) {
-      console.log('최근에 업데이트를 확인했습니다. 24시간 후에 다시 확인합니다.');
       return;
     }
 
@@ -34,12 +43,18 @@ const UpdateNotification = () => {
       const info = await checkForUpdate();
 
       if (info.success && info.updateAvailable) {
+        // 건너뛴 버전이 있는지 확인
+        const skippedVersion = getSkippedVersion();
+
+        // 건너뛴 버전과 최신 버전이 같으면 알림 표시 안 함
+        if (skippedVersion && skippedVersion === info.latestVersion) {
+          console.log(`버전 ${skippedVersion}은(는) 건너뛰기로 설정되었습니다.`);
+          return;
+        }
+
         setUpdateInfo(info);
         setShowNotification(true);
       }
-
-      // 체크 시간 저장
-      saveLastCheckTime();
     } catch (error) {
       console.error('업데이트 체크 오류:', error);
     }
@@ -72,13 +87,15 @@ const UpdateNotification = () => {
 
   const handleLater = () => {
     setShowNotification(false);
-    // 나중에 알림을 받기 위해 마지막 체크 시간을 초기화하지 않음
+    // 다음 앱 실행 시 다시 확인
   };
 
   const handleSkip = () => {
+    // 이 버전을 건너뛰기로 저장 (이 버전에 대해서는 다시 알림 표시 안 함)
+    if (updateInfo && updateInfo.latestVersion) {
+      saveSkippedVersion(updateInfo.latestVersion);
+    }
     setShowNotification(false);
-    // 이 버전을 건너뛰기 위해 시간을 저장
-    saveLastCheckTime();
   };
 
   const formatFileSize = (bytes) => {
@@ -168,7 +185,7 @@ const UpdateNotification = () => {
               fontWeight: '500'
             }}
           >
-            건너뛰기
+            이 버전 건너뛰기
           </button>
           <button
             onClick={handleLater}
@@ -184,7 +201,7 @@ const UpdateNotification = () => {
               fontWeight: '500'
             }}
           >
-            나중에
+            다음에
           </button>
           <button
             onClick={handleUpdate}
