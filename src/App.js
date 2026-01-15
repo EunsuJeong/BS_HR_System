@@ -6576,7 +6576,7 @@ const HRManagementSystem = () => {
         /* ================================
    [3_일반직원 모드] 직원 모드 UI 시작
 ================================ */
-        <div className="min-h-screen bg-gray-50 employee-mode-content">
+        <div className="min-h-screen h-screen overflow-y-auto bg-gray-50 employee-mode-content">
           <StaffMain
             currentUser={currentUser}
             fontSize={fontSize}

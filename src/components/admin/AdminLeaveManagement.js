@@ -1064,8 +1064,8 @@ const AdminLeaveManagement = ({
                 다운로드
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full text-xs">
+            <div className="flex-1 overflow-x-auto overflow-y-auto">
+              <table className="w-full text-xs table-fixed">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="text-center py-1 px-2">
@@ -1140,7 +1140,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 w-[450px]">
                       사유
                       <button
                         onClick={() => handleLeaveSort('reason')}
@@ -1149,7 +1149,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 w-[200px]">
                       비상연락망
                       <button
                         onClick={() => handleLeaveSort('contact')}
@@ -1311,7 +1311,7 @@ const AdminLeaveManagement = ({
                                 lr.type
                               )}
                             </td>
-                            <td className="text-center py-2 px-2">
+                            <td className="text-center py-2 px-2 w-[450px] break-words whitespace-normal">
                               {isEditing ? (
                                 <input
                                   type="text"
@@ -1332,7 +1332,7 @@ const AdminLeaveManagement = ({
                                 lr.reason || '개인사정'
                               )}
                             </td>
-                            <td className="text-center py-2 px-2">
+                            <td className="text-center py-2 px-2 w-[200px]">
                               {isEditing ? (
                                 <input
                                   type="text"

@@ -400,7 +400,7 @@ const AdminSuggestionManagement = ({
                             getSuggestionCategoryText(s.type, 'ko')
                           )}
                         </td>
-                        <td className="text-left py-2 px-2">
+                        <td className="text-center py-2 px-2">
                           {isEditing ? (
                             <textarea
                               value={editingSuggestionData.content || s.content}
@@ -414,7 +414,7 @@ const AdminSuggestionManagement = ({
                               rows="2"
                             />
                           ) : (
-                            <div className="max-w-xs text-left whitespace-normal break-words line-clamp-3">
+                            <div className="max-w-xs text-center whitespace-normal break-words line-clamp-3 mx-auto">
                               {s.content}
                             </div>
                           )}

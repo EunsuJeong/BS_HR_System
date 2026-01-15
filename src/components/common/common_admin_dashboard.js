@@ -2646,57 +2646,79 @@ export const calculateLateRateUtil = ({
         yesterday.getDate()
       );
 
-      // 2. 출근시간 기준으로 실제 시프트 판정 (1순위: 출근시간, 2순위: workType)
-      // 야간 근무는 전날 저녁 출근이므로 전날 데이터를 먼저 확인
+      // 2. 출근시간 기준으로 실제 시프트 판정
+      // workType에 따라 확인할 데이터 결정:
+      // - 주간 근무자: 당일 데이터만 확인 (전날 반차 등으로 인한 오판정 방지)
+      // - 야간/시프터: 전날 데이터도 확인 (야간 근무는 전날 저녁 출근)
       let actualShift = null;
       let checkYear = year;
       let checkMonth = m + 1;
       let checkDay = day;
       let attendanceData = null;
 
-      // 우선순위 1: 전날 데이터에서 야간 출근 확인 (전날 저녁 출근 = 오늘 야간 근무)
-      if (yesterdayAttendanceData && yesterdayAttendanceData.checkIn) {
-        const checkInMinutes = timeToMinutes(yesterdayAttendanceData.checkIn);
-        // 전날 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무
-        if (checkInMinutes < 180 || checkInMinutes >= 900) {
-          actualShift = '야간';
-          checkYear = yesterday.getFullYear();
-          checkMonth = yesterday.getMonth() + 1;
-          checkDay = yesterday.getDate();
-          attendanceData = yesterdayAttendanceData;
-        }
-      }
-
-      // 우선순위 2: 전날에 야간 출근이 없으면 당일 출근 확인
-      if (!actualShift && todayAttendanceData && todayAttendanceData.checkIn) {
-        const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
-        // 당일 03시~15시 출근 = 오늘 주간 근무
-        if (checkInMinutes >= 180 && checkInMinutes < 900) {
-          actualShift = '주간';
-          attendanceData = todayAttendanceData;
-        }
-        // 당일 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무 시작
-        else if (checkInMinutes >= 900 || checkInMinutes < 180) {
-          actualShift = '야간';
-          attendanceData = todayAttendanceData;
-        }
-      }
-
-      // 우선순위 3: 출근 데이터가 없으면 workType으로 판정 (단, 시프터는 주간으로 기본 처리)
-      if (!actualShift) {
-        if (workType === '야간') {
-          actualShift = '야간';
-          checkYear = yesterday.getFullYear();
-          checkMonth = yesterday.getMonth() + 1;
-          checkDay = yesterday.getDate();
-          attendanceData = yesterdayAttendanceData;
-        } else if (workType === '주간/야간') {
-          // 시프터는 출근 시간으로만 판단 (출근 데이터 없으면 주간으로 기본 처리)
-          actualShift = '주간';
-          attendanceData = todayAttendanceData;
+      // 주간 근무자는 당일 데이터만 확인
+      if (workType === '주간') {
+        if (todayAttendanceData && todayAttendanceData.checkIn) {
+          const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
+          // 당일 03시~15시 출근 = 주간 근무
+          if (checkInMinutes >= 180 && checkInMinutes < 900) {
+            actualShift = '주간';
+            attendanceData = todayAttendanceData;
+          }
+          // 당일 15시 이후 또는 03시 이전 출근 = 야간 근무 시작 (주간 근무자지만 야간 출근한 경우)
+          else {
+            actualShift = '야간';
+            attendanceData = todayAttendanceData;
+          }
         } else {
+          // 출근 데이터 없으면 주간으로 기본 처리
           actualShift = '주간';
           attendanceData = todayAttendanceData;
+        }
+      }
+      // 야간/시프터는 전날 데이터도 확인
+      else {
+        // 우선순위 1: 전날 데이터에서 야간 출근 확인 (전날 저녁 출근 = 오늘 야간 근무)
+        if (yesterdayAttendanceData && yesterdayAttendanceData.checkIn) {
+          const checkInMinutes = timeToMinutes(yesterdayAttendanceData.checkIn);
+          // 전날 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무
+          if (checkInMinutes < 180 || checkInMinutes >= 900) {
+            actualShift = '야간';
+            checkYear = yesterday.getFullYear();
+            checkMonth = yesterday.getMonth() + 1;
+            checkDay = yesterday.getDate();
+            attendanceData = yesterdayAttendanceData;
+          }
+        }
+
+        // 우선순위 2: 전날에 야간 출근이 없으면 당일 출근 확인
+        if (!actualShift && todayAttendanceData && todayAttendanceData.checkIn) {
+          const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
+          // 당일 03시~15시 출근 = 오늘 주간 근무
+          if (checkInMinutes >= 180 && checkInMinutes < 900) {
+            actualShift = '주간';
+            attendanceData = todayAttendanceData;
+          }
+          // 당일 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무 시작
+          else if (checkInMinutes >= 900 || checkInMinutes < 180) {
+            actualShift = '야간';
+            attendanceData = todayAttendanceData;
+          }
+        }
+
+        // 우선순위 3: 출근 데이터가 없으면 workType으로 판정
+        if (!actualShift) {
+          if (workType === '야간') {
+            actualShift = '야간';
+            checkYear = yesterday.getFullYear();
+            checkMonth = yesterday.getMonth() + 1;
+            checkDay = yesterday.getDate();
+            attendanceData = yesterdayAttendanceData;
+          } else {
+            // 시프터는 출근 시간으로만 판단 (출근 데이터 없으면 주간으로 기본 처리)
+            actualShift = '주간';
+            attendanceData = todayAttendanceData;
+          }
         }
       }
 
@@ -2850,43 +2872,70 @@ export const calculateAbsentRateUtil = ({
         yesterday.getDate()
       );
 
-      // 3. 출근시간 기준으로 실제 시프트 판정 (1순위: 출근시간, 2순위: workType)
-      // 야간 근무는 전날 저녁 출근이므로 전날 데이터를 먼저 확인
+      // 3. 출근시간 기준으로 실제 시프트 판정
+      // workType에 따라 확인할 데이터 결정:
+      // - 주간 근무자: 당일 데이터만 확인 (전날 반차 등으로 인한 오판정 방지)
+      // - 야간/시프터: 전날 데이터도 확인 (야간 근무는 전날 저녁 출근)
       let actualShift = null;
       let attendanceData = null;
 
-      // 우선순위 1: 전날 데이터에서 야간 출근 확인 (전날 저녁 출근 = 오늘 야간 근무)
-      if (yesterdayAttendanceData && yesterdayAttendanceData.checkIn) {
-        const checkInMinutes = timeToMinutes(yesterdayAttendanceData.checkIn);
-        // 전날 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무
-        if (checkInMinutes < 180 || checkInMinutes >= 900) {
-          actualShift = '야간';
-          attendanceData = yesterdayAttendanceData;
-        }
-      }
-
-      // 우선순위 2: 전날에 야간 출근이 없으면 당일 출근 확인
-      if (!actualShift && todayAttendanceData && todayAttendanceData.checkIn) {
-        const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
-        // 당일 03시~15시 출근 = 오늘 주간 근무
-        if (checkInMinutes >= 180 && checkInMinutes < 900) {
+      // 주간 근무자는 당일 데이터만 확인
+      if (workType === '주간') {
+        if (todayAttendanceData && todayAttendanceData.checkIn) {
+          const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
+          // 당일 03시~15시 출근 = 주간 근무
+          if (checkInMinutes >= 180 && checkInMinutes < 900) {
+            actualShift = '주간';
+            attendanceData = todayAttendanceData;
+          }
+          // 당일 15시 이후 또는 03시 이전 출근 = 야간 근무 시작
+          else {
+            actualShift = '야간';
+            attendanceData = todayAttendanceData;
+          }
+        } else {
+          // 출근 데이터 없으면 주간으로 기본 처리
           actualShift = '주간';
           attendanceData = todayAttendanceData;
         }
-        // 당일 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무 시작
-        else if (checkInMinutes >= 900 || checkInMinutes < 180) {
-          actualShift = '야간';
-          attendanceData = todayAttendanceData;
-        }
       }
+      // 야간/시프터는 전날 데이터도 확인
+      else {
+        // 우선순위 1: 전날 데이터에서 야간 출근 확인 (전날 저녁 출근 = 오늘 야간 근무)
+        if (yesterdayAttendanceData && yesterdayAttendanceData.checkIn) {
+          const checkInMinutes = timeToMinutes(yesterdayAttendanceData.checkIn);
+          // 전날 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무
+          if (checkInMinutes < 180 || checkInMinutes >= 900) {
+            actualShift = '야간';
+            attendanceData = yesterdayAttendanceData;
+          }
+        }
 
-      // 우선순위 3: 둘 다 없으면 workType으로 판정
-      if (!actualShift) {
-        actualShift = workType;
-        if (workType === '야간') {
-          attendanceData = yesterdayAttendanceData;
-        } else {
-          attendanceData = todayAttendanceData;
+        // 우선순위 2: 전날에 야간 출근이 없으면 당일 출근 확인
+        if (!actualShift && todayAttendanceData && todayAttendanceData.checkIn) {
+          const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
+          // 당일 03시~15시 출근 = 오늘 주간 근무
+          if (checkInMinutes >= 180 && checkInMinutes < 900) {
+            actualShift = '주간';
+            attendanceData = todayAttendanceData;
+          }
+          // 당일 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무 시작
+          else if (checkInMinutes >= 900 || checkInMinutes < 180) {
+            actualShift = '야간';
+            attendanceData = todayAttendanceData;
+          }
+        }
+
+        // 우선순위 3: 출근 데이터가 없으면 workType으로 판정
+        if (!actualShift) {
+          if (workType === '야간') {
+            actualShift = '야간';
+            attendanceData = yesterdayAttendanceData;
+          } else {
+            // 시프터는 출근 시간으로만 판단 (출근 데이터 없으면 주간으로 기본 처리)
+            actualShift = '주간';
+            attendanceData = todayAttendanceData;
+          }
         }
       }
 
@@ -3034,11 +3083,16 @@ export const calculateAverageOvertimeHoursUtil = ({
       }
     }
 
-    // 직원별 총 특근시간 합산
-    const empOvertimeHours = Object.values(overtimeTypes).reduce(
-      (sum, h) => sum + h,
-      0
-    );
+    // 직원별 총 초과근무시간 합산 (모든 초과근무 타입 포함)
+    const empOvertimeHours =
+      overtimeTypes.조출 +
+      overtimeTypes.연장 +
+      overtimeTypes.특근 +
+      overtimeTypes.심야 +
+      overtimeTypes['연장+심야'] +
+      overtimeTypes['특근+연장'] +
+      overtimeTypes['특근+심야'] +
+      overtimeTypes['특근+연장+심야'];
 
     if (empOvertimeHours > 0) {
       totalOvertimeHours += empOvertimeHours;
@@ -3965,57 +4019,79 @@ function calculateMonthlyRate(
         yesterday.getDate()
       );
 
-      // 2. 출근시간 기준으로 실제 시프트 판정 (1순위: 출근시간, 2순위: workType)
-      // 야간 근무는 전날 저녁 출근이므로 전날 데이터를 먼저 확인
+      // 2. 출근시간 기준으로 실제 시프트 판정
+      // workType에 따라 확인할 데이터 결정:
+      // - 주간 근무자: 당일 데이터만 확인 (전날 반차 등으로 인한 오판정 방지)
+      // - 야간/시프터: 전날 데이터도 확인 (야간 근무는 전날 저녁 출근)
       let actualShift = null;
       let checkYear = year;
       let checkMonth = month + 1;
       let checkDay = day;
       let attendanceData = null;
 
-      // 우선순위 1: 전날 데이터에서 야간 출근 확인 (전날 저녁 출근 = 오늘 야간 근무)
-      if (yesterdayAttendanceData && yesterdayAttendanceData.checkIn) {
-        const checkInMinutes = timeToMinutes(yesterdayAttendanceData.checkIn);
-        // 전날 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무
-        if (checkInMinutes < 180 || checkInMinutes >= 900) {
-          actualShift = '야간';
-          checkYear = yesterday.getFullYear();
-          checkMonth = yesterday.getMonth() + 1;
-          checkDay = yesterday.getDate();
-          attendanceData = yesterdayAttendanceData;
-        }
-      }
-
-      // 우선순위 2: 전날에 야간 출근이 없으면 당일 출근 확인
-      if (!actualShift && todayAttendanceData && todayAttendanceData.checkIn) {
-        const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
-        // 당일 03시~15시 출근 = 오늘 주간 근무
-        if (checkInMinutes >= 180 && checkInMinutes < 900) {
-          actualShift = '주간';
-          attendanceData = todayAttendanceData;
-        }
-        // 당일 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무 시작
-        else if (checkInMinutes >= 900 || checkInMinutes < 180) {
-          actualShift = '야간';
-          attendanceData = todayAttendanceData;
-        }
-      }
-
-      // 우선순위 3: 출근 데이터가 없으면 workType으로 판정 (단, 시프터는 주간으로 기본 처리)
-      if (!actualShift) {
-        if (workType === '야간') {
-          actualShift = '야간';
-          checkYear = yesterday.getFullYear();
-          checkMonth = yesterday.getMonth() + 1;
-          checkDay = yesterday.getDate();
-          attendanceData = yesterdayAttendanceData;
-        } else if (workType === '주간/야간') {
-          // 시프터는 출근 시간으로만 판단 (출근 데이터 없으면 주간으로 기본 처리)
-          actualShift = '주간';
-          attendanceData = todayAttendanceData;
+      // 주간 근무자는 당일 데이터만 확인
+      if (workType === '주간') {
+        if (todayAttendanceData && todayAttendanceData.checkIn) {
+          const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
+          // 당일 03시~15시 출근 = 주간 근무
+          if (checkInMinutes >= 180 && checkInMinutes < 900) {
+            actualShift = '주간';
+            attendanceData = todayAttendanceData;
+          }
+          // 당일 15시 이후 또는 03시 이전 출근 = 야간 근무 시작 (주간 근무자지만 야간 출근한 경우)
+          else {
+            actualShift = '야간';
+            attendanceData = todayAttendanceData;
+          }
         } else {
+          // 출근 데이터 없으면 주간으로 기본 처리
           actualShift = '주간';
           attendanceData = todayAttendanceData;
+        }
+      }
+      // 야간/시프터는 전날 데이터도 확인
+      else {
+        // 우선순위 1: 전날 데이터에서 야간 출근 확인 (전날 저녁 출근 = 오늘 야간 근무)
+        if (yesterdayAttendanceData && yesterdayAttendanceData.checkIn) {
+          const checkInMinutes = timeToMinutes(yesterdayAttendanceData.checkIn);
+          // 전날 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무
+          if (checkInMinutes < 180 || checkInMinutes >= 900) {
+            actualShift = '야간';
+            checkYear = yesterday.getFullYear();
+            checkMonth = yesterday.getMonth() + 1;
+            checkDay = yesterday.getDate();
+            attendanceData = yesterdayAttendanceData;
+          }
+        }
+
+        // 우선순위 2: 전날에 야간 출근이 없으면 당일 출근 확인
+        if (!actualShift && todayAttendanceData && todayAttendanceData.checkIn) {
+          const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
+          // 당일 03시~15시 출근 = 오늘 주간 근무
+          if (checkInMinutes >= 180 && checkInMinutes < 900) {
+            actualShift = '주간';
+            attendanceData = todayAttendanceData;
+          }
+          // 당일 15시 이후 또는 03시 이전 출근 = 오늘 야간 근무 시작
+          else if (checkInMinutes >= 900 || checkInMinutes < 180) {
+            actualShift = '야간';
+            attendanceData = todayAttendanceData;
+          }
+        }
+
+        // 우선순위 3: 출근 데이터가 없으면 workType으로 판정
+        if (!actualShift) {
+          if (workType === '야간') {
+            actualShift = '야간';
+            checkYear = yesterday.getFullYear();
+            checkMonth = yesterday.getMonth() + 1;
+            checkDay = yesterday.getDate();
+            attendanceData = yesterdayAttendanceData;
+          } else {
+            // 시프터는 출근 시간으로만 판단 (출근 데이터 없으면 주간으로 기본 처리)
+            actualShift = '주간';
+            attendanceData = todayAttendanceData;
+          }
         }
       }
 
@@ -4037,10 +4113,10 @@ function calculateMonthlyRate(
           : null;
 
         if (checkInMinutes !== null) {
-          // 지각 기준: 주간 08:31 이후, 야간 19:01 이후
+          // 지각 기준: 주간 08:31 이상, 야간 19:01 이상
           const isLate =
-            (actualShift === '주간' && checkInMinutes > 511) || // 08:31 = 511분
-            (actualShift === '야간' && checkInMinutes > 1141); // 19:01 = 1141분
+            (actualShift === '주간' && checkInMinutes >= 511) || // 08:31 이상 = 지각
+            (actualShift === '야간' && checkInMinutes >= 1141); // 19:01 이상 = 지각
 
           status = isLate ? '지각' : '출근';
         } else {
@@ -4195,11 +4271,16 @@ export const getWorkLifeBalanceDataByYearUtil = (
         }
       }
 
-      // 직원별 총 특근시간 합산
-      const empTotalOvertimeHours = Object.values(overtimeTypes).reduce(
-        (sum, h) => sum + h,
-        0
-      );
+      // 직원별 총 초과근무시간 합산 (모든 초과근무 타입 포함)
+      const empTotalOvertimeHours =
+        overtimeTypes.조출 +
+        overtimeTypes.연장 +
+        overtimeTypes.특근 +
+        overtimeTypes.심야 +
+        overtimeTypes['연장+심야'] +
+        overtimeTypes['특근+연장'] +
+        overtimeTypes['특근+심야'] +
+        overtimeTypes['특근+연장+심야'];
 
       if (empTotalOvertimeHours > 0) {
         totalOvertimeHours += empTotalOvertimeHours;
@@ -5519,10 +5600,10 @@ export const getGoalDetailDataUtil = (
             : null;
 
           if (checkInMinutes !== null) {
-            // 지각 기준: 주간 08:31 이후, 야간 19:01 이후
+            // 지각 기준: 주간 08:31 이상, 야간 19:01 이상
             const isLate =
-              (actualShift === '주간' && checkInMinutes > 511) || // 08:31 = 511분
-              (actualShift === '야간' && checkInMinutes > 1141); // 19:01 = 1141분
+              (actualShift === '주간' && checkInMinutes >= 511) || // 08:31 이상 = 지각
+              (actualShift === '야간' && checkInMinutes >= 1141); // 19:01 이상 = 지각
 
             status = isLate ? '지각' : '출근';
           } else {
