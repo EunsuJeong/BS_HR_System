@@ -254,7 +254,7 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage }) => {
                 </div>
                 {isExpanded && (
                   <div className="px-2 pb-2">
-                    <p className="text-xs text-gray-600 leading-relaxed">
+                    <p className="text-xs text-gray-600" style={{ lineHeight: '1.15' }}>
                       {notification.content}
                     </p>
                   </div>
@@ -336,6 +336,7 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage }) => {
                           className={`text-xs ${
                             isUnread ? 'text-gray-700' : 'text-gray-600'
                           }`}
+                          style={{ lineHeight: '1.15' }}
                         >
                           {notification.content}
                         </p>

@@ -354,7 +354,7 @@ const StaffAnnualLeave = ({
             <div className="flex flex-wrap gap-2">
               <textarea
                 name="reason"
-                placeholder={getText('사유(최대 25자 제한)', 'Reason(25 character limit)')}
+                placeholder={getText('사유(최대 25자 제한)', 'Reason (≤25 chars)')}
                 value={leaveForm.reason}
                 onChange={handleLeaveFormChange}
                 onInput={(e) => {
@@ -484,13 +484,13 @@ const StaffAnnualLeave = ({
                         <td className="text-center py-1 px-2 whitespace-nowrap">
                           {getLeaveTypeText(leaveFormPreview.type)}
                         </td>
-                        <td className="text-center py-1 px-2 whitespace-pre-wrap" style={{ lineHeight: '1.15' }}>
-                          {addLineBreaks(leaveFormPreview.reason)}
+                        <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>
+                          {leaveFormPreview.reason}
                         </td>
                         <td className="text-center py-1 px-2 whitespace-nowrap">
                           {leaveFormPreview.contact}
                         </td>
-                        <td className="text-center py-1 px-2 whitespace-pre-wrap" style={{ lineHeight: '1.15' }}>-</td>
+                        <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>-</td>
                         <td className="text-center py-1 px-2 text-purple-600 whitespace-nowrap">
                           {leaveFormPreview.status}
                         </td>
@@ -520,14 +520,14 @@ const StaffAnnualLeave = ({
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             {getLeaveTypeText(lr.type)}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-pre-wrap" style={{ lineHeight: '1.15' }}>
-                            {addLineBreaks(lr.reason)}
+                          <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>
+                            {lr.reason}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             {lr.contact}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-pre-wrap" style={{ lineHeight: '1.15' }}>
-                            {lr.remark ? addLineBreaks(lr.remark) : '-'}
+                          <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>
+                            {lr.remark || '-'}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             <span

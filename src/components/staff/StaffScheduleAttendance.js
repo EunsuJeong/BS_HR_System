@@ -521,7 +521,7 @@ const StaffScheduleAttendance = ({
                     const leaveType =
                       selectedDateLeave?.type || selectedDateLeave?.leaveType;
 
-                    // ❌ 연차, 경조, 공가, 휴직, 결근, 기타, 병가 → 출근시간 미표시
+                    // ❌ 연차, 경조, 공가, 휴직, 결근, 병가 → 출근시간 미표시 (기타는 출근으로 표시)
                     if (
                       [
                         '연차',
@@ -529,7 +529,6 @@ const StaffScheduleAttendance = ({
                         '공가',
                         '휴직',
                         '결근',
-                        '기타',
                         '병가',
                       ].includes(leaveType)
                     ) {
@@ -568,7 +567,7 @@ const StaffScheduleAttendance = ({
                     const leaveType =
                       selectedDateLeave?.type || selectedDateLeave?.leaveType;
 
-                    // ❌ 연차, 경조, 공가, 휴직, 결근, 기타, 병가 → 퇴근시간 미표시
+                    // ❌ 연차, 경조, 공가, 휴직, 결근, 병가 → 퇴근시간 미표시 (기타는 출근으로 표시)
                     if (
                       [
                         '연차',
@@ -576,7 +575,6 @@ const StaffScheduleAttendance = ({
                         '공가',
                         '휴직',
                         '결근',
-                        '기타',
                         '병가',
                       ].includes(leaveType)
                     ) {
@@ -658,9 +656,13 @@ const StaffScheduleAttendance = ({
 
                       // 출결상태 텍스트 결정
                       let statusText;
-                      if (selectedDateLeave) {
-                        statusText =
-                          selectedDateLeave.type || selectedDateLeave.leaveType;
+                      const leaveTypeForStatus =
+                        selectedDateLeave?.type || selectedDateLeave?.leaveType;
+                      if (selectedDateLeave && leaveTypeForStatus !== '기타') {
+                        statusText = leaveTypeForStatus;
+                      } else if (leaveTypeForStatus === '기타') {
+                        // 기타는 '출근'으로 표시
+                        statusText = '출근';
                       } else if (
                         !selectedDateAttendance?.checkIn &&
                         !selectedDateAttendance?.checkOut &&
@@ -675,12 +677,15 @@ const StaffScheduleAttendance = ({
 
                       // 출결상태 색상 결정
                       let colorClass;
-                      if (selectedDateLeave) {
+                      if (selectedDateLeave && leaveTypeForStatus !== '기타') {
                         colorClass =
-                          getLeaveTypeColor(
-                            selectedDateLeave.type ||
-                              selectedDateLeave.leaveType
-                          ) + ' bg-orange-100';
+                          getLeaveTypeColor(leaveTypeForStatus) +
+                          ' bg-orange-100';
+                      } else if (
+                        leaveTypeForStatus === '기타' ||
+                        statusText === '출근'
+                      ) {
+                        colorClass = 'text-green-600 bg-green-100';
                       } else if (statusText === '휴일') {
                         colorClass = 'text-gray-600 bg-gray-200';
                       } else if (statusText === '근무중') {
@@ -745,35 +750,35 @@ const StaffScheduleAttendance = ({
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   날짜
                 </label>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs">
                   {selectedEvent.date}
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">
+                <div className="mt-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     제목
                   </label>
-                  <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs">
                     {selectedEvent.title}
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">
+                <div className="mt-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     일정 유형
                   </label>
-                  <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs">
                     {selectedEvent.type}
                   </div>
                 </div>
               </div>
               {selectedEvent.description && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     설명
                   </label>
-                  <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg min-h-[80px] whitespace-pre-wrap">
+                  <div className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg min-h-[60px] whitespace-pre-wrap text-xs">
                     {selectedEvent.description}
                   </div>
                 </div>

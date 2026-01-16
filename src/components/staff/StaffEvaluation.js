@@ -125,7 +125,7 @@ const StaffEvaluation = ({
                           <td className="text-center py-2 px-3 font-semibold">
                             {perf.grade}
                           </td>
-                          <td className="text-center py-2 px-3">
+                          <td className="text-center py-2 px-3" style={{ lineHeight: '1.15' }}>
                             {perf.content || '사유 없음'}
                           </td>
                           <td className="text-center py-2 px-3">
