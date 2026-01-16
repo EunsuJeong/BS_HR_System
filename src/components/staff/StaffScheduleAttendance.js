@@ -814,7 +814,7 @@ const StaffScheduleAttendance = ({
                   setShowEventDetail(false);
                   setSelectedEvent(null);
                 }}
-                className="w-full px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500"
+                className="w-full px-4 py-2 bg-gray-400 text-white text-xs rounded-lg hover:bg-gray-500"
               >
                 닫기
               </button>
