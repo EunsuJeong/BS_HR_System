@@ -354,7 +354,7 @@ const StaffAnnualLeave = ({
             <div className="flex flex-wrap gap-2">
               <textarea
                 name="reason"
-                placeholder={getText('사유(최대 25자 제한)', 'Reason (≤25 chars)')}
+                placeholder={getText('사유(최대 25자 제한)', 'Reason (≤25 charS)')}
                 value={leaveForm.reason}
                 onChange={handleLeaveFormChange}
                 onInput={(e) => {
