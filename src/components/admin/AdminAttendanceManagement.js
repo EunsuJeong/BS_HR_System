@@ -218,6 +218,7 @@ const AdminAttendanceManagement = ({
             </div>
 
             <div className="flex space-x-2">
+              {/* 편집 버튼 비활성화 (2024-01-16)
               <button
                 onClick={toggleEditingMode}
                 className={`px-4 py-2 rounded-lg flex items-center whitespace-nowrap ${
@@ -229,6 +230,7 @@ const AdminAttendanceManagement = ({
                 <Edit size={16} className="mr-2" />
                 {isEditingAttendance ? '편집완료' : '편집'}
               </button>
+              */}
               <label className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer flex items-center whitespace-nowrap">
                 <Upload size={16} className="mr-2" />
                 업로드
@@ -811,7 +813,10 @@ const AdminAttendanceManagement = ({
                                       </span>
                                     );
                                   }
-                                  // 연차, 경조, 공가, 휴직, 결근, 기타: 출근 행에 표시
+                                  // 연차, 경조, 공가, 휴직, 결근: 출근 행에 표시 (기타는 제외)
+                                  if (leaveType === '기타') {
+                                    return formatTimeDisplay(attendance.checkIn) || '';
+                                  }
                                   return leaveType;
                                 }
                                 const isShiftWorker = hasShiftWork(emp.id);
@@ -1047,7 +1052,10 @@ const AdminAttendanceManagement = ({
                                       </span>
                                     );
                                   }
-                                  // 연차, 경조, 공가, 휴직, 결근, 기타: 퇴근 행에 표시
+                                  // 연차, 경조, 공가, 휴직, 결근: 퇴근 행에 표시 (기타는 제외)
+                                  if (leaveType === '기타') {
+                                    return formatTimeDisplay(attendance.checkOut) || '';
+                                  }
                                   return leaveType;
                                 }
                                 const isShiftWorker = hasShiftWork(emp.id);

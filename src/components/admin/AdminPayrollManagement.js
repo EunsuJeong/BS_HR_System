@@ -166,6 +166,7 @@ const AdminPayrollManagement = ({
                 <RefreshCw size={16} className="mr-2" />
                 초기화
               </button>
+              {/* 편집 버튼 비활성화 (2024-01-16)
               <button
                 onClick={() => {
                   setIsPayrollEditMode(!isPayrollEditMode);
@@ -180,6 +181,7 @@ const AdminPayrollManagement = ({
                 <Edit size={16} className="mr-2" />
                 {isPayrollEditMode ? '편집완료' : '편집'}
               </button>
+              */}
               <label className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer flex items-center">
                 <Upload size={16} className="mr-2" />
                 업로드
