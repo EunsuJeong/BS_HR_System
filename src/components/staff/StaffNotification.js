@@ -276,7 +276,7 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage }) => {
                 </h3>
                 <button
                   onClick={() => setShowNotificationMorePopup(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 text-sm"
                 >
                   ✕
                 </button>

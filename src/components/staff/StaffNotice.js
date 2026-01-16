@@ -164,6 +164,7 @@ const StaffNotice = ({
                     <div className="mt-1 p-2 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                       <div
                         className="text-xs text-gray-700"
+                        style={{ lineHeight: '1.15' }}
                         dangerouslySetInnerHTML={{
                           __html: linkifyText(notice.content || ''),
                         }}
@@ -260,7 +261,7 @@ const StaffNotice = ({
                     setSelectedNotice(null);
                     // 팝업 상태는 React state로만 관리
                   }}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 text-sm"
                 >
                   ✕
                 </button>
@@ -395,7 +396,8 @@ const StaffNotice = ({
                     </div>
                     <div className="border-t pt-4">
                       <div
-                        className="text-xs text-gray-700 leading-relaxed"
+                        className="text-xs text-gray-700"
+                        style={{ lineHeight: '1.15' }}
                         dangerouslySetInnerHTML={{
                           __html: linkifyText(selectedNotice.content || ''),
                         }}

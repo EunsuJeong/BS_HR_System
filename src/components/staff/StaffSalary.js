@@ -213,7 +213,7 @@ const StaffSalary = ({
                       setShowSalaryHistoryPopup(false);
                       setSelectedSalaryHistory(null);
                     }}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 text-sm"
                   >
                     ✕
                   </button>
@@ -514,7 +514,7 @@ const StaffSalary = ({
                       setSalaryPasswordError('');
                       setShowPassword(false);
                     }}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 text-sm"
                   >
                     ✕
                   </button>

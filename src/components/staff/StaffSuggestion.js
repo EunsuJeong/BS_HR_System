@@ -74,32 +74,15 @@ const StaffSuggestion = ({
     }
   };
 
-  // fontSize에 따른 줄 간격 클래스 반환
-  const getLineHeightClass = () => {
-    switch (fontSize) {
-      case 'small':
-        return 'leading-tight'; // 1.25
-      case 'large':
-        return 'leading-loose'; // 2
-      default:
-        return 'leading-relaxed'; // 1.625
-    }
-  };
+  // 줄 간격 스타일 반환 (1.15로 통일)
+  const lineHeightStyle = { lineHeight: '1.15' };
 
   const commonClass = getCommonClass();
   const placeholderClass = getPlaceholderClass();
-  const lineHeightClass = getLineHeightClass();
 
-  // fontSize에 따라 줄바꿈 글자 수를 조정하는 함수
+  // fontSize에 따라 줄바꿈 글자 수를 조정하는 함수 (모든 모드에서 25글자)
   const getMaxLineLength = () => {
-    switch (fontSize) {
-      case 'small':
-        return 25;
-      case 'large':
-        return 15;
-      default:
-        return 20;
-    }
+    return 25;
   };
 
   // 글자 수에 따라 줄바꿈 추가하는 함수
@@ -203,7 +186,7 @@ const StaffSuggestion = ({
               </h3>
               <button
                 onClick={() => setShowSuggestionMorePopup(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 text-sm"
               >
                 ✕
               </button>
@@ -253,10 +236,10 @@ const StaffSuggestion = ({
                               selectedLanguage
                             )}
                           </td>
-                          <td className={`text-center py-1 px-2 whitespace-pre-wrap ${lineHeightClass}`}>
+                          <td className="text-center py-1 px-2 whitespace-pre-wrap" style={lineHeightStyle}>
                             {addLineBreaks(s.content)}
                           </td>
-                          <td className={`text-center py-1 px-2 whitespace-pre-wrap ${lineHeightClass}`}>
+                          <td className="text-center py-1 px-2 whitespace-pre-wrap" style={lineHeightStyle}>
                             {(s.status === '승인' || s.status === '반려') &&
                             s.remark
                               ? addLineBreaks(s.remark)
@@ -408,7 +391,7 @@ const StaffSuggestion = ({
               </h3>
               <button
                 onClick={() => setShowSuggestionApplyPopup(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 text-sm"
               >
                 ✕
               </button>
@@ -470,7 +453,7 @@ const StaffSuggestion = ({
                   setEditingSuggestionTitle('');
                   setEditingSuggestionRemark('');
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 text-sm"
               >
                 ✕
               </button>

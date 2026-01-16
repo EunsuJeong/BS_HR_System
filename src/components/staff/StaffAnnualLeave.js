@@ -68,6 +68,20 @@ const StaffAnnualLeave = ({
   const commonClass = getCommonClass();
   const placeholderClass = getPlaceholderClass();
 
+  // 글자 수에 따라 줄바꿈 추가하는 함수 (fontSize에 관계없이 25글자)
+  const addLineBreaks = (text) => {
+    if (!text) return '';
+    const maxLength = 25;
+    let result = '';
+    for (let i = 0; i < text.length; i += maxLength) {
+      result += text.slice(i, i + maxLength);
+      if (i + maxLength < text.length) {
+        result += '\n';
+      }
+    }
+    return result;
+  };
+
   // 날짜를 YYYY-MM-DD 형식으로 변환하는 헬퍼 함수
   const formatDateForInput = (dateValue) => {
     if (!dateValue) return '';
@@ -407,7 +421,7 @@ const StaffAnnualLeave = ({
                 </h3>
                 <button
                   onClick={() => setShowLeaveHistoryPopup(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 text-sm"
                 >
                   ✕
                 </button>
@@ -469,13 +483,13 @@ const StaffAnnualLeave = ({
                         <td className="text-center py-1 px-2 whitespace-nowrap">
                           {getLeaveTypeText(leaveFormPreview.type)}
                         </td>
-                        <td className="text-center py-1 px-2">
-                          {leaveFormPreview.reason}
+                        <td className="text-center py-1 px-2 whitespace-pre-wrap" style={{ lineHeight: '1.15' }}>
+                          {addLineBreaks(leaveFormPreview.reason)}
                         </td>
                         <td className="text-center py-1 px-2 whitespace-nowrap">
                           {leaveFormPreview.contact}
                         </td>
-                        <td className="text-center py-1 px-2">-</td>
+                        <td className="text-center py-1 px-2 whitespace-pre-wrap" style={{ lineHeight: '1.15' }}>-</td>
                         <td className="text-center py-1 px-2 text-purple-600 whitespace-nowrap">
                           {leaveFormPreview.status}
                         </td>
@@ -505,12 +519,14 @@ const StaffAnnualLeave = ({
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             {getLeaveTypeText(lr.type)}
                           </td>
-                          <td className="text-center py-1 px-2">{lr.reason}</td>
+                          <td className="text-center py-1 px-2 whitespace-pre-wrap" style={{ lineHeight: '1.15' }}>
+                            {addLineBreaks(lr.reason)}
+                          </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             {lr.contact}
                           </td>
-                          <td className="text-center py-1 px-2">
-                            {lr.remark || '-'}
+                          <td className="text-center py-1 px-2 whitespace-pre-wrap" style={{ lineHeight: '1.15' }}>
+                            {lr.remark ? addLineBreaks(lr.remark) : '-'}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             <span
@@ -627,7 +643,7 @@ const StaffAnnualLeave = ({
               </h3>
               <button
                 onClick={() => setShowEditLeavePopup(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 text-sm"
               >
                 ✕
               </button>
