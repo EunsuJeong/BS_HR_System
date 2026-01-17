@@ -236,10 +236,10 @@ const StaffSuggestion = ({
                               selectedLanguage
                             )}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-pre-wrap" style={lineHeightStyle}>
+                          <td className="text-center py-1 px-2 whitespace-pre" style={lineHeightStyle}>
                             {addLineBreaks(s.content)}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-pre-wrap" style={lineHeightStyle}>
+                          <td className="text-center py-1 px-2 whitespace-pre" style={lineHeightStyle}>
                             {(s.status === '승인' || s.status === '반려') &&
                             s.remark
                               ? addLineBreaks(s.remark)

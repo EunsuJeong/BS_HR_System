@@ -155,7 +155,20 @@ const StaffSalary = ({
     }
   };
 
+  // fontSize에 따른 텍스트 클래스 반환
+  const getTextClass = () => {
+    switch (fontSize) {
+      case 'small':
+        return 'text-2xs';
+      case 'large':
+        return 'text-sm';
+      default:
+        return 'text-xs';
+    }
+  };
+
   const btnClass = getButtonClass();
+  const textClass = getTextClass();
 
   // 급여 비밀번호 확인 함수
   const handleSalaryPasswordConfirmLocal = () => {
@@ -231,7 +244,7 @@ const StaffSalary = ({
                 {!selectedSalaryHistory ? (
                   <div>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
+                      <table className={`w-full ${textClass}`}>
                         <thead className="bg-gray-100">
                           <tr>
                             <th className="text-center py-2 px-3 whitespace-nowrap">
@@ -263,13 +276,16 @@ const StaffSalary = ({
                                   {salary.month}
                                 </td>
                                 <td className="text-right py-2 px-3 whitespace-nowrap">
-                                  {salary.totalGross.toLocaleString()}{getText('원', ' KRW')}
+                                  {salary.totalGross.toLocaleString()}
+                                  {getText('원', ' KRW')}
                                 </td>
                                 <td className="text-right py-2 px-3 whitespace-nowrap">
-                                  {salary.totalDeduction.toLocaleString()}{getText('원', ' KRW')}
+                                  {salary.totalDeduction.toLocaleString()}
+                                  {getText('원', ' KRW')}
                                 </td>
                                 <td className="text-right py-2 px-3 font-bold text-emerald-600 whitespace-nowrap">
-                                  {salary.netPay.toLocaleString()}{getText('원', ' KRW')}
+                                  {salary.netPay.toLocaleString()}
+                                  {getText('원', ' KRW')}
                                 </td>
                                 <td className="text-center py-2 px-3 whitespace-nowrap">
                                   <button
@@ -299,7 +315,7 @@ const StaffSalary = ({
                         >
                           {selectedLanguage === 'en' ? 'Prev' : '이전'}
                         </button>
-                        <span className="text-xs text-gray-600">
+                        <span className={`${textClass} text-gray-600`}>
                           {salaryPage} /{' '}
                           {Math.max(
                             1,
@@ -333,7 +349,7 @@ const StaffSalary = ({
                     )}
                     {actualSalaryData.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
-                        <p className="text-xs">
+                        <p className={textClass}>
                           {getText('급여 내역이 없습니다', 'No salary records')}
                         </p>
                       </div>
@@ -351,7 +367,7 @@ const StaffSalary = ({
                     </div>
                     <div className="space-y-4">
                       <div>
-                        <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                        <h4 className={`${textClass} font-semibold text-gray-800 mb-2`}>
                           {selectedSalaryHistory.month}{' '}
                           {getText('급여 상세 내역', 'Salary Details')}
                         </h4>
@@ -359,11 +375,11 @@ const StaffSalary = ({
 
                       {/* 지급 내역 */}
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-700 mb-2">
+                        <h4 className={`${textClass} font-semibold text-gray-700 mb-2`}>
                           {getText('지급 내역', 'Income Details')}
                         </h4>
                         <div className="overflow-x-auto">
-                          <table className="w-full text-xs border-collapse table-fixed">
+                          <table className={`w-full ${textClass} border-collapse table-fixed`}>
                             <colgroup>
                               <col className="w-1/2" />
                               <col className="w-1/2" />
@@ -373,19 +389,26 @@ const StaffSalary = ({
                                 selectedSalaryHistory.incomeDetails.map(
                                   (item, index) => (
                                     <tr key={index}>
-                                      <td className="py-2 px-3 border border-gray-300 bg-gray-50" style={{ lineHeight: '1.4' }}>
+                                      <td
+                                        className={`${textClass} py-2 px-3 border border-gray-300 bg-gray-50`}
+                                        style={{ lineHeight: '1.4' }}
+                                      >
                                         {item.label}
                                       </td>
-                                      <td className="py-2 px-3 border border-gray-300 text-right" style={{ lineHeight: '1.4' }}>
+                                      <td
+                                        className={`${textClass} py-2 px-3 border border-gray-300 text-right`}
+                                        style={{ lineHeight: '1.4' }}
+                                      >
                                         {item.label === '휴일근로수당' ? (
                                           // 휴일근로수당은 2줄 형식: (시간) / 금액
                                           <>
-                                            {item.hours !== null && item.hours > 0 && (
-                                              <div className="text-gray-600 text-xs mb-1">
-                                                ({item.hours}시간)
-                                              </div>
-                                            )}
-                                            <div>
+                                            {item.hours !== null &&
+                                              item.hours > 0 && (
+                                                <div className={`text-gray-600 ${textClass} mb-1`}>
+                                                  ({item.hours}시간)
+                                                </div>
+                                              )}
+                                            <div className={textClass}>
                                               {item.amount.toLocaleString()}
                                               {getText('원', ' KRW')}
                                             </div>
@@ -395,9 +418,11 @@ const StaffSalary = ({
                                           <>
                                             {item.hours !== null &&
                                               item.hours > 0 && (
-                                                <span className="text-gray-600 mr-2">
+                                                <span className={`text-gray-600 ${textClass} mr-2`}>
                                                   ({item.hours}
-                                                  {item.label.includes('일수') ||
+                                                  {item.label.includes(
+                                                    '일수'
+                                                  ) ||
                                                   item.label.includes('년차') ||
                                                   item.label.includes('결근')
                                                     ? '일'
@@ -416,7 +441,7 @@ const StaffSalary = ({
                               ) : (
                                 <tr>
                                   <td
-                                    className="py-2 px-3 border border-gray-300 text-center"
+                                    className={`${textClass} py-2 px-3 border border-gray-300 text-center`}
                                     colSpan="2"
                                   >
                                     {getText(
@@ -427,10 +452,16 @@ const StaffSalary = ({
                                 </tr>
                               )}
                               <tr className="font-semibold bg-blue-50">
-                                <td className="py-2 px-3 border border-gray-300" style={{ lineHeight: '1.4' }}>
+                                <td
+                                  className={`${textClass} py-2 px-3 border border-gray-300`}
+                                  style={{ lineHeight: '1.4' }}
+                                >
                                   {getText('지급계', 'Total Gross')}
                                 </td>
-                                <td className="py-2 px-3 border border-gray-300 text-right" style={{ lineHeight: '1.4' }}>
+                                <td
+                                  className={`${textClass} py-2 px-3 border border-gray-300 text-right`}
+                                  style={{ lineHeight: '1.4' }}
+                                >
                                   {selectedSalaryHistory.totalGross.toLocaleString()}
                                   {getText('원', ' KRW')}
                                 </td>
@@ -442,11 +473,11 @@ const StaffSalary = ({
 
                       {/* 공제 내역 */}
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-700 mb-2">
+                        <h4 className={`${textClass} font-semibold text-gray-700 mb-2`}>
                           {getText('공제 내역', 'Deduction Details')}
                         </h4>
                         <div className="overflow-x-auto">
-                          <table className="w-full text-xs border-collapse table-fixed">
+                          <table className={`w-full ${textClass} border-collapse table-fixed`}>
                             <colgroup>
                               <col className="w-1/2" />
                               <col className="w-1/2" />
@@ -456,10 +487,16 @@ const StaffSalary = ({
                                 selectedSalaryHistory.deductionDetails.map(
                                   (item, index) => (
                                     <tr key={index}>
-                                      <td className="py-2 px-3 border border-gray-300 bg-gray-50" style={{ lineHeight: '1.4' }}>
+                                      <td
+                                        className={`${textClass} py-2 px-3 border border-gray-300 bg-gray-50`}
+                                        style={{ lineHeight: '1.4' }}
+                                      >
                                         {item.label}
                                       </td>
-                                      <td className="py-2 px-3 border border-gray-300 text-right" style={{ lineHeight: '1.4' }}>
+                                      <td
+                                        className={`${textClass} py-2 px-3 border border-gray-300 text-right`}
+                                        style={{ lineHeight: '1.4' }}
+                                      >
                                         {item.amount.toLocaleString()}
                                         {getText('원', ' KRW')}
                                       </td>
@@ -469,7 +506,7 @@ const StaffSalary = ({
                               ) : (
                                 <tr>
                                   <td
-                                    className="py-2 px-3 border border-gray-300 text-center"
+                                    className={`${textClass} py-2 px-3 border border-gray-300 text-center`}
                                     colSpan="2"
                                   >
                                     {getText(
@@ -480,10 +517,16 @@ const StaffSalary = ({
                                 </tr>
                               )}
                               <tr className="font-semibold bg-red-50">
-                                <td className="py-2 px-3 border border-gray-300" style={{ lineHeight: '1.4' }}>
+                                <td
+                                  className={`${textClass} py-2 px-3 border border-gray-300`}
+                                  style={{ lineHeight: '1.4' }}
+                                >
                                   {getText('공제계', 'Total Deductions')}
                                 </td>
-                                <td className="py-2 px-3 border border-gray-300 text-right" style={{ lineHeight: '1.4' }}>
+                                <td
+                                  className={`${textClass} py-2 px-3 border border-gray-300 text-right`}
+                                  style={{ lineHeight: '1.4' }}
+                                >
                                   {selectedSalaryHistory.totalDeduction.toLocaleString()}
                                   {getText('원', ' KRW')}
                                 </td>
@@ -496,10 +539,10 @@ const StaffSalary = ({
                       {/* 실수령액 */}
                       <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-bold text-emerald-800">
+                          <span className={`${textClass} font-bold text-emerald-800`}>
                             {getText('실수령액', 'Net Pay')}
                           </span>
-                          <span className="text-lg font-bold text-emerald-600">
+                          <span className={`${textClass} font-bold text-emerald-600`}>
                             {selectedSalaryHistory.netPay.toLocaleString()}
                             {getText('원', ' KRW')}
                           </span>
