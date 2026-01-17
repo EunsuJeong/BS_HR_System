@@ -73,10 +73,11 @@ export const getAttendanceDotColor = (status) => {
       '경조',
       '공가',
       '휴직',
-      '기타',
     ].includes(status)
   )
     return 'bg-orange-400';
+
+  if (status === '기타') return 'bg-green-400';
 
   if (status === '휴일') return 'bg-gray-400';
 

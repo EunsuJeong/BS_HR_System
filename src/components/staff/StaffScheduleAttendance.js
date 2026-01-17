@@ -87,17 +87,21 @@ const StaffScheduleAttendance = ({
       return 'text-red-600';
     }
 
-    // 연차, 반차(오전), 반차(오후), 경조, 공가, 휴직, 기타: 오렌지색
+    // 연차, 반차(오전), 반차(오후), 경조, 공가, 휴직: 오렌지색
     if (
       leaveType === '연차' ||
       leaveType === '반차(오전)' ||
       leaveType === '반차(오후)' ||
       leaveType === '경조' ||
       leaveType === '공가' ||
-      leaveType === '휴직' ||
-      leaveType === '기타'
+      leaveType === '휴직'
     ) {
       return 'text-orange-600';
+    }
+
+    // 기타: 초록색 (출근과 동일)
+    if (leaveType === '기타') {
+      return 'text-green-600';
     }
 
     return 'text-gray-600';
@@ -498,8 +502,8 @@ const StaffScheduleAttendance = ({
                 <div className="w-3 h-3 bg-orange-400 rounded-full mr-2 flex-shrink-0"></div>
                 <span className="text-gray-600 truncate">
                   {getText(
-                    '연차,반차,경조,공가,휴직,기타',
-                    'Annual/Half-day leave,Condolences,Other'
+                    '연차,반차,경조,공가,휴직',
+                    'Annual/Half-day leave,Condolences'
                   )}
                 </span>
               </div>

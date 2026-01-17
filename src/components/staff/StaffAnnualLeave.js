@@ -265,7 +265,7 @@ const StaffAnnualLeave = ({
           </button>
         </div>
         <div className="space-y-3 text-xs">
-          <div className="text-center text-gray-700">
+          <div className="text-center text-gray-700" style={{ lineHeight: '1.15' }}>
             <div>
               {getText(
                 `연차기간: ${leaveStartDate}~${leaveEndDate}`,
