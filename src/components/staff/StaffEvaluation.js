@@ -94,16 +94,16 @@ const StaffEvaluation = ({
                 <table className={`w-full ${tableTextClass}`}>
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="text-center py-2 px-3">
+                      <th className={`text-center py-2 px-3 ${tableTextClass}`}>
                         {getText('날짜', 'Date (Year)')}
                       </th>
-                      <th className="text-center py-2 px-3">
+                      <th className={`text-center py-2 px-3 ${tableTextClass}`}>
                         {getText('등급', 'Grade')}
                       </th>
-                      <th className="text-center py-2 px-3">
+                      <th className={`text-center py-2 px-3 ${tableTextClass}`}>
                         {getText('내용', 'Content')}
                       </th>
-                      <th className="text-center py-2 px-3">
+                      <th className={`text-center py-2 px-3 ${tableTextClass}`}>
                         {getText('상태', 'Status')}
                       </th>
                     </tr>
@@ -119,16 +119,16 @@ const StaffEvaluation = ({
                       )
                       .map((perf, index) => (
                         <tr key={perf.id || `eval-${perf.employeeId}-${perf.year}-${index}`}>
-                          <td className="text-center py-2 px-3">
+                          <td className={`text-center py-2 px-3 ${tableTextClass}`}>
                             {perf.year}
                           </td>
-                          <td className="text-center py-2 px-3 font-semibold">
+                          <td className={`text-center py-2 px-3 font-semibold ${tableTextClass}`}>
                             {perf.grade}
                           </td>
-                          <td className="text-center py-2 px-3" style={{ lineHeight: '1.15' }}>
+                          <td className={`text-center py-2 px-3 ${tableTextClass}`} style={{ lineHeight: '1.15' }}>
                             {perf.content || '사유 없음'}
                           </td>
-                          <td className="text-center py-2 px-3">
+                          <td className={`text-center py-2 px-3 ${tableTextClass}`}>
                             <span
                               className={`px-2 py-1 rounded-full ${tableTextClass} ${
                                 perf.status === '확정'

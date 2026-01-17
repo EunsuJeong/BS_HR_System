@@ -33,6 +33,21 @@ const StaffNotice = ({
   // 조회수가 이미 증가된 공지사항 ID를 추적 (중복 방지)
   const viewedNoticesRef = useRef(new Set());
 
+  // 날짜 형식 변환 함수 (YYYY-MM-DD → YYYY\nMM-DD)
+  const formatDateMultiLine = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length >= 3) {
+      return (
+        <>
+          <div>{parts[0]}</div>
+          <div>{parts[1]}-{parts[2]}</div>
+        </>
+      );
+    }
+    return dateStr;
+  };
+
   // 팝업이 열리거나 페이지가 변경될 때 스크롤을 맨 위로
   useEffect(() => {
     if (showNoticePopup && noticeScrollRef.current) {
@@ -150,7 +165,7 @@ const StaffNotice = ({
                       <span className="text-gray-400 mr-1.5">
                         👁 {notice.viewCount || 0}
                       </span>
-                      <span className="text-gray-500 mr-1">{notice.date}</span>
+                      <span className="text-gray-500 mr-1 text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(notice.date)}</span>
                       <span
                         className={`transform transition-transform duration-200 ${
                           expandedNotices.has(notice.id) ? 'rotate-180' : ''
@@ -321,7 +336,7 @@ const StaffNotice = ({
                             <span className="text-gray-400 mr-2">
                               👁 {notice.viewCount || 0}
                             </span>
-                            <span className="text-gray-500">{notice.date}</span>
+                            <span className="text-gray-500 text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(notice.date)}</span>
                           </div>
                         </div>
                       ))}
@@ -391,7 +406,7 @@ const StaffNotice = ({
                         <span className="text-gray-400 mr-2">
                           👁 {selectedNotice.viewCount || 0}
                         </span>
-                        <span>{selectedNotice.date}</span>
+                        <span className="text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(selectedNotice.date)}</span>
                       </div>
                     </div>
                     <div className="border-t pt-4">

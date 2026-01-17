@@ -91,15 +91,15 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage }) => {
     return now.getTime() - created.getTime() > fiveDaysInMs;
   };
 
-  // 한국 시간 형식으로 변환 (YYYY-MM-DD HH:mm:ss)
-  const formatKoreanTime = (isoString) => {
+  // 한국 시간 형식으로 변환 (YYYY\nMM-DD\nHH:mm:ss)
+  const formatKoreanTimeMultiLine = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
 
     // 한국 시간대로 변환 (+9시간)
     const koreanTime = new Date(date.getTime() + 9 * 60 * 60 * 1000);
 
-    // YYYY-MM-DD HH:mm:ss 형식으로 변환
+    // YYYY, MM-DD, HH:mm:ss 형식으로 변환
     const year = koreanTime.getUTCFullYear();
     const month = String(koreanTime.getUTCMonth() + 1).padStart(2, '0');
     const day = String(koreanTime.getUTCDate()).padStart(2, '0');
@@ -107,7 +107,13 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage }) => {
     const minutes = String(koreanTime.getUTCMinutes()).padStart(2, '0');
     const seconds = String(koreanTime.getUTCSeconds()).padStart(2, '0');
 
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return (
+      <>
+        <div>{year}</div>
+        <div>{month}-{day}</div>
+        <div>{hours}:{minutes}:{seconds}</div>
+      </>
+    );
   };
 
   // ✅ DB에서 직접 알림 데이터 로드
@@ -240,8 +246,8 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage }) => {
                     )}
                   </div>
                   <div className="text-2xs flex items-center ml-2">
-                    <span className="text-gray-500 mr-1">
-                      {formatKoreanTime(notification.createdAt)}
+                    <span className="text-gray-500 mr-1 text-right" style={{ lineHeight: '1.15' }}>
+                      {formatKoreanTimeMultiLine(notification.createdAt)}
                     </span>
                     <span
                       className={`transform transition-transform duration-200 ${
@@ -328,8 +334,8 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage }) => {
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500 ml-2">
-                            {formatKoreanTime(notification.createdAt)}
+                          <span className="text-xs text-gray-500 ml-2 text-right" style={{ lineHeight: '1.15' }}>
+                            {formatKoreanTimeMultiLine(notification.createdAt)}
                           </span>
                         </div>
                         <p
