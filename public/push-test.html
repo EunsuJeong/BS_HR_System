@@ -157,7 +157,7 @@
 
             // VAPID 공개키 가져오기
             const response = await fetch(
-              'http://localhost:5000/api/push/vapid-public-key'
+              'https://bshrsystem-production.up.railway.app/api/push/vapid-public-key'
             );
             const data = await response.json();
 
@@ -181,7 +181,7 @@
 
             // 백엔드에 구독 정보 전송
             const subscribeResponse = await fetch(
-              'http://localhost:5000/api/push/subscribe',
+              'https://bshrsystem-production.up.railway.app/api/push/subscribe',
               {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
