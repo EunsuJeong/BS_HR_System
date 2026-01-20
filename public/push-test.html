@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PWA 푸시 알림 테스트</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 30px;
+      }
+      .status {
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 10px 5px;
+        transition: background 0.3s;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .log {
+        background: #f8f9fa;
+        padding: 15px;
+        margin-top: 20px;
+        border-radius: 5px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+      }
+      .log-item {
+        padding: 5px;
+        border-bottom: 1px solid #dee2e6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>📱 PWA 푸시 알림 테스트</h1>
+
+      <div id="status" class="status info">준비 중...</div>
+
+      <div style="margin: 20px 0">
+        <button id="requestPermission">1️⃣ 알림 권한 요청</button>
+        <button id="subscribe" disabled>2️⃣ 푸시 구독 등록</button>
+        <button id="testLocal" disabled>3️⃣ 로컬 알림 테스트</button>
+        <button id="testBackend" disabled>4️⃣ 백엔드 알림 테스트</button>
+      </div>
+
+      <div class="log" id="log">
+        <div class="log-item">📋 로그가 여기에 표시됩니다...</div>
+      </div>
+    </div>
+
+    <script>
+      const log = (message, type = 'info') => {
+        const logDiv = document.getElementById('log');
+        const item = document.createElement('div');
+        item.className = 'log-item';
+        const timestamp = new Date().toLocaleTimeString('ko-KR');
+        item.innerHTML = `[${timestamp}] ${
+          type === 'error' ? '❌' : type === 'success' ? '✅' : '📝'
+        } ${message}`;
+        logDiv.insertBefore(item, logDiv.firstChild);
+      };
+
+      const updateStatus = (message, type) => {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+      };
+
+      let subscription = null;
+
+      // VAPID 공개키를 Uint8Array로 변환
+      function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding)
+          .replace(/-/g, '+')
+          .replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+      }
+
+      // 1. 알림 권한 요청
+      document
+        .getElementById('requestPermission')
+        .addEventListener('click', async () => {
+          try {
+            log('알림 권한 요청 중...');
+            const permission = await Notification.requestPermission();
+
+            if (permission === 'granted') {
+              updateStatus('✅ 알림 권한이 허용되었습니다!', 'success');
+              log('알림 권한 허용됨', 'success');
+              document.getElementById('subscribe').disabled = false;
+              document.getElementById('testLocal').disabled = false;
+            } else {
+              updateStatus('❌ 알림 권한이 거부되었습니다.', 'error');
+              log('알림 권한 거부됨', 'error');
+            }
+          } catch (error) {
+            log(`에러: ${error.message}`, 'error');
+          }
+        });
+
+      // 2. 푸시 구독 등록
+      document
+        .getElementById('subscribe')
+        .addEventListener('click', async () => {
+          try {
+            log('VAPID 공개키 가져오는 중...');
+
+            // VAPID 공개키 가져오기
+            const response = await fetch(
+              'http://localhost:5000/api/push/vapid-public-key'
+            );
+            const data = await response.json();
+
+            if (!data.success) {
+              throw new Error('VAPID 공개키를 가져올 수 없습니다.');
+            }
+
+            log(`VAPID 공개키: ${data.publicKey.substring(0, 20)}...`);
+
+            // Service Worker 등록 확인
+            const registration = await navigator.serviceWorker.ready;
+            log('Service Worker 준비됨');
+
+            // 푸시 구독
+            subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(data.publicKey),
+            });
+
+            log('푸시 구독 생성됨', 'success');
+
+            // 백엔드에 구독 정보 전송
+            const subscribeResponse = await fetch(
+              'http://localhost:5000/api/push/subscribe',
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  subscription,
+                  employeeId: 'TEST001',
+                  employeeName: '테스트 사용자',
+                  userAgent: navigator.userAgent,
+                  platform: navigator.platform,
+                }),
+              }
+            );
+
+            const subscribeData = await subscribeResponse.json();
+
+            if (subscribeData.success) {
+              updateStatus('✅ 푸시 구독이 등록되었습니다!', 'success');
+              log('백엔드에 구독 정보 전송 완료', 'success');
+              document.getElementById('testBackend').disabled = false;
+            } else {
+              throw new Error(subscribeData.error || '구독 등록 실패');
+            }
+          } catch (error) {
+            updateStatus(`❌ 에러: ${error.message}`, 'error');
+            log(`구독 등록 실패: ${error.message}`, 'error');
+          }
+        });
+
+      // 3. 로컬 테스트 알림
+      document
+        .getElementById('testLocal')
+        .addEventListener('click', async () => {
+          try {
+            log('로컬 테스트 알림 표시 중...');
+
+            const registration = await navigator.serviceWorker.ready;
+            await registration.showNotification('🧪 로컬 테스트 알림', {
+              body: '이것은 Service Worker를 통한 로컬 테스트 알림입니다.',
+              icon: '/logo192.png',
+              badge: '/favicon.ico',
+              vibrate: [200, 100, 200],
+              tag: 'local-test',
+              requireInteraction: false,
+              data: { type: 'test' },
+            });
+
+            updateStatus('✅ 로컬 테스트 알림이 표시되었습니다!', 'success');
+            log('로컬 알림 표시 완료', 'success');
+          } catch (error) {
+            log(`로컬 알림 실패: ${error.message}`, 'error');
+          }
+        });
+
+      // 4. 백엔드 테스트 알림 (실제로는 백엔드에서 전송)
+      document.getElementById('testBackend').addEventListener('click', () => {
+        updateStatus(
+          '💡 백엔드 테스트: 연차를 신청하거나 공지사항을 등록해보세요!',
+          'info'
+        );
+        log(
+          '백엔드 알림은 실제 이벤트(연차 신청, 공지사항 등)에서 자동으로 전송됩니다.'
+        );
+        log('또는 서버에서 직접 sendPushNotification() 함수를 호출하세요.');
+      });
+
+      // 초기화
+      window.addEventListener('load', async () => {
+        if (!('serviceWorker' in navigator)) {
+          updateStatus(
+            '❌ 이 브라우저는 Service Worker를 지원하지 않습니다.',
+            'error'
+          );
+          log('Service Worker 미지원', 'error');
+          return;
+        }
+
+        if (!('PushManager' in window)) {
+          updateStatus(
+            '❌ 이 브라우저는 푸시 알림을 지원하지 않습니다.',
+            'error'
+          );
+          log('Push API 미지원', 'error');
+          return;
+        }
+
+        // Service Worker 등록
+        try {
+          const registration = await navigator.serviceWorker.register(
+            '/service-worker.js'
+          );
+          log('Service Worker 등록됨', 'success');
+          updateStatus(
+            '✅ Service Worker가 등록되었습니다. 알림 권한을 요청하세요.',
+            'success'
+          );
+        } catch (error) {
+          log(`Service Worker 등록 실패: ${error.message}`, 'error');
+        }
+
+        // 현재 권한 상태 확인
+        const permission = Notification.permission;
+        log(`현재 알림 권한: ${permission}`);
+
+        if (permission === 'granted') {
+          document.getElementById('subscribe').disabled = false;
+          document.getElementById('testLocal').disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

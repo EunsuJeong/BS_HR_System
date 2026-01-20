@@ -48,6 +48,10 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+nul
+
+# Temporary Claude directories
+tmpclaude-*-cwd/
 
 # Vercel
 .vercel

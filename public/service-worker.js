@@ -12,7 +12,7 @@ const urlsToCache = [
   '/logo192.png',
   '/logo512.png',
   '/static/css/main.css', // 빌드 시 생성되는 CSS
-  '/static/js/main.js',   // 빌드 시 생성되는 JS
+  '/static/js/main.js', // 빌드 시 생성되는 JS
 ];
 
 // Service Worker 설치 이벤트
@@ -20,11 +20,13 @@ self.addEventListener('install', (event) => {
   console.log('[Service Worker] 설치 중...');
 
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches
+      .open(CACHE_NAME)
       .then((cache) => {
         console.log('[Service Worker] 파일 캐싱 중...');
         // 필수 파일은 addAll로 한번에, 선택적 파일은 개별 add로
-        return cache.addAll(urlsToCache.slice(0, 6)) // 기본 파일만 필수
+        return cache
+          .addAll(urlsToCache.slice(0, 6)) // 기본 파일만 필수
           .catch((error) => {
             console.warn('[Service Worker] 일부 파일 캐싱 실패:', error);
             // 빌드 파일은 개발 환경에서 없을 수 있으므로 무시
@@ -42,7 +44,8 @@ self.addEventListener('activate', (event) => {
   console.log('[Service Worker] 활성화 중...');
 
   event.waitUntil(
-    caches.keys()
+    caches
+      .keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
@@ -68,43 +71,45 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          console.log('[Service Worker] 캐시에서 반환:', event.request.url);
-          return cachedResponse;
-        }
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        console.log('[Service Worker] 캐시에서 반환:', event.request.url);
+        return cachedResponse;
+      }
 
-        // 캐시에 없으면 네트워크에서 가져오기
-        return fetch(event.request)
-          .then((response) => {
-            // 유효한 응답인지 확인
-            if (!response || response.status !== 200 || response.type === 'opaque') {
-              return response;
-            }
-
-            // 응답 복사 (한 번만 읽을 수 있으므로)
-            const responseToCache = response.clone();
-
-            // 동적으로 캐시에 추가 (정적 파일만)
-            if (event.request.url.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico)$/)) {
-              caches.open(CACHE_NAME)
-                .then((cache) => {
-                  cache.put(event.request, responseToCache);
-                });
-            }
-
+      // 캐시에 없으면 네트워크에서 가져오기
+      return fetch(event.request)
+        .then((response) => {
+          // 유효한 응답인지 확인
+          if (
+            !response ||
+            response.status !== 200 ||
+            response.type === 'opaque'
+          ) {
             return response;
-          })
-          .catch((error) => {
-            console.error('[Service Worker] Fetch 실패:', error);
+          }
 
-            // 오프라인일 때 HTML 요청이면 캐싱된 index.html 반환
-            if (event.request.headers.get('accept').includes('text/html')) {
-              return caches.match('/index.html');
-            }
-          });
-      })
+          // 응답 복사 (한 번만 읽을 수 있으므로)
+          const responseToCache = response.clone();
+
+          // 동적으로 캐시에 추가 (정적 파일만)
+          if (event.request.url.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico)$/)) {
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+
+          return response;
+        })
+        .catch((error) => {
+          console.error('[Service Worker] Fetch 실패:', error);
+
+          // 오프라인일 때 HTML 요청이면 캐싱된 index.html 반환
+          if (event.request.headers.get('accept').includes('text/html')) {
+            return caches.match('/index.html');
+          }
+        });
+    })
   );
 });
 
@@ -120,41 +125,101 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// 푸시 알림 수신 (Firebase Messaging과 별도)
+// ✅ PWA 푸시 알림 수신 (백그라운드에서도 작동)
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
-  const title = data.title || '부성스틸 HR';
-  const options = {
-    body: data.body || '새로운 알림이 있습니다.',
-    icon: data.icon || '/logo192.png',
-    badge: '/logo192.png',
+  console.log('[Service Worker] 푸시 알림 수신:', event);
+
+  let notificationData = {
+    title: '부성스틸 HR',
+    body: '새로운 알림이 있습니다.',
+    icon: '/logo192.png',
+    badge: '/favicon.ico',
     vibrate: [200, 100, 200],
-    data: data.data || {},
+    requireInteraction: false,
+    data: {},
+    tag: 'default',
   };
 
+  // 푸시 데이터 파싱
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      notificationData = {
+        title: data.title || notificationData.title,
+        body: data.body || data.message || notificationData.body,
+        icon: data.icon || notificationData.icon,
+        badge: data.badge || notificationData.badge,
+        vibrate: data.vibrate || [200, 100, 200],
+        requireInteraction: data.requireInteraction || false,
+        tag: data.tag || 'default',
+        data: data.data || {},
+        actions: data.actions || [],
+        image: data.image,
+        timestamp: Date.now(),
+      };
+
+      console.log('[Service Worker] 파싱된 알림 데이터:', notificationData);
+    } catch (e) {
+      console.error('[Service Worker] 푸시 데이터 파싱 실패:', e);
+    }
+  }
+
+  // 알림 표시
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    self.registration.showNotification(notificationData.title, notificationData)
   );
 });
 
-// 알림 클릭 이벤트
+// ✅ 알림 클릭 이벤트
 self.addEventListener('notificationclick', (event) => {
-  console.log('[Service Worker] 알림 클릭됨:', event.notification.tag);
+  console.log('[Service Worker] 알림 클릭:', event);
+  console.log('[Service Worker] 알림 태그:', event.notification.tag);
+  console.log('[Service Worker] 알림 데이터:', event.notification.data);
 
   event.notification.close();
 
+  // 알림 데이터에서 URL 추출
+  const notificationData = event.notification.data || {};
+  let targetUrl = '/';
+
+  // 알림 타입에 따라 이동할 URL 결정
+  if (notificationData.type === 'leave') {
+    targetUrl = '/admin/leave';
+  } else if (notificationData.type === 'payroll') {
+    targetUrl = '/admin/payroll';
+  } else if (notificationData.type === 'notice') {
+    targetUrl = '/admin/notice';
+  } else if (notificationData.url) {
+    targetUrl = notificationData.url;
+  }
+
+  // 액션 버튼 클릭 처리
+  if (event.action === 'view') {
+    targetUrl = notificationData.url || targetUrl;
+  } else if (event.action === 'close') {
+    return; // 알림만 닫기
+  }
+
+  console.log('[Service Worker] 이동할 URL:', targetUrl);
+
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
+    clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // 이미 열린 창이 있으면 포커스
+        // 이미 열린 창이 있으면 해당 URL로 이동 후 포커스
         for (const client of clientList) {
-          if (client.url === '/' && 'focus' in client) {
+          if ('focus' in client) {
+            client.postMessage({
+              type: 'NOTIFICATION_CLICK',
+              url: targetUrl,
+              data: notificationData,
+            });
             return client.focus();
           }
         }
         // 열린 창이 없으면 새 창 열기
         if (clients.openWindow) {
-          return clients.openWindow('/');
+          return clients.openWindow(targetUrl);
         }
       })
   );

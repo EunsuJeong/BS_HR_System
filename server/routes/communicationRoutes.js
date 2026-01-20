@@ -309,6 +309,34 @@ router.post('/notices', async (req, res) => {
       });
     }
 
+    // ✅ PWA 푸시 알림 전송 (즉시 게시된 공지사항만)
+    if (noticeData.isPublished && !noticeData.isScheduled) {
+      try {
+        const {
+          sendPushNotificationToAll,
+        } = require('../controllers/pushNotificationController');
+        await sendPushNotificationToAll({
+          title: noticeData.isImportant ? '🔴 중요 공지사항' : '📢 새 공지사항',
+          body: notice.title,
+          icon: '/logo192.png',
+          badge: '/favicon.ico',
+          data: {
+            type: 'notice',
+            noticeId: notice._id.toString(),
+            url: '/admin/notice',
+          },
+          tag: `notice-${notice._id}`,
+          requireInteraction: noticeData.isImportant, // 중요 공지는 사용자 확인 필요
+          vibrate: noticeData.isImportant
+            ? [200, 100, 200, 100, 200]
+            : [200, 100, 200],
+        });
+        console.log('✅ PWA 푸시 알림 전송 완료: 공지사항');
+      } catch (pushError) {
+        console.error('⚠️ PWA 푸시 알림 전송 실패:', pushError.message);
+      }
+    }
+
     res.status(201).json(notice);
   } catch (error) {
     console.error('❌ 공지사항 등록 오류:', error);

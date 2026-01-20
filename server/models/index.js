@@ -17,6 +17,7 @@ const PolicyCache = require('./ai/policyCache');
 const Notice = require('./communication/notices');
 const Notification = require('./communication/notifications');
 const Suggestion = require('./communication/suggestions');
+const PushSubscription = require('./communication/pushSubscription');
 
 // Safety Models
 const SafetyAccident = require('./safety/safetyAccidents');
@@ -50,6 +51,7 @@ module.exports = {
   Notice,
   Notification,
   Suggestion,
+  PushSubscription,
 
   // Safety
   SafetyAccident,

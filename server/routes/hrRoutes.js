@@ -74,7 +74,9 @@ router.post('/login', async (req, res) => {
       employee.userAgent = versionInfo.userAgent || '';
       employee.lastVersionUpdate = new Date();
 
-      console.log(`📱 [로그인] ${employee.name} - 버전: ${employee.appVersion}, 플랫폼: ${employee.platformType}`);
+      console.log(
+        `📱 [로그인] ${employee.name} - 버전: ${employee.appVersion}, 플랫폼: ${employee.platformType}`
+      );
     }
 
     await employee.save();
@@ -509,6 +511,29 @@ router.post('/leaves', async (req, res) => {
       });
     }
 
+    // ✅ PWA 푸시 알림 전송 (관리자에게 알림)
+    try {
+      const {
+        sendPushNotificationToAll,
+      } = require('../controllers/pushNotificationController');
+      await sendPushNotificationToAll({
+        title: '📝 새 연차 신청',
+        body: `${leave.employeeName}님이 ${leave.leaveType} 연차를 신청했습니다.`,
+        icon: '/logo192.png',
+        badge: '/favicon.ico',
+        data: {
+          type: 'leave',
+          leaveId: leave._id.toString(),
+          url: '/admin/leave',
+        },
+        tag: `leave-${leave._id}`,
+        requireInteraction: false,
+      });
+      console.log('✅ PWA 푸시 알림 전송 완료: 연차 신청');
+    } catch (pushError) {
+      console.error('⚠️ PWA 푸시 알림 전송 실패:', pushError.message);
+    }
+
     res.json({ success: true, data: leave });
   } catch (error) {
     console.error('❌ Leave 저장 실패:', error.message);
@@ -835,6 +860,45 @@ router.put('/leaves/:id/status', async (req, res) => {
         status: leave.status,
         timestamp: new Date().toISOString(),
       });
+    }
+
+    // ✅ PWA 푸시 알림 전송 (직원에게 알림)
+    try {
+      const {
+        sendPushNotification,
+      } = require('../controllers/pushNotificationController');
+
+      let notificationTitle = '';
+      let notificationBody = '';
+
+      if (status === '승인') {
+        notificationTitle = '✅ 연차 승인 완료';
+        notificationBody = `${leave.leaveType} 연차가 승인되었습니다.`;
+      } else if (status === '반려') {
+        notificationTitle = '❌ 연차 반려';
+        notificationBody = `${leave.leaveType} 연차가 반려되었습니다.`;
+      }
+
+      if (notificationTitle) {
+        await sendPushNotification(leave.employeeId, {
+          title: notificationTitle,
+          body: notificationBody,
+          icon: '/logo192.png',
+          badge: '/favicon.ico',
+          data: {
+            type: 'leave',
+            leaveId: leave._id.toString(),
+            status: leave.status,
+            url: '/staff/leave',
+          },
+          tag: `leave-status-${leave._id}`,
+          requireInteraction: true, // 사용자가 확인할 때까지 유지
+          vibrate: [200, 100, 200, 100, 200],
+        });
+        console.log(`✅ PWA 푸시 알림 전송 완료: 연차 ${status}`);
+      }
+    } catch (pushError) {
+      console.error('⚠️ PWA 푸시 알림 전송 실패:', pushError.message);
     }
 
     res.json({ success: true, data: leave });

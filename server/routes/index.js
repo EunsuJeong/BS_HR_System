@@ -10,5 +10,5 @@ router.use('/system', require('./systemRoutes'));
 router.use('/attendance', require('./attendance'));
 router.use('/payroll', require('./payroll'));
 router.use('/holiday', require('./holiday'));
-
+router.use('/push', require('./push')); // ✅ PWA 푸시 알림 라우트 추가
 module.exports = router;
