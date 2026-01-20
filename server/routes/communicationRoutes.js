@@ -718,7 +718,7 @@ router.delete('/notifications/:id', async (req, res) => {
 router.get('/suggestions', async (req, res) => {
   try {
     const { employeeId, role } = req.query;
-    console.log(`🔍 [Suggestions API] GET 요청 받음:`, { employeeId, role });
+    // console.log(`🔍 [Suggestions API] GET 요청 받음:`, { employeeId, role });
 
     let query = {};
 
@@ -728,17 +728,17 @@ router.get('/suggestions', async (req, res) => {
     }
     // role='admin'이거나 employeeId가 없으면 전체 조회 (빈 query)
 
-    console.log(`🔍 [Suggestions API] MongoDB 쿼리:`, query);
+    // console.log(`🔍 [Suggestions API] MongoDB 쿼리:`, query);
     const suggestions = await Suggestion.find(query).sort({ createdAt: -1 });
-    console.log(
-      `✅ [Suggestions API] 조회 완료: employeeId=${
-        employeeId || 'ALL'
-      }, role=${role || 'staff'}, count=${suggestions.length}`
-    );
+    // console.log(
+    //   `✅ [Suggestions API] 조회 완료: employeeId=${
+    //     employeeId || 'ALL'
+    //   }, role=${role || 'staff'}, count=${suggestions.length}`
+    // );
 
-    if (suggestions.length > 0) {
-      console.log(`📝 [Suggestions API] 첫 번째 데이터:`, suggestions[0]);
-    }
+    // if (suggestions.length > 0) {
+    //   console.log(`📝 [Suggestions API] 첫 번째 데이터:`, suggestions[0]);
+    // }
 
     res.json(suggestions);
   } catch (error) {
