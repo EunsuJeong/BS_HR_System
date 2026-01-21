@@ -3193,7 +3193,7 @@ const HRManagementSystem = () => {
     setSidebarOpen,
     fontSize,
     setFontSize,
-  } = useSystemSettings();
+  } = useSystemSettings(currentUser);
 
   // *[1_공통] 전역 Socket.io 실시간 업데이트* (성능 이슈로 비활성화)
   React.useEffect(() => {

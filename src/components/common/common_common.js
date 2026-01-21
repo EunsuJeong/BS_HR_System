@@ -2593,12 +2593,25 @@ export const useStorageSync = ({
 
 /**
  * 시스템 공통 설정을 관리하는 커스텀 훅
+ * @param {Object} currentUser - 현재 로그인한 사용자 정보
  * @returns {Object} 시스템 설정 관련 STATE 및 setter 함수들
  */
-export const useSystemSettings = () => {
+export const useSystemSettings = (currentUser = null) => {
   // *[1_공통] STATE - 언어/시스템 설정*
-  const [showLanguageSelection, setShowLanguageSelection] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('ko');
+  // 로그인한 사용자가 직원이고 저장된 언어가 없으면 언어 선택 화면 표시
+  const [showLanguageSelection, setShowLanguageSelection] = useState(() => {
+    if (currentUser && !currentUser.isAdmin && !currentUser.preferredLanguage) {
+      return true;
+    }
+    return false;
+  });
+  const [selectedLanguage, setSelectedLanguage] = useState(() => {
+    // 사용자의 저장된 언어가 있으면 사용, 없으면 기본값 'ko'
+    if (currentUser && currentUser.preferredLanguage) {
+      return currentUser.preferredLanguage;
+    }
+    return 'ko';
+  });
   const [showChangePasswordPopup, setShowChangePasswordPopup] = useState(false);
   const [changePasswordForm, setChangePasswordForm] = useState({
     current: '',
