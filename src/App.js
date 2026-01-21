@@ -3195,8 +3195,11 @@ const HRManagementSystem = () => {
     setFontSize,
   } = useSystemSettings();
 
-  // *[1_공통] 전역 Socket.io 실시간 업데이트*
+  // *[1_공통] 전역 Socket.io 실시간 업데이트* (성능 이슈로 비활성화)
   React.useEffect(() => {
+    // Socket.io 비활성화 - Railway 서버 WebSocket 미지원으로 연결 오류 발생
+    return;
+
     if (!currentUser) return;
 
     const socket = io(SERVER_URL, {
@@ -4628,6 +4631,8 @@ const HRManagementSystem = () => {
     // 즉시 로드
     loadNoticesFromDB();
 
+    // Socket.io 비활성화 - Railway 서버 WebSocket 미지원으로 연결 오류 발생
+    /*
     // Socket.io 연결 설정 (실시간 업데이트용)
     const socket = io(SERVER_URL, {
       reconnectionDelay: 1000,
@@ -4674,6 +4679,7 @@ const HRManagementSystem = () => {
         socket.disconnect();
       }
     };
+    */
   }, [currentUser]);
 
   // *[1_공통] 건의사항 데이터 DB에서 로드*
