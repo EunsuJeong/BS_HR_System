@@ -142,24 +142,28 @@ export const useStaffLeave = (dependencies = {}) => {
       const day = current.getDate();
       const dayOfWeek = current.getDay();
 
-      if (dayOfWeek === 0 || dayOfWeek === 6) {
-        setLeaveFormError(
-          getText(
-            '주말에는 연차를 신청할 수 없습니다.',
-            'Cannot apply for leave on weekends.'
-          )
-        );
-        return;
-      }
+      // 경조, 공가, 휴직, 기타 유형은 주말/휴일 제한 없이 신청 가능
+      const noRestrictionTypes = ['경조', '공가', '휴직', '기타'];
+      if (!noRestrictionTypes.includes(leaveForm.type)) {
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          setLeaveFormError(
+            getText(
+              '주말에는 연차를 신청할 수 없습니다.',
+              'Cannot apply for leave on weekends.'
+            )
+          );
+          return;
+        }
 
-      if (isHolidayDate(year, month, day)) {
-        setLeaveFormError(
-          getText(
-            '휴일 또는 공휴일에는 연차를 신청할 수 없습니다.',
-            'Cannot apply for leave on holidays.'
-          )
-        );
-        return;
+        if (isHolidayDate(year, month, day)) {
+          setLeaveFormError(
+            getText(
+              '휴일 또는 공휴일에는 연차를 신청할 수 없습니다.',
+              'Cannot apply for leave on holidays.'
+            )
+          );
+          return;
+        }
       }
 
       current.setDate(current.getDate() + 1);

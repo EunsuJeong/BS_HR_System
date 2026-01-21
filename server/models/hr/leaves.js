@@ -74,11 +74,11 @@ const leaveSchema = new mongoose.Schema(
       },
     },
 
-    // 일수 정보
+    // 일수 정보 (경조, 공가, 휴직 등은 0일 허용)
     requestedDays: {
       type: Number,
       required: true,
-      min: [0.5, '최소 0.5일 이상이어야 합니다'],
+      min: [0, '신청 일수는 0 이상이어야 합니다'],
     },
     approvedDays: {
       type: Number,
