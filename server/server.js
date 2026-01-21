@@ -11,7 +11,8 @@ const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const routes = require('./routes');
 const http = require('http');
-const { Server } = require('socket.io');
+// Socket.io 비활성화 - 폴링 요청 과부하로 성능 저하 발생
+// const { Server } = require('socket.io');
 
 // ================== 시간대 설정 ==================
 // 한국 시간대(KST, UTC+9)로 설정
@@ -25,7 +26,8 @@ console.log(
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io CORS 설정
+// Socket.io 비활성화 - 폴링 요청 과부하로 성능 저하 발생
+/*
 const socketAllowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
@@ -51,6 +53,9 @@ const io = new Server(server, {
     credentials: true,
   },
 });
+*/
+// 빈 io 객체 생성 (기존 코드 호환성 유지)
+const io = { emit: () => {}, on: () => {} };
 
 const PORT = process.env.PORT || 5000;
 
@@ -188,7 +193,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ================== Socket.io 연결 관리 ==================
+// ================== Socket.io 연결 관리 (비활성화) ==================
+/*
 io.on('connection', (socket) => {
   console.log('✅ 클라이언트 연결:', socket.id);
 
@@ -196,9 +202,10 @@ io.on('connection', (socket) => {
     console.log('❌ 클라이언트 연결 해제:', socket.id);
   });
 });
+*/
 
 // ================== 서버 시작 ==================
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`🔌 Socket.io ready for real-time updates`);
+  // console.log(`🔌 Socket.io ready for real-time updates`); // Socket.io 비활성화됨
 });
