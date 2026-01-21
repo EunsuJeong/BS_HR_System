@@ -47,6 +47,9 @@ const employeeSchema = new mongoose.Schema(
     platform: String, // 'web', 'ios', 'android'
     userAgent: String, // 사용자 에이전트
     lastVersionUpdate: Date, // 버전 정보 마지막 업데이트 시간
+
+    // 언어 설정
+    preferredLanguage: { type: String, enum: ['ko', 'en'], default: null }, // 선호 언어 (null: 미설정)
   },
   { collection: 'employees' }
 );

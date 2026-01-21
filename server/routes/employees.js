@@ -212,6 +212,51 @@ router.put('/:id', async (req, res) => {
 });
 
 /**
+ * @route   PATCH /api/employees/:id/language
+ * @desc    직원 언어 설정 업데이트
+ * @access  Private
+ */
+router.patch('/:id/language', async (req, res) => {
+  try {
+    const { language } = req.body;
+
+    // 언어 값 검증
+    if (!language || !['ko', 'en'].includes(language)) {
+      return res.status(400).json({
+        success: false,
+        message: '유효한 언어를 선택해주세요. (ko 또는 en)',
+      });
+    }
+
+    const employee = await Employee.findOneAndUpdate(
+      { employeeId: req.params.id },
+      { $set: { preferredLanguage: language } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: '직원을 찾을 수 없습니다.',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '언어 설정이 저장되었습니다.',
+      data: { preferredLanguage: employee.preferredLanguage },
+    });
+  } catch (error) {
+    console.error('언어 설정 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '언어 설정 중 오류가 발생했습니다.',
+      error: error.message,
+    });
+  }
+});
+
+/**
  * @route   DELETE /api/employees/:id
  * @desc    직원 삭제 (상태 변경)
  * @access  Private

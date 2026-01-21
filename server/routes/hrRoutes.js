@@ -85,6 +85,7 @@ router.post('/login', async (req, res) => {
       ...employeeData,
       id: employeeData.employeeId, // 프론트엔드와 일관성을 위해 id 필드 추가
       usedLeave: employeeData.leaveUsed || 0, // leaveUsed를 usedLeave로도 매핑
+      preferredLanguage: employeeData.preferredLanguage || null, // 언어 설정
       isAdmin: false,
     };
 
@@ -149,6 +150,51 @@ router.put('/employees/:employeeId/password', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '비밀번호 변경 중 오류가 발생했습니다.',
+    });
+  }
+});
+
+// ✅ 직원 언어 설정 업데이트
+router.patch('/employees/:employeeId/language', async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { language } = req.body;
+
+    console.log(`🌐 [언어 설정] 요청: employeeId=${employeeId}, language=${language}`);
+
+    // 언어 값 검증
+    if (!language || !['ko', 'en'].includes(language)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효한 언어를 선택해주세요. (ko 또는 en)',
+      });
+    }
+
+    const employee = await Employee.findOneAndUpdate(
+      { employeeId },
+      { $set: { preferredLanguage: language } },
+      { new: true }
+    );
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        error: '직원을 찾을 수 없습니다.',
+      });
+    }
+
+    console.log(`✅ [언어 설정] 완료: ${employee.name} -> ${language}`);
+
+    res.json({
+      success: true,
+      message: '언어 설정이 저장되었습니다.',
+      data: { preferredLanguage: employee.preferredLanguage },
+    });
+  } catch (error) {
+    console.error('❌ [언어 설정] 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '언어 설정 중 오류가 발생했습니다.',
     });
   }
 });

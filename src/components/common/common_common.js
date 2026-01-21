@@ -2413,23 +2413,40 @@ export const useLanguage = (dependencies = {}) => {
     setShowLanguageSelection = () => {},
     setCurrentYear = () => {},
     setCurrentMonth = () => {},
+    currentUser = null, // 현재 로그인한 사용자
   } = dependencies;
 
-  // [1_공통] 언어 선택
+  // [1_공통] 언어 선택 및 DB 저장
   const handleLanguageSelect = useCallback(
-    (language) => {
+    async (language) => {
       setSelectedLanguage(language);
       setShowLanguageSelection(false);
 
       const now = new Date();
       setCurrentYear(now.getFullYear());
       setCurrentMonth(now.getMonth() + 1);
+
+      // DB에 언어 설정 저장 (직원만, 관리자 제외)
+      if (currentUser && currentUser.employeeId && !currentUser.isAdmin) {
+        try {
+          const { default: EmployeeAPI } = await import('../../api/employee');
+          await EmployeeAPI.updateLanguage(currentUser.employeeId, language);
+          console.log(`✅ 언어 설정 저장: ${language}`);
+        } catch (error) {
+          console.error('❌ 언어 설정 저장 실패:', error);
+          // 저장 실패해도 UI는 정상 작동하도록 함
+        }
+      }
+
+      // 언어 선택 후 새로고침 (DB 로드)
+      window.location.reload();
     },
     [
       setSelectedLanguage,
       setShowLanguageSelection,
       setCurrentYear,
       setCurrentMonth,
+      currentUser,
     ]
   );
 
@@ -2813,7 +2830,16 @@ export const useAuth = (dependencies = {}) => {
           setCurrentUser(employeeUser);
           sessionStorage.setItem('currentUser', JSON.stringify(employeeUser));
           setLoginError('');
-          setShowLanguageSelection(true); // 직원은 언어 선택 화면 표시
+
+          // 저장된 언어 설정 확인 - 있으면 자동 적용, 없으면 언어 선택 화면 표시
+          if (employeeUser.preferredLanguage) {
+            setSelectedLanguage(employeeUser.preferredLanguage);
+            setShowLanguageSelection(false); // 언어 선택 화면 건너뛰기
+            // 로그인 후 새로고침 (DB 로드)
+            setTimeout(() => window.location.reload(), 100);
+          } else {
+            setShowLanguageSelection(true); // 직원은 언어 선택 화면 표시
+          }
 
           const now = new Date();
           setCurrentYear(now.getFullYear());

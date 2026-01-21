@@ -26,6 +26,10 @@ export const EmployeeAPI = {
 
   // 부서별 통계
   getStats: async () => api.get('/hr/employees/stats/summary'),
+
+  // 언어 설정 업데이트
+  updateLanguage: async (employeeId, language) =>
+    api.patch(`/hr/employees/${employeeId}/language`, { language }),
 };
 
 export default EmployeeAPI;
