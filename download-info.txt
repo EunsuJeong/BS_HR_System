@@ -1,0 +1,5 @@
+APK 다운로드 URL: https://github.com/EunsuJeong/BS_HR_System/releases/download/v2026.01.21-3d8b35e/BS-HR-System-v2026.01.21-3d8b35e.apk
+릴리즈 페이지: https://github.com/EunsuJeong/BS_HR_System/releases/latest
+버전: v2026.01.21-3d8b35e
+빌드 날짜: 2026-01-21 08:11:00
+커밋: 3d8b35e3642bc139eaa9bedddc78c30aa4cb1b3a
