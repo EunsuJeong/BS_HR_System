@@ -65,6 +65,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:3002',
+  'http://112.218.236.188:3000', // 외부 IP 접근 허용
   'https://bs-hr-system.vercel.app', // Vercel 프로덕션 URL
   process.env.FRONTEND_URL, // Vercel 배포 URL (환경변수)
 ].filter(Boolean); // undefined 제거

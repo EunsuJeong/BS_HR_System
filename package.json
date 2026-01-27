@@ -70,6 +70,8 @@
     "cleanup:schedules": "node scripts/cleanup-ghost-schedules.js",
     "server": "node server/server.js",
     "server:dev": "nodemon server/server.js",
+    "serve:prod": "npm run build && npx serve -s build -l 3000",
+    "local:prod": "concurrently \"npm run server:dev\" \"npm run serve:prod\"",
     "deploy:backend": "echo 'Backend deployment configured for Railway'",
     "deploy:frontend": "vercel --prod",
     "deploy:frontend:preview": "vercel"
