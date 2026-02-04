@@ -5,7 +5,14 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { getDateKey, getDayOfWeek, getDaysInMonth, EXCLUDE_TIME, excludeBreakTimes, timeToMinutes } from './common_common';
+import {
+  getDateKey,
+  getDayOfWeek,
+  getDaysInMonth,
+  EXCLUDE_TIME,
+  excludeBreakTimes,
+  timeToMinutes,
+} from './common_common';
 import * as XLSX from 'xlsx';
 import { AttendanceAPI } from '../../api/attendance';
 
@@ -397,7 +404,7 @@ export const useAttendanceManagement = ({
     employees,
     setRegularNotifications,
     setNotificationLogs,
-    devLog
+    devLog,
   ]);
 
   // [2_관리자 모드] 2.8_근태 관리 - 날짜별 근무 타입 가져오기
@@ -1192,7 +1199,12 @@ export const useAttendanceManagement = ({
       console.error('[saveAttendanceToDb] 에러:', error);
       return { success: false, message: error.message };
     }
-  }, [attendanceSheetData, attendanceSheetYear, attendanceSheetMonth, check52HourViolation]);
+  }, [
+    attendanceSheetData,
+    attendanceSheetYear,
+    attendanceSheetMonth,
+    check52HourViolation,
+  ]);
 
   const uploadAttendanceXLSX = useCallback(
     (file) => {
@@ -1263,7 +1275,9 @@ export const useAttendanceManagement = ({
 
                 if (dbResult.success) {
                   console.log(
-                    `✅ 업로드 완료 (신규: ${dbResult.stats?.inserted || 0}, 업데이트: ${dbResult.stats?.updated || 0})`
+                    `✅ 업로드 완료 (신규: ${
+                      dbResult.stats?.inserted || 0
+                    }, 업데이트: ${dbResult.stats?.updated || 0})`
                   );
                 } else {
                   console.error(`❌ 업로드 실패:`, dbResult.message);
@@ -1272,13 +1286,15 @@ export const useAttendanceManagement = ({
                 dbResult = {
                   success: false,
                   message: error.message,
-                  stats: { inserted: 0, updated: 0 }
+                  stats: { inserted: 0, updated: 0 },
                 };
                 console.error(`❌ 업로드 오류:`, error);
               }
 
               console.log(
-                `🎉 전체 업로드 ${dbResult.success ? '성공' : '실패'}: 신규 ${dbResult.stats?.inserted || 0}건, 업데이트 ${dbResult.stats?.updated || 0}건`
+                `🎉 전체 업로드 ${dbResult.success ? '성공' : '실패'}: 신규 ${
+                  dbResult.stats?.inserted || 0
+                }건, 업데이트 ${dbResult.stats?.updated || 0}건`
               );
 
               // ========== 5단계: DB 저장 확인 ==========
@@ -2666,34 +2682,43 @@ export class AttendanceExcelParser {
   }
 
   /**
-   * 직원 찾기 (여러 매칭 전략 사용)
+   * 직원 찾기 (여러 매칭 전략 사용 - 재직자 우선)
    */
   findEmployee(employeeName) {
-    // 정확한 매칭
-    let employee = this.employees.find((emp) => emp.name === employeeName);
+    // 정확한 매칭 (재직자만)
+    let employee = this.employees.find(
+      (emp) => emp.name === employeeName && emp.status === '재직'
+    );
     if (employee) return employee;
 
-    // 공백 제거 후 매칭
+    // 공백 제거 후 매칭 (재직자만)
     employee = this.employees.find(
-      (emp) => emp.name.replace(/\s/g, '') === employeeName.replace(/\s/g, '')
+      (emp) =>
+        emp.name.replace(/\s/g, '') === employeeName.replace(/\s/g, '') &&
+        emp.status === '재직'
     );
     if (employee) {
       this.devLog(
-        `  🔄 공백 제거 후 매칭: "${employeeName}" → "${employee.name}"`
+        `  🔄 공백 제거 후 매칭: "${employeeName}" → "${employee.name}" (재직)`
       );
       return employee;
     }
 
-    // 부분 매칭
+    // 부분 매칭 (재직자만)
     employee = this.employees.find(
       (emp) =>
-        emp.name.includes(employeeName) || employeeName.includes(emp.name)
+        (emp.name.includes(employeeName) || employeeName.includes(emp.name)) &&
+        emp.status === '재직'
     );
     if (employee) {
-      this.devLog(`  🔄 부분 매칭: "${employeeName}" → "${employee.name}"`);
+      this.devLog(
+        `  🔄 부분 매칭: "${employeeName}" → "${employee.name}" (재직)`
+      );
       return employee;
     }
 
+    // 재직자를 찾지 못한 경우 로그
+    this.devLog(`  ❌ 재직 중인 "${employeeName}" 직원을 찾을 수 없습니다.`);
     return null;
   }
 
@@ -2711,8 +2736,12 @@ export class AttendanceExcelParser {
       const totalMinutes = Math.round(timeValue * 1440);
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
-      formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-      this.devLog(`      🔄 엑셀 소수점 시간 변환: ${originalValue} → ${formattedTime}`);
+      formattedTime = `${String(hours).padStart(2, '0')}:${String(
+        minutes
+      ).padStart(2, '0')}`;
+      this.devLog(
+        `      🔄 엑셀 소수점 시간 변환: ${originalValue} → ${formattedTime}`
+      );
       return { formatted: formattedTime, original: String(originalValue) };
     }
 
@@ -2723,8 +2752,12 @@ export class AttendanceExcelParser {
         const totalMinutes = Math.round(numValue * 1440);
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-        this.devLog(`      🔄 엑셀 소수점 시간 변환: ${originalValue} → ${formattedTime}`);
+        formattedTime = `${String(hours).padStart(2, '0')}:${String(
+          minutes
+        ).padStart(2, '0')}`;
+        this.devLog(
+          `      🔄 엑셀 소수점 시간 변환: ${originalValue} → ${formattedTime}`
+        );
         return { formatted: formattedTime, original: String(originalValue) };
       }
     }

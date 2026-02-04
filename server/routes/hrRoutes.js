@@ -69,7 +69,9 @@ router.post('/login', async (req, res) => {
       employee.userAgent = versionInfo.userAgent || '';
       employee.lastVersionUpdate = new Date();
 
-      console.log(`📱 [로그인] ${employee.name} - 버전: ${employee.appVersion}, 플랫폼: ${employee.platformType}`);
+      console.log(
+        `📱 [로그인] ${employee.name} - 버전: ${employee.appVersion}, 플랫폼: ${employee.platformType}`
+      );
     }
 
     await employee.save();
@@ -311,10 +313,10 @@ router.delete('/employees/:id', async (req, res) => {
     // 직원 상태를 '퇴사'로 변경 (데이터는 보존)
     const employee = await Employee.findOneAndUpdate(
       { employeeId },
-      { 
+      {
         status: '퇴사',
         leaveDate: new Date(), // 퇴사일 자동 기록
-        updatedAt: new Date() 
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -327,15 +329,15 @@ router.delete('/employees/:id', async (req, res) => {
 
     console.log('✅ 직원 퇴사 처리 완료 (데이터 보존):', employeeId);
     console.log(`   - 이름: ${employee.name}, 퇴사일: ${employee.leaveDate}`);
-    
+
     // leaveUsed를 usedLeave로도 매핑 (프론트엔드 호환성)
     const employeeObj = employee.toObject();
     employeeObj.usedLeave = employeeObj.leaveUsed || 0;
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       data: employeeObj,
-      message: '퇴사 처리되었습니다. 데이터는 보존됩니다.' 
+      message: '퇴사 처리되었습니다. 데이터는 보존됩니다.',
     });
   } catch (error) {
     console.error('❌ 직원 퇴사 처리 실패:', error.message);
