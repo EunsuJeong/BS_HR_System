@@ -6967,7 +6967,8 @@ export const linkifyText = (text) => {
   if (!text) return text;
 
   // URL 패턴 정규식 (http://, https://, www., 도메인명.확장자 등 지원)
-  const urlPattern = /(\b(https?:\/\/|www\.)[^\s<>"]+|(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/[^\s<>"]*)?)/gi;
+  const urlPattern =
+    /(\b(https?:\/\/|www\.)[^\s<>"]+|(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/[^\s<>"]*)?)/gi;
 
   return text.replace(urlPattern, (match) => {
     // 이미 링크 태그 안에 있는 URL은 건너뛰기

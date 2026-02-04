@@ -1508,124 +1508,146 @@ export const usePayrollManagement = (dependencies = {}) => {
  * @param {Array} employees - 직원 목록 (입사일/퇴사일 확인용)
  * @returns {Array} 필터링된 급여대장 데이터
  */
-export const usePayrollFilter = (payrollTableData, payrollSearchFilter, employees = []) => {
+export const usePayrollFilter = (
+  payrollTableData,
+  payrollSearchFilter,
+  employees = []
+) => {
   const filteredPayrollData = useMemo(() => {
     // payrollTableData가 배열이 아닌 경우 빈 배열 반환
     if (!Array.isArray(payrollTableData)) {
       return [];
     }
 
-    return payrollTableData.filter((row) => {
-      if (
-        payrollSearchFilter.department &&
-        payrollSearchFilter.department !== '전체 부서' &&
-        row.부서 !== payrollSearchFilter.department
-      ) {
-        return false;
-      }
-
-      if (
-        payrollSearchFilter.position &&
-        payrollSearchFilter.position !== '전체' &&
-        row.직급 !== payrollSearchFilter.position
-      ) {
-        return false;
-      }
-
-      if (
-        payrollSearchFilter.workType &&
-        payrollSearchFilter.workType !== '전체' &&
-        row.근무형태 !== payrollSearchFilter.workType
-      ) {
-        return false;
-      }
-
-      if (payrollSearchFilter.name) {
-        // 쉼표(,) 또는 공백으로 구분하여 여러 이름 검색
-        const searchNames = payrollSearchFilter.name
-          .split(/[,\s]+/) // 쉼표 또는 공백으로 분리
-          .map((name) => name.trim()) // 앞뒤 공백 제거
-          .filter((name) => name.length > 0); // 빈 문자열 제거
-
-        // 검색어 중 하나라도 직원 이름에 포함되어 있으면 통과
-        const isMatch = searchNames.some((searchName) =>
-          row.성명.includes(searchName)
-        );
-
-        if (!isMatch) {
+    return payrollTableData
+      .filter((row) => {
+        if (
+          payrollSearchFilter.department &&
+          payrollSearchFilter.department !== '전체 부서' &&
+          row.부서 !== payrollSearchFilter.department
+        ) {
           return false;
         }
-      }
 
-      if (
-        payrollSearchFilter.year !== row.지급년도 ||
-        payrollSearchFilter.month !== row.지급월
-      ) {
-        return false;
-      }
+        if (
+          payrollSearchFilter.position &&
+          payrollSearchFilter.position !== '전체' &&
+          row.직급 !== payrollSearchFilter.position
+        ) {
+          return false;
+        }
 
-      // 입사일/퇴사일 기반 필터링
-      if (employees.length > 0) {
-        const employee = employees.find(emp => 
-          emp.name === row.성명 || 
-          emp.id === row.사번 || 
-          emp.employeeNumber === row.사번
-        );
+        if (
+          payrollSearchFilter.workType &&
+          payrollSearchFilter.workType !== '전체' &&
+          row.근무형태 !== payrollSearchFilter.workType
+        ) {
+          return false;
+        }
 
-        if (employee) {
-          const currentYear = payrollSearchFilter.year;
-          const currentMonth = payrollSearchFilter.month;
+        if (payrollSearchFilter.name) {
+          // 쉼표(,) 또는 공백으로 구분하여 여러 이름 검색
+          const searchNames = payrollSearchFilter.name
+            .split(/[,\s]+/) // 쉼표 또는 공백으로 분리
+            .map((name) => name.trim()) // 앞뒤 공백 제거
+            .filter((name) => name.length > 0); // 빈 문자열 제거
 
-          // 입사일 확인
-          if (employee.joinDate) {
-            const joinDate = new Date(employee.joinDate);
-            const joinYear = joinDate.getFullYear();
-            const joinMonth = joinDate.getMonth() + 1;
+          // 검색어 중 하나라도 직원 이름에 포함되어 있으면 통과
+          const isMatch = searchNames.some((searchName) =>
+            row.성명.includes(searchName)
+          );
 
-            // 입사월 이전이면 제외
-            if (
-              currentYear < joinYear ||
-              (currentYear === joinYear && currentMonth < joinMonth)
-            ) {
-              return false;
-            }
+          if (!isMatch) {
+            return false;
           }
+        }
 
-          // 퇴사일 확인 (leaveDate 사용)
-          if (employee.leaveDate) {
-            const leaveDate = new Date(employee.leaveDate);
-            const leaveYear = leaveDate.getFullYear();
-            const leaveMonth = leaveDate.getMonth() + 1;
+        if (
+          payrollSearchFilter.year !== row.지급년도 ||
+          payrollSearchFilter.month !== row.지급월
+        ) {
+          return false;
+        }
 
-            // 퇴사월 이후면 제외
-            if (
-              currentYear > leaveYear ||
-              (currentYear === leaveYear && currentMonth > leaveMonth)
-            ) {
-              return false;
+        // 입사일/퇴사일 기반 필터링
+        if (employees.length > 0) {
+          const employee = employees.find(
+            (emp) =>
+              emp.name === row.성명 ||
+              emp.id === row.사번 ||
+              emp.employeeNumber === row.사번
+          );
+
+          if (employee) {
+            const currentYear = payrollSearchFilter.year;
+            const currentMonth = payrollSearchFilter.month;
+
+            // 입사일 확인
+            if (employee.joinDate) {
+              const joinDate = new Date(employee.joinDate);
+              const joinYear = joinDate.getFullYear();
+              const joinMonth = joinDate.getMonth() + 1;
+
+              // 입사월 이전이면 제외
+              if (
+                currentYear < joinYear ||
+                (currentYear === joinYear && currentMonth < joinMonth)
+              ) {
+                return false;
+              }
+            }
+
+            // 퇴사일 확인 (leaveDate 사용)
+            if (employee.leaveDate) {
+              const leaveDate = new Date(employee.leaveDate);
+              const leaveYear = leaveDate.getFullYear();
+              const leaveMonth = leaveDate.getMonth() + 1;
+
+              // 퇴사월 이후면 제외
+              if (
+                currentYear > leaveYear ||
+                (currentYear === leaveYear && currentMonth > leaveMonth)
+              ) {
+                return false;
+              }
             }
           }
         }
-      }
 
-      return true;
-    }).sort((a, b) => {
-      // 정렬 우선순위 배열
-      const payTypeOrder = ['연봉', '시급'];
-      const positionOrder = ['대표', '상무', '전무', '이사', '부장', '차장', '과장', '대리', '주임', '반장', '조장', '사원'];
+        return true;
+      })
+      .sort((a, b) => {
+        // 정렬 우선순위 배열
+        const payTypeOrder = ['연봉', '시급'];
+        const positionOrder = [
+          '대표',
+          '상무',
+          '전무',
+          '이사',
+          '부장',
+          '차장',
+          '과장',
+          '대리',
+          '주임',
+          '반장',
+          '조장',
+          '사원',
+        ];
 
-      // 1순위: 급여형태 (연봉 → 시급)
-      const payTypeA = payTypeOrder.indexOf(a.급여형태);
-      const payTypeB = payTypeOrder.indexOf(b.급여형태);
-      const payTypeCompare = (payTypeA === -1 ? 999 : payTypeA) - (payTypeB === -1 ? 999 : payTypeB);
+        // 1순위: 급여형태 (연봉 → 시급)
+        const payTypeA = payTypeOrder.indexOf(a.급여형태);
+        const payTypeB = payTypeOrder.indexOf(b.급여형태);
+        const payTypeCompare =
+          (payTypeA === -1 ? 999 : payTypeA) -
+          (payTypeB === -1 ? 999 : payTypeB);
 
-      if (payTypeCompare !== 0) return payTypeCompare;
+        if (payTypeCompare !== 0) return payTypeCompare;
 
-      // 2순위: 직급
-      const posA = positionOrder.indexOf(a.직급);
-      const posB = positionOrder.indexOf(b.직급);
-      return (posA === -1 ? 999 : posA) - (posB === -1 ? 999 : posB);
-    });
+        // 2순위: 직급
+        const posA = positionOrder.indexOf(a.직급);
+        const posB = positionOrder.indexOf(b.직급);
+        return (posA === -1 ? 999 : posA) - (posB === -1 ? 999 : posB);
+      });
   }, [payrollTableData, payrollSearchFilter, employees]);
 
   return filteredPayrollData;

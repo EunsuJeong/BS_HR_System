@@ -953,16 +953,19 @@ const AdminEmployeeManagement = ({
                           value={editForm.status}
                           onChange={(e) => {
                             const newStatus = e.target.value;
-                            const today = new Date().toISOString().split('T')[0];
-                            
+                            const today = new Date()
+                              .toISOString()
+                              .split('T')[0];
+
                             setEditForm((f) => ({
                               ...f,
                               status: newStatus,
                               // 상태가 '퇴사'로 변경되면 오늘 날짜를 퇴사일로 설정
                               // 상태가 '재직' or '휴직'으로 변경되면 퇴사일 초기화
-                              resignDate: newStatus === '퇴사' 
-                                ? (f.resignDate || today)
-                                : '',
+                              resignDate:
+                                newStatus === '퇴사'
+                                  ? f.resignDate || today
+                                  : '',
                             }));
                           }}
                         >
