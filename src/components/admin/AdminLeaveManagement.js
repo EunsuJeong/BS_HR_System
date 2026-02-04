@@ -380,6 +380,11 @@ const AdminLeaveManagement = ({
                 <tbody className="divide-y divide-gray-200">
                   {employees
                     .filter((emp) => {
+                      // 퇴사자 제외 (status가 '퇴사'인 경우)
+                      if (emp.status === '퇴사') {
+                        return false;
+                      }
+
                       // 직급 필터
                       if (
                         leaveSearch.position &&

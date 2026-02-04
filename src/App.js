@@ -3033,7 +3033,8 @@ const HRManagementSystem = () => {
   // (src/hooks/usePayrollFilter.js로 분리됨)
   const filteredPayrollData = usePayrollFilter(
     payrollTableData,
-    payrollSearchFilter
+    payrollSearchFilter,
+    employees
   );
 
   //---[3_일반직원 모드] 3.6_급여 내역 STATE---//

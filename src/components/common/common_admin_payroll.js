@@ -1505,9 +1505,10 @@ export const usePayrollManagement = (dependencies = {}) => {
  * 급여 검색 필터에 따라 필터링된 급여대장 데이터를 반환하는 커스텀 훅
  * @param {Array} payrollTableData - 전체 급여대장 데이터
  * @param {Object} payrollSearchFilter - 급여 검색 필터
+ * @param {Array} employees - 직원 목록 (입사일/퇴사일 확인용)
  * @returns {Array} 필터링된 급여대장 데이터
  */
-export const usePayrollFilter = (payrollTableData, payrollSearchFilter) => {
+export const usePayrollFilter = (payrollTableData, payrollSearchFilter, employees = []) => {
   const filteredPayrollData = useMemo(() => {
     // payrollTableData가 배열이 아닌 경우 빈 배열 반환
     if (!Array.isArray(payrollTableData)) {
@@ -1563,6 +1564,50 @@ export const usePayrollFilter = (payrollTableData, payrollSearchFilter) => {
         return false;
       }
 
+      // 입사일/퇴사일 기반 필터링
+      if (employees.length > 0) {
+        const employee = employees.find(emp => 
+          emp.name === row.성명 || 
+          emp.id === row.사번 || 
+          emp.employeeNumber === row.사번
+        );
+
+        if (employee) {
+          const currentYear = payrollSearchFilter.year;
+          const currentMonth = payrollSearchFilter.month;
+
+          // 입사일 확인
+          if (employee.joinDate) {
+            const joinDate = new Date(employee.joinDate);
+            const joinYear = joinDate.getFullYear();
+            const joinMonth = joinDate.getMonth() + 1;
+
+            // 입사월 이전이면 제외
+            if (
+              currentYear < joinYear ||
+              (currentYear === joinYear && currentMonth < joinMonth)
+            ) {
+              return false;
+            }
+          }
+
+          // 퇴사일 확인
+          if (employee.resignDate || employee.leaveDate) {
+            const leaveDate = new Date(employee.resignDate || employee.leaveDate);
+            const leaveYear = leaveDate.getFullYear();
+            const leaveMonth = leaveDate.getMonth() + 1;
+
+            // 퇴사월 이후면 제외
+            if (
+              currentYear > leaveYear ||
+              (currentYear === leaveYear && currentMonth > leaveMonth)
+            ) {
+              return false;
+            }
+          }
+        }
+      }
+
       return true;
     }).sort((a, b) => {
       // 정렬 우선순위 배열
@@ -1581,7 +1626,7 @@ export const usePayrollFilter = (payrollTableData, payrollSearchFilter) => {
       const posB = positionOrder.indexOf(b.직급);
       return (posA === -1 ? 999 : posA) - (posB === -1 ? 999 : posB);
     });
-  }, [payrollTableData, payrollSearchFilter]);
+  }, [payrollTableData, payrollSearchFilter, employees]);
 
   return filteredPayrollData;
 };
