@@ -551,14 +551,14 @@ const AdminEmployeeManagement = ({
                   <th className="text-center py-2 px-1">
                     퇴사일
                     <button
-                      onClick={() => handleSort('resignDate')}
+                      onClick={() => handleSort('leaveDate')}
                       className={`ml-1 text-xs hover:text-gray-700 ${
-                        employeeSortField === 'resignDate'
+                        employeeSortField === 'leaveDate'
                           ? 'text-blue-600'
                           : 'text-gray-500'
                       }`}
                     >
-                      {employeeSortField === 'resignDate'
+                      {employeeSortField === 'leaveDate'
                         ? employeeSortOrder === 'asc'
                           ? '▲'
                           : '▼'
@@ -940,7 +940,7 @@ const AdminEmployeeManagement = ({
                       </td>
                     ) : (
                       <td className="text-center py-1 px-2">
-                        {emp.resignDate || '-'}
+                        {emp.leaveDate || '-'}
                       </td>
                     )}
                     <td className="text-center py-1 px-2 w-28 max-w-28 whitespace-nowrap">
@@ -962,9 +962,9 @@ const AdminEmployeeManagement = ({
                               status: newStatus,
                               // 상태가 '퇴사'로 변경되면 오늘 날짜를 퇴사일로 설정
                               // 상태가 '재직' or '휴직'으로 변경되면 퇴사일 초기화
-                              resignDate:
+                              leaveDate:
                                 newStatus === '퇴사'
-                                  ? f.resignDate || today
+                                  ? f.leaveDate || today
                                   : '',
                             }));
                           }}
@@ -1164,7 +1164,7 @@ const AdminEmployeeManagement = ({
                                   contractType: '정규',
                                   workType: '주간',
                                   joinDate: '',
-                                  resignDate: '',
+                                  leaveDate: '',
                                   status: '',
                                   phone: '',
                                   address: '',
@@ -1190,7 +1190,7 @@ const AdminEmployeeManagement = ({
                                   payType: emp.payType || '',
                                   contractType: emp.contractType || '정규',
                                   joinDate: emp.joinDate || '',
-                                  resignDate: emp.resignDate || '',
+                                  leaveDate: emp.leaveDate || '',
                                   workType: emp.workType || '주간',
                                   status: emp.status || '재직',
                                   phone: emp.phone || '',
