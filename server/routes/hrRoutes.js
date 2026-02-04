@@ -34,13 +34,6 @@ const formatDateToString = (date) => {
 router.post('/login', async (req, res) => {
   try {
     const { id, password, versionInfo } = req.body;
-    console.log(`🔐 [직원 로그인] 요청: id=${id}`);
-
-    // 🔍 디버깅: 해당 이름/사번으로 모든 직원 조회
-    const allMatches = await Employee.find({
-      $or: [{ name: id }, { employeeId: id }],
-    }).select('employeeId name status');
-    console.log(`🔍 [직원 로그인] "${id}"로 검색된 모든 직원:`, allMatches);
 
     // 재직 중인 직원만 검색 (이름 또는 employeeId) - 우선순위 1순위
     const employee = await Employee.findOne({
@@ -48,10 +41,7 @@ router.post('/login', async (req, res) => {
       status: '재직', // 재직 중인 직원만 검색
     });
 
-    console.log(`✅ [직원 로그인] 재직자 검색 결과:`, employee ? `${employee.name} (${employee.employeeId}) - 재직` : '없음');
-
     if (!employee) {
-      console.log(`❌ [직원 로그인] 재직 중인 직원 없음: id=${id}`);
       return res.status(401).json({
         success: false,
         error: '재직 중인 직원을 찾을 수 없습니다. 사번을 확인해주세요.',
@@ -60,14 +50,13 @@ router.post('/login', async (req, res) => {
 
     // 비밀번호 확인
     if (employee.password !== password) {
-      console.log(`❌ [직원 로그인] 비밀번호 불일치: ${employee.name}`);
       return res.status(401).json({
         success: false,
         error: '비밀번호가 일치하지 않습니다.',
       });
     }
 
-    console.log(`✅ [직원 로그인] 성공: ${employee.name} (${employee.employeeId}) - 재직`);
+    console.log(`✅ [직원 로그인] ${employee.name} (${employee.employeeId})`);
 
     // ✅ 마지막 로그인 시간 업데이트 (KST 기준)
     employee.lastLogin = moment.tz('Asia/Seoul').toDate();
