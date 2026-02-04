@@ -31,6 +31,24 @@ export const useEmployeeManagement = (dependencies = {}) => {
   const handleUpdateEmployee = useCallback(
     async (employeeId, updatedData) => {
       try {
+        // 퇴사일/상태 자동 연동 로직
+        const today = new Date().toISOString().split('T')[0];
+        let finalStatus = updatedData.status || '재직';
+        let finalResignDate = updatedData.resignDate;
+
+        // 1. 퇴사일이 있으면 상태를 '퇴사'로 자동 변경
+        if (finalResignDate) {
+          finalStatus = '퇴사';
+        }
+        // 2. 상태가 '퇴사'이고 퇴사일이 없으면 오늘 날짜로 설정
+        else if (finalStatus === '퇴사' && !finalResignDate) {
+          finalResignDate = today;
+        }
+        // 3. 상태가 '재직' 또는 '휴직'이면 퇴사일 초기화
+        else if (finalStatus === '재직' || finalStatus === '휴직') {
+          finalResignDate = '';
+        }
+
         // DB에 저장
         const { default: EmployeeAPI } = await import('../../api/employee');
 
@@ -39,7 +57,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
           name: updatedData.name,
           position: updatedData.position,
           department: updatedData.department,
-          status: updatedData.status || '재직',
+          status: finalStatus,
         };
 
         // 선택적 필드는 값이 있을 때만 추가
@@ -54,8 +72,10 @@ export const useEmployeeManagement = (dependencies = {}) => {
           employeePayload.contractType = updatedData.contractType;
         if (updatedData.joinDate)
           employeePayload.joinDate = updatedData.joinDate;
-        if (updatedData.resignDate)
-          employeePayload.leaveDate = updatedData.resignDate;
+        if (finalResignDate)
+          employeePayload.leaveDate = finalResignDate;
+        else
+          employeePayload.leaveDate = ''; // 퇴사일이 없으면 명시적으로 빈 문자열 전송
         if (updatedData.phone) employeePayload.phone = updatedData.phone;
         if (updatedData.address) employeePayload.address = updatedData.address;
 

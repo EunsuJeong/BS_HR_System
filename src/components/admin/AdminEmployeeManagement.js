@@ -927,12 +927,15 @@ const AdminEmployeeManagement = ({
                           type="date"
                           className="border rounded px-2 py-1 w-28 min-w-28 text-center"
                           value={editForm.resignDate || ''}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const resignDate = e.target.value;
                             setEditForm((f) => ({
                               ...f,
-                              resignDate: e.target.value,
-                            }))
-                          }
+                              resignDate: resignDate,
+                              // 퇴사일이 입력되면 자동으로 상태를 '퇴사'로 변경
+                              status: resignDate ? '퇴사' : f.status,
+                            }));
+                          }}
                         />
                       </td>
                     ) : (
@@ -948,12 +951,20 @@ const AdminEmployeeManagement = ({
                         <select
                           className="border rounded px-2 py-1 w-15 min-w-15 text-center"
                           value={editForm.status}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const newStatus = e.target.value;
+                            const today = new Date().toISOString().split('T')[0];
+                            
                             setEditForm((f) => ({
                               ...f,
-                              status: e.target.value,
-                            }))
-                          }
+                              status: newStatus,
+                              // 상태가 '퇴사'로 변경되면 오늘 날짜를 퇴사일로 설정
+                              // 상태가 '재직' or '휴직'으로 변경되면 퇴사일 초기화
+                              resignDate: newStatus === '퇴사' 
+                                ? (f.resignDate || today)
+                                : '',
+                            }));
+                          }}
                         >
                           <option value="재직">재직</option>
                           <option value="휴직">휴직</option>

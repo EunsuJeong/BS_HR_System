@@ -169,6 +169,22 @@ router.put('/:id', async (req, res) => {
   try {
     const { password, ...updateData } = req.body;
 
+    // 퇴사일/상태 자동 연동 로직
+    const today = new Date().toISOString().split('T')[0];
+    
+    // 1. 퇴사일(leaveDate)이 있으면 상태를 '퇴사'로 자동 변경
+    if (updateData.leaveDate && updateData.leaveDate !== '') {
+      updateData.status = '퇴사';
+    }
+    // 2. 상태가 '퇴사'이고 퇴사일이 없으면 오늘 날짜로 설정
+    else if (updateData.status === '퇴사' && (!updateData.leaveDate || updateData.leaveDate === '')) {
+      updateData.leaveDate = today;
+    }
+    // 3. 상태가 '재직' 또는 '휴직'이면 퇴사일 초기화
+    else if (updateData.status === '재직' || updateData.status === '휴직') {
+      updateData.leaveDate = '';
+    }
+
     // 비밀번호 변경 시 해싱
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);
