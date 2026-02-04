@@ -53,7 +53,7 @@
   "scripts": {
     "start:mongodb": "node start-mongodb.js",
     "start": "concurrently \"npm run start:mongodb\" \"nodemon server/server.js\" \"craco start\"",
-    "start:frontend": "craco start",
+    "start:frontend": "set PORT=3000 && craco start",
     "build": "craco build",
     "test": "craco test",
     "eject": "react-scripts eject",

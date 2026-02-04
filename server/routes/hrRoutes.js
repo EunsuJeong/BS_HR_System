@@ -34,34 +34,40 @@ const formatDateToString = (date) => {
 router.post('/login', async (req, res) => {
   try {
     const { id, password, versionInfo } = req.body;
+    console.log(`🔐 [직원 로그인] 요청: id=${id}`);
 
-    // 직원 이름 또는 employeeId로 검색
+    // 🔍 디버깅: 해당 이름/사번으로 모든 직원 조회
+    const allMatches = await Employee.find({
+      $or: [{ name: id }, { employeeId: id }],
+    }).select('employeeId name status');
+    console.log(`🔍 [직원 로그인] "${id}"로 검색된 모든 직원:`, allMatches);
+
+    // 재직 중인 직원만 검색 (이름 또는 employeeId) - 우선순위 1순위
     const employee = await Employee.findOne({
       $or: [{ name: id }, { employeeId: id }],
+      status: '재직', // 재직 중인 직원만 검색
     });
 
+    console.log(`✅ [직원 로그인] 재직자 검색 결과:`, employee ? `${employee.name} (${employee.employeeId}) - 재직` : '없음');
+
     if (!employee) {
+      console.log(`❌ [직원 로그인] 재직 중인 직원 없음: id=${id}`);
       return res.status(401).json({
         success: false,
-        error: '아이디를 찾을 수 없습니다.',
+        error: '재직 중인 직원을 찾을 수 없습니다. 사번을 확인해주세요.',
       });
     }
 
     // 비밀번호 확인
     if (employee.password !== password) {
+      console.log(`❌ [직원 로그인] 비밀번호 불일치: ${employee.name}`);
       return res.status(401).json({
         success: false,
         error: '비밀번호가 일치하지 않습니다.',
       });
     }
 
-    // 퇴사자 확인
-    if (employee.status === '퇴사') {
-      return res.status(403).json({
-        success: false,
-        error: '퇴사한 직원은 로그인할 수 없습니다.',
-      });
-    }
+    console.log(`✅ [직원 로그인] 성공: ${employee.name} (${employee.employeeId}) - 재직`);
 
     // ✅ 마지막 로그인 시간 업데이트 (KST 기준)
     employee.lastLogin = moment.tz('Asia/Seoul').toDate();
@@ -307,14 +313,22 @@ router.post('/employees', async (req, res) => {
   }
 });
 
-// ✅ 직원 삭제 (실제 삭제)
+// ✅ 직원 퇴사 처리 (Soft Delete - 상태만 '퇴사'로 변경, 데이터 보존)
 router.delete('/employees/:id', async (req, res) => {
   try {
     const employeeId = req.params.id;
-    console.log('📤 직원 삭제 요청:', employeeId);
+    console.log('📤 직원 퇴사 처리 요청:', employeeId);
 
-    // 직원 삭제
-    const employee = await Employee.findOneAndDelete({ employeeId });
+    // 직원 상태를 '퇴사'로 변경 (데이터는 보존)
+    const employee = await Employee.findOneAndUpdate(
+      { employeeId },
+      { 
+        status: '퇴사',
+        leaveDate: new Date(), // 퇴사일 자동 기록
+        updatedAt: new Date() 
+      },
+      { new: true }
+    );
 
     if (!employee) {
       return res
@@ -322,17 +336,20 @@ router.delete('/employees/:id', async (req, res) => {
         .json({ success: false, error: '직원을 찾을 수 없습니다.' });
     }
 
-    // 관련 데이터 삭제
-    await Promise.all([
-      Leave.deleteMany({ employeeId }),
-      Attendance.deleteMany({ employeeId }),
-      Evaluation.deleteMany({ employeeId }),
-    ]);
-
-    console.log('✅ 직원 및 관련 데이터 삭제 완료:', employeeId);
-    res.json({ success: true, data: employee });
+    console.log('✅ 직원 퇴사 처리 완료 (데이터 보존):', employeeId);
+    console.log(`   - 이름: ${employee.name}, 퇴사일: ${employee.leaveDate}`);
+    
+    // leaveUsed를 usedLeave로도 매핑 (프론트엔드 호환성)
+    const employeeObj = employee.toObject();
+    employeeObj.usedLeave = employeeObj.leaveUsed || 0;
+    
+    res.json({ 
+      success: true, 
+      data: employeeObj,
+      message: '퇴사 처리되었습니다. 데이터는 보존됩니다.' 
+    });
   } catch (error) {
-    console.error('❌ 직원 삭제 실패:', error.message);
+    console.error('❌ 직원 퇴사 처리 실패:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
