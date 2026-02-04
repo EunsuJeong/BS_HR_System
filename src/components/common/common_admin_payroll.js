@@ -1591,9 +1591,9 @@ export const usePayrollFilter = (payrollTableData, payrollSearchFilter, employee
             }
           }
 
-          // 퇴사일 확인
-          if (employee.resignDate || employee.leaveDate) {
-            const leaveDate = new Date(employee.resignDate || employee.leaveDate);
+          // 퇴사일 확인 (leaveDate 사용)
+          if (employee.leaveDate) {
+            const leaveDate = new Date(employee.leaveDate);
             const leaveYear = leaveDate.getFullYear();
             const leaveMonth = leaveDate.getMonth() + 1;
 
