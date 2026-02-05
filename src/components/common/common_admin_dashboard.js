@@ -3148,6 +3148,7 @@ export const calculateMonthlyLeaveUsageRateUtil = ({
   );
 
   filteredEmps.forEach((emp) => {
+    // ✅ 연초(1월)부터 해당 월까지 누적 연차 사용 계산
     const usedLeave = leaveRequests
       .filter((lr) => {
         if (lr.employeeId !== emp.id || lr.status !== '승인') return false;
@@ -3158,9 +3159,10 @@ export const calculateMonthlyLeaveUsageRateUtil = ({
           return false;
 
         const leaveDate = new Date(lr.startDate);
+        // 연초부터 targetMonth까지의 모든 연차 포함
         return (
           leaveDate.getFullYear() === targetYear &&
-          leaveDate.getMonth() === targetMonth - 1
+          leaveDate.getMonth() <= targetMonth - 1
         );
       })
       .reduce((sum, lr) => {
