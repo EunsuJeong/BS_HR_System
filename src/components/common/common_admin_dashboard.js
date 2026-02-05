@@ -87,6 +87,18 @@ export const useDashboardStats = ({
       const workType = emp.workType || '주간';
       const leaveType = emp.leaveType || null;
 
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외 (DB 필드 joinDate 우선 사용)
+      const joinDateValue = emp.joinDate || emp.hireDate;
+      if (joinDateValue) {
+        const hireDate = new Date(joinDateValue);
+        const currentDate = new Date(targetDate);
+        hireDate.setHours(0, 0, 0, 0);
+        currentDate.setHours(0, 0, 0, 0);
+        if (currentDate < hireDate) {
+          return; // 입사 전이므로 제외
+        }
+      }
+
       if (leaveType === '휴직') {
         return;
       }
