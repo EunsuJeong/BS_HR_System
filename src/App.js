@@ -4394,7 +4394,10 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
-              leaveDate: emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z' ? formatDateToString(emp.leaveDate) : '', // ✅ 퇴사일 조건부 표시
+              leaveDate:
+                emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
+                  ? formatDateToString(emp.leaveDate)
+                  : '', // ✅ 퇴사일 조건부 표시
               workType: emp.workType,
               payType: emp.salaryType,
               contractType: emp.contractType || '정규', // 계약형태
@@ -4486,6 +4489,7 @@ const HRManagementSystem = () => {
                 contractType: emp.contractType || '정규', // 계약형태
                 status: emp.status,
                 address: emp.address,
+                lastLogin: emp.lastLogin, // 마지막 로그인 시각
                 // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
                 leaveUsed: emp.leaveUsed,
                 // ✅ 호환성을 위한 매핑 필드
@@ -4950,7 +4954,10 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
-              leaveDate: emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z' ? formatDateToString(emp.leaveDate) : '', // ✅ 퇴사일 조건부 표시
+              leaveDate:
+                emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
+                  ? formatDateToString(emp.leaveDate)
+                  : '', // ✅ 퇴사일 조건부 표시
               workType: emp.workType,
               payType: emp.salaryType,
               contractType: emp.contractType || '정규', // 계약형태

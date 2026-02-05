@@ -926,14 +926,14 @@ const AdminEmployeeManagement = ({
                         <input
                           type="date"
                           className="border rounded px-2 py-1 w-28 min-w-28 text-center"
-                          value={editForm.resignDate || ''}
+                          value={editForm.leaveDate || ''}
                           onChange={(e) => {
-                            const resignDate = e.target.value;
+                            const leaveDate = e.target.value;
                             setEditForm((f) => ({
                               ...f,
-                              resignDate: resignDate,
+                              leaveDate: leaveDate,
                               // 퇴사일이 입력되면 자동으로 상태를 '퇴사'로 변경
-                              status: resignDate ? '퇴사' : f.status,
+                              status: leaveDate ? '퇴사' : f.status,
                             }));
                           }}
                         />
