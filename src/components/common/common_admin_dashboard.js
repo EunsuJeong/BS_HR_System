@@ -1755,7 +1755,10 @@ export const calculateMonthlyAttendanceRate = (
   let totalRecords = 0;
   let presentCount = 0;
 
-  employees.forEach((emp) => {
+  // ✅ 퇴사자 제외
+  const activeEmployees = employees.filter((emp) => emp.status !== '퇴사');
+
+  activeEmployees.forEach((emp) => {
     for (let day = 1; day <= daysInMonth; day++) {
       const attendanceData = getAttendanceForEmployee(
         emp.id,
@@ -1807,7 +1810,10 @@ export const calculateCompanyStats = (
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const monthlyAttendance = [];
 
-  employees.forEach((emp) => {
+  // ✅ 퇴사자 제외
+  const activeEmployees = employees.filter((emp) => emp.status !== '퇴사');
+
+  activeEmployees.forEach((emp) => {
     for (let day = 1; day <= daysInMonth; day++) {
       const attendanceData = getAttendanceForEmployee(
         emp.id,
@@ -1923,6 +1929,9 @@ export const getEmployeesByStatus = ({
 
   return employees
     .filter((emp) => {
+      // ✅ 퇴사자 제외
+      if (emp.status === '퇴사') return false;
+      
       const workType = emp.workType || '주간';
       const leaveType = emp.leaveType || null;
 
@@ -2692,7 +2701,11 @@ export const calculateLateRateUtil = ({
         }
 
         // 우선순위 2: 전날에 야간 출근이 없으면 당일 출근 확인
-        if (!actualShift && todayAttendanceData && todayAttendanceData.checkIn) {
+        if (
+          !actualShift &&
+          todayAttendanceData &&
+          todayAttendanceData.checkIn
+        ) {
           const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
           // 당일 03시~15시 출근 = 오늘 주간 근무
           if (checkInMinutes >= 180 && checkInMinutes < 900) {
@@ -2912,7 +2925,11 @@ export const calculateAbsentRateUtil = ({
         }
 
         // 우선순위 2: 전날에 야간 출근이 없으면 당일 출근 확인
-        if (!actualShift && todayAttendanceData && todayAttendanceData.checkIn) {
+        if (
+          !actualShift &&
+          todayAttendanceData &&
+          todayAttendanceData.checkIn
+        ) {
           const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
           // 당일 03시~15시 출근 = 오늘 주간 근무
           if (checkInMinutes >= 180 && checkInMinutes < 900) {
@@ -4067,7 +4084,11 @@ function calculateMonthlyRate(
         }
 
         // 우선순위 2: 전날에 야간 출근이 없으면 당일 출근 확인
-        if (!actualShift && todayAttendanceData && todayAttendanceData.checkIn) {
+        if (
+          !actualShift &&
+          todayAttendanceData &&
+          todayAttendanceData.checkIn
+        ) {
           const checkInMinutes = timeToMinutes(todayAttendanceData.checkIn);
           // 당일 03시~15시 출근 = 오늘 주간 근무
           if (checkInMinutes >= 180 && checkInMinutes < 900) {
