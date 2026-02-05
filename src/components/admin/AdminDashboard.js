@@ -514,7 +514,7 @@ const AdminDashboard = ({
         {/* 목표달성률 */}
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-semibold">이번달 목표달성률</h3>
+            <h3 className="text-lg font-semibold">이번달 목표달성률 ({new Date().getFullYear()} / {String(new Date().getMonth() + 1).padStart(2, '0')})</h3>
             <button
               onClick={() => {
                 setSelectedYear(new Date().getFullYear());
@@ -583,7 +583,7 @@ const AdminDashboard = ({
         {/* 워라밸 지표 */}
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between">
           <div className="flex justify-between items-center mb-3">
-            <h4 className="text-lg font-semibold">이번달 워라밸 지표</h4>
+            <h4 className="text-lg font-semibold">이번달 워라밸 지표 ({new Date().getFullYear()} / {String(new Date().getMonth() + 1).padStart(2, '0')})</h4>
             <button
               onClick={() => {
                 setSelectedYear(new Date().getFullYear());
