@@ -4082,10 +4082,25 @@ function calculateMonthlyRate(
       })
       .map((lr) => lr.employeeId);
 
-    // 출근 대상 직원
-    const targetEmployees = baseFilteredEmployees.filter(
-      (emp) => !onLeaveToday.includes(emp.id)
-    );
+    // 출근 대상 직원 (연차자 + 입사 전 직원 제외)
+    const targetEmployees = baseFilteredEmployees.filter((emp) => {
+      // 연차자 제외
+      if (onLeaveToday.includes(emp.id)) return false;
+
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외 (DB 필드 joinDate 우선 사용)
+      const joinDateValue = emp.joinDate || emp.hireDate;
+      if (joinDateValue) {
+        const hireDate = new Date(joinDateValue);
+        const currentDate = new Date(dateStr);
+        hireDate.setHours(0, 0, 0, 0);
+        currentDate.setHours(0, 0, 0, 0);
+        if (currentDate < hireDate) {
+          return false; // 입사 전이므로 제외
+        }
+      }
+
+      return true;
+    });
 
     if (targetEmployees.length === 0) continue;
 
