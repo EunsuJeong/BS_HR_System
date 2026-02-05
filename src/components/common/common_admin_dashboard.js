@@ -2452,7 +2452,7 @@ export const calculateAttendanceRateUtil = ({
     const targetEmployees = baseFilteredEmployees.filter((emp) => {
       // 연차자 제외
       if (onLeaveToday.includes(emp.id)) return false;
-      
+
       // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
       if (emp.hireDate) {
         const hireDate = new Date(emp.hireDate);
@@ -2463,7 +2463,7 @@ export const calculateAttendanceRateUtil = ({
           return false; // 입사 전이므로 제외
         }
       }
-      
+
       return true;
     });
 
@@ -2658,7 +2658,7 @@ export const calculateLateRateUtil = ({
     const targetEmployees = baseFilteredEmployees.filter((emp) => {
       // 연차자 제외
       if (onLeaveToday.includes(emp.id)) return false;
-      
+
       // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
       if (emp.hireDate) {
         const hireDate = new Date(emp.hireDate);
@@ -2669,7 +2669,7 @@ export const calculateLateRateUtil = ({
           return false; // 입사 전이므로 제외
         }
       }
-      
+
       return true;
     });
 
@@ -2896,7 +2896,7 @@ export const calculateAbsentRateUtil = ({
     const targetEmployees = baseFilteredEmployees.filter((emp) => {
       // 연차자 제외
       if (onLeaveToday.includes(emp.id)) return false;
-      
+
       // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
       if (emp.hireDate) {
         const hireDate = new Date(emp.hireDate);
@@ -2907,7 +2907,7 @@ export const calculateAbsentRateUtil = ({
           return false; // 입사 전이므로 제외
         }
       }
-      
+
       return true;
     });
 
@@ -3089,8 +3089,9 @@ export const calculateAverageOvertimeHoursUtil = ({
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth(); // 0-11
 
+  // ✅ 이철균, 이현주, 퇴사자 제외
   const filteredEmps = employees.filter(
-    (e) => !['이철균', '이현주'].includes(e.name)
+    (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
   );
 
   let totalOvertimeHours = 0;
@@ -3217,8 +3218,9 @@ export const calculateMonthlyLeaveUsageRateUtil = ({
   let totalUsedLeave = 0;
   let totalAvailableLeave = 0;
 
+  // ✅ 이철균, 이현주, 퇴사자 제외
   const filteredEmps = employees.filter(
-    (e) => !['이철균', '이현주'].includes(e.name)
+    (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
   );
 
   filteredEmps.forEach((emp) => {
@@ -3278,8 +3280,9 @@ export const calculateWeekly52HoursViolationUtil = ({
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
+  // ✅ 이철균, 이현주, 퇴사자 제외
   const filteredEmps = employees.filter(
-    (e) => !['이철균', '이현주'].includes(e.name)
+    (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
   );
 
   let violationCount = 0;
@@ -3380,8 +3383,9 @@ export const calculateStressIndexUtil = ({
   const currentMonth = now.getMonth(); // 0-11
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
+  // ✅ 이철균, 이현주, 퇴사자 제외
   const filteredEmps = employees.filter(
-    (e) => !['이철균', '이현주'].includes(e.name)
+    (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
   );
 
   let totalStress = 0;
@@ -4380,8 +4384,9 @@ export const getWorkLifeBalanceDataByYearUtil = (
 
     // 주 52시간 위반 건수 계산 (실제 월요일-일요일 주 단위)
     let violationCount = 0;
+    // ✅ 이철균, 이현주, 퇴사자 제외
     const filteredEmps = employees.filter(
-      (e) => !['이철균', '이현주'].includes(e.name)
+      (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
     );
 
     filteredEmps.forEach((emp, empIdx) => {
@@ -4787,8 +4792,9 @@ export const getViolationDetailsUtil = (
   calcDailyWage
 ) => {
   const violationDetails = [];
+  // ✅ 이철균, 이현주, 퇴사자 제외
   const filteredEmps = employees.filter(
-    (e) => !['이철균', '이현주'].includes(e.name)
+    (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
   );
 
   filteredEmps.forEach((emp) => {
@@ -4909,8 +4915,9 @@ export const getWorkLifeDetailDataUtil = (
   const detailData = [];
   const daysInMonth = getDaysInMonth(year, month + 1);
 
+  // ✅ 이철균, 이현주, 퇴사자 제외
   const filteredEmps = employees.filter(
-    (e) => !['이철균', '이현주'].includes(e.name)
+    (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
   );
 
   // isHoliday 함수 - getWorkTypeForDate가 있으면 근태 관리 로직 사용, 없으면 기본 함수 사용
@@ -5502,8 +5509,9 @@ export const getGoalDetailDataUtil = (
   const detailData = [];
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  // ✅ 이철균, 이현주, 퇴사자 제외
   const filteredEmps = employees.filter(
-    (e) => !['이철균', '이현주'].includes(e.name)
+    (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
   );
 
   let filteredData = [];
@@ -5584,6 +5592,17 @@ export const getGoalDetailDataUtil = (
         // 모든 지표에서 연차자 제외
         if (onLeaveToday.includes(emp.id)) {
           return;
+        }
+
+        // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
+        if (emp.hireDate) {
+          const hireDate = new Date(emp.hireDate);
+          const currentDate = new Date(dateStr);
+          hireDate.setHours(0, 0, 0, 0);
+          currentDate.setHours(0, 0, 0, 0);
+          if (currentDate < hireDate) {
+            return; // 입사 전이므로 제외
+          }
         }
 
         const workType = emp.workType || '주간';
