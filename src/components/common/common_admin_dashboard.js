@@ -2414,9 +2414,10 @@ export const calculateAttendanceRateUtil = ({
   // 기본 제외 직원 (이철균, 이현주, 당월 퇴사자)
   const baseFilteredEmployees = getFilteredEmployees(employees, m);
 
-  let dailyRates = []; // 각 일자별 출근률 저장
+  let totalPresentCount = 0; // 총 출근 횟수
+  let totalWorkDays = 0; // 총 근무일 수 (정상 근무일 × 직원 수)
 
-  // 각 일자별로 출근률 계산
+  // 각 일자별로 출근 횟수 집계
   for (let day = 1; day <= daysInMonth; day++) {
     const dateObj = new Date(year, m, day);
     const dayOfWeek = dateObj.getDay();
@@ -2583,16 +2584,14 @@ export const calculateAttendanceRateUtil = ({
       }
     });
 
-    // 일자별 출근률 계산
-    const dailyRate = (presentCount / targetEmployees.length) * 100;
-    dailyRates.push(dailyRate);
+    // 해당 날짜의 근무 건수 집계 (출근 대상자 수)
+    totalWorkDays += targetEmployees.length;
+    totalPresentCount += presentCount;
   }
 
-  // 월별 출근률 = 일별 출근률의 평균
-  return dailyRates.length > 0
-    ? (
-        dailyRates.reduce((sum, rate) => sum + rate, 0) / dailyRates.length
-      ).toFixed(1)
+  // 월별 출근률 = (총 출근 횟수 / 총 근무일 수) × 100
+  return totalWorkDays > 0
+    ? ((totalPresentCount / totalWorkDays) * 100).toFixed(1)
     : '0.0';
 };
 
@@ -2623,9 +2622,10 @@ export const calculateLateRateUtil = ({
   // 기본 제외 직원 (이철균, 이현주, 당월 퇴사자)
   const baseFilteredEmployees = getFilteredEmployees(employees, m);
 
-  let dailyRates = []; // 각 일자별 지각률 저장
+  let totalLateCount = 0; // 총 지각 횟수
+  let totalWorkDays = 0; // 총 근무일 수 (정상 근무일 × 직원 수)
 
-  // 각 일자별로 지각률 계산
+  // 각 일자별로 지각 횟수 집계
   for (let day = 1; day <= daysInMonth; day++) {
     const dateObj = new Date(year, m, day);
     const dayOfWeek = dateObj.getDay();
@@ -2809,16 +2809,14 @@ export const calculateLateRateUtil = ({
       }
     });
 
-    // 일자별 지각률 계산
-    const dailyRate = (lateCount / targetEmployees.length) * 100;
-    dailyRates.push(dailyRate);
+    // 해당 날짜의 근무 건수 집계 (출근 대상자 수)
+    totalWorkDays += targetEmployees.length;
+    totalLateCount += lateCount;
   }
 
-  // 월별 지각률 = 일별 지각률의 평균
-  return dailyRates.length > 0
-    ? (
-        dailyRates.reduce((sum, rate) => sum + rate, 0) / dailyRates.length
-      ).toFixed(1)
+  // 월별 지각률 = (총 지각 횟수 / 총 근무일 수) × 100
+  return totalWorkDays > 0
+    ? ((totalLateCount / totalWorkDays) * 100).toFixed(1)
     : '0.0';
 };
 
@@ -2849,9 +2847,10 @@ export const calculateAbsentRateUtil = ({
   // 기본 제외 직원 (이철균, 이현주, 당월 퇴사자)
   const baseFilteredEmployees = getFilteredEmployees(employees, m);
 
-  let dailyRates = []; // 각 일자별 결근률 저장
+  let totalAbsentCount = 0; // 총 결근 횟수
+  let totalWorkDays = 0; // 총 근무일 수 (정상 근무일 × 직원 수)
 
-  // 각 일자별로 결근률 계산
+  // 각 일자별로 결근 횟수 집계
   for (let day = 1; day <= daysInMonth; day++) {
     const dateObj = new Date(year, m, day);
     const dayOfWeek = dateObj.getDay();
@@ -3034,16 +3033,14 @@ export const calculateAbsentRateUtil = ({
       }
     });
 
-    // 일자별 결근률 계산
-    const dailyRate = (absentCount / targetEmployees.length) * 100;
-    dailyRates.push(dailyRate);
+    // 해당 날짜의 근무 건수 집계 (출근 대상자 수)
+    totalWorkDays += targetEmployees.length;
+    totalAbsentCount += absentCount;
   }
 
-  // 월별 결근률 = 일별 결근률의 평균
-  return dailyRates.length > 0
-    ? (
-        dailyRates.reduce((sum, rate) => sum + rate, 0) / dailyRates.length
-      ).toFixed(1)
+  // 월별 결근률 = (총 결근 횟수 / 총 근무일 수) × 100
+  return totalWorkDays > 0
+    ? ((totalAbsentCount / totalWorkDays) * 100).toFixed(1)
     : '0.0';
 };
 
