@@ -1942,9 +1942,15 @@ export const getEmployeesByStatus = ({
         // 입사일을 00:00:00으로 설정하여 비교
         hireDate.setHours(0, 0, 0, 0);
         checkDate.setHours(0, 0, 0, 0);
+        
+        // 디버깅 로그
         if (checkDate < hireDate) {
+          devLog(`❌ ${emp.name} - 입사 전 제외 (체크날짜: ${targetDate}, 입사일: ${emp.hireDate})`);
           return false; // 입사 전이므로 제외
         }
+      } else {
+        // hireDate가 없는 경우 경고 로그
+        devLog(`⚠️ ${emp.name} - hireDate 정보 없음`);
       }
 
       const workType = emp.workType || '주간';
