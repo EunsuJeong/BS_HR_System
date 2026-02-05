@@ -91,6 +91,18 @@ export const useDashboardStats = ({
         return;
       }
 
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
+      if (emp.hireDate) {
+        const hireDate = new Date(emp.hireDate);
+        const checkDate = new Date(targetDate);
+        hireDate.setHours(0, 0, 0, 0);
+        checkDate.setHours(0, 0, 0, 0);
+        if (checkDate < hireDate) {
+          devLog(`❌ ${emp.name} - 입사 전 제외 (체크날짜: ${targetDate}, 입사일: ${emp.hireDate})`);
+          return; // 입사 전이므로 제외
+        }
+      }
+
       // 📌 휴일 체크: 휴일은 주간/야간 구분 없이 당일 데이터만 확인
       const targetDateObj = new Date(targetDate);
       const targetYear = targetDateObj.getFullYear();
@@ -1942,10 +1954,12 @@ export const getEmployeesByStatus = ({
         // 입사일을 00:00:00으로 설정하여 비교
         hireDate.setHours(0, 0, 0, 0);
         checkDate.setHours(0, 0, 0, 0);
-        
+
         // 디버깅 로그
         if (checkDate < hireDate) {
-          devLog(`❌ ${emp.name} - 입사 전 제외 (체크날짜: ${targetDate}, 입사일: ${emp.hireDate})`);
+          devLog(
+            `❌ ${emp.name} - 입사 전 제외 (체크날짜: ${targetDate}, 입사일: ${emp.hireDate})`
+          );
           return false; // 입사 전이므로 제외
         }
       } else {
