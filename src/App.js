@@ -4434,6 +4434,22 @@ const HRManagementSystem = () => {
             };
           });
           setEmployees(formattedEmployees);
+          
+          // 🔍 디버깅: 2월 입사자 확인
+          const feb2026Hires = formattedEmployees.filter(emp => {
+            if (!emp.hireDate && !emp.joinDate) return false;
+            const hireDate = new Date(emp.hireDate || emp.joinDate);
+            return hireDate.getFullYear() === 2026 && hireDate.getMonth() === 1;
+          });
+          if (feb2026Hires.length > 0) {
+            console.log('🔍 2026년 2월 입사자:', feb2026Hires.map(emp => ({
+              name: emp.name,
+              id: emp.id,
+              hireDate: emp.hireDate,
+              joinDate: emp.joinDate,
+            })));
+          }
+          
           devLog(
             `✅ DB에서 직원 ${formattedEmployees.length}명 로드 완료 (연차 정보 포함)`
           );

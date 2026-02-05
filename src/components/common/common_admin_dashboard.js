@@ -5615,14 +5615,17 @@ export const getGoalDetailDataUtil = (
         }
 
         // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
-        if (emp.hireDate) {
-          const hireDate = new Date(emp.hireDate);
+        if (emp.hireDate || emp.joinDate) {
+          const hireDate = new Date(emp.hireDate || emp.joinDate);
           const currentDate = new Date(dateStr);
           hireDate.setHours(0, 0, 0, 0);
           currentDate.setHours(0, 0, 0, 0);
           if (currentDate < hireDate) {
+            console.log(`❌ [목표달성률] ${emp.name} - 입사 전 제외 (체크날짜: ${dateStr}, 입사일: ${emp.hireDate || emp.joinDate})`);
             return; // 입사 전이므로 제외
           }
+        } else {
+          console.warn(`⚠️ [목표달성률] ${emp.name} - hireDate/joinDate 정보 없음`);
         }
 
         const workType = emp.workType || '주간';
