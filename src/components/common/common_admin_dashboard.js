@@ -80,7 +80,10 @@ export const useDashboardStats = ({
     devLog('🔍 대상 날짜:', { targetDate, targetYesterday });
     devLog('🔍 총 직원 수:', employees.length);
 
-    employees.forEach((emp) => {
+    // ✅ 퇴사자 제외
+    const activeEmployees = employees.filter((emp) => emp.status !== '퇴사');
+
+    activeEmployees.forEach((emp) => {
       const workType = emp.workType || '주간';
       const leaveType = emp.leaveType || null;
 
