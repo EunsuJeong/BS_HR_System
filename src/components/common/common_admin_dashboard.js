@@ -91,18 +91,6 @@ export const useDashboardStats = ({
         return;
       }
 
-      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
-      if (emp.hireDate) {
-        const hireDate = new Date(emp.hireDate);
-        const checkDate = new Date(targetDate);
-        hireDate.setHours(0, 0, 0, 0);
-        checkDate.setHours(0, 0, 0, 0);
-        if (checkDate < hireDate) {
-          devLog(`❌ ${emp.name} - 입사 전 제외 (체크날짜: ${targetDate}, 입사일: ${emp.hireDate})`);
-          return; // 입사 전이므로 제외
-        }
-      }
-
       // 📌 휴일 체크: 휴일은 주간/야간 구분 없이 당일 데이터만 확인
       const targetDateObj = new Date(targetDate);
       const targetYear = targetDateObj.getFullYear();
@@ -1947,9 +1935,10 @@ export const getEmployeesByStatus = ({
       // ✅ 퇴사자 제외
       if (emp.status === '퇴사') return false;
 
-      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
-      if (emp.hireDate) {
-        const hireDate = new Date(emp.hireDate);
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외 (DB 필드 joinDate 사용)
+      const joinDateValue = emp.joinDate || emp.hireDate;
+      if (joinDateValue) {
+        const hireDate = new Date(joinDateValue);
         const checkDate = new Date(targetDate);
         // 입사일을 00:00:00으로 설정하여 비교
         hireDate.setHours(0, 0, 0, 0);
@@ -1958,7 +1947,7 @@ export const getEmployeesByStatus = ({
         // 디버깅 로그
         if (checkDate < hireDate) {
           devLog(
-            `❌ ${emp.name} - 입사 전 제외 (체크날짜: ${targetDate}, 입사일: ${emp.hireDate})`
+            `❌ ${emp.name} - 입사 전 제외 (체크날짜: ${targetDate}, 입사일: ${joinDateValue})`
           );
           return false; // 입사 전이므로 제외
         }
@@ -2473,9 +2462,10 @@ export const calculateAttendanceRateUtil = ({
       // 연차자 제외
       if (onLeaveToday.includes(emp.id)) return false;
 
-      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
-      if (emp.hireDate) {
-        const hireDate = new Date(emp.hireDate);
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외 (DB 필드 joinDate 우선 사용)
+      const joinDateValue = emp.joinDate || emp.hireDate;
+      if (joinDateValue) {
+        const hireDate = new Date(joinDateValue);
         const currentDate = new Date(dateStr);
         hireDate.setHours(0, 0, 0, 0);
         currentDate.setHours(0, 0, 0, 0);
@@ -2679,9 +2669,10 @@ export const calculateLateRateUtil = ({
       // 연차자 제외
       if (onLeaveToday.includes(emp.id)) return false;
 
-      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
-      if (emp.hireDate) {
-        const hireDate = new Date(emp.hireDate);
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외 (DB 필드 joinDate 우선 사용)
+      const joinDateValue = emp.joinDate || emp.hireDate;
+      if (joinDateValue) {
+        const hireDate = new Date(joinDateValue);
         const currentDate = new Date(dateStr);
         hireDate.setHours(0, 0, 0, 0);
         currentDate.setHours(0, 0, 0, 0);
@@ -2917,9 +2908,10 @@ export const calculateAbsentRateUtil = ({
       // 연차자 제외
       if (onLeaveToday.includes(emp.id)) return false;
 
-      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
-      if (emp.hireDate) {
-        const hireDate = new Date(emp.hireDate);
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외 (DB 필드 joinDate 우선 사용)
+      const joinDateValue = emp.joinDate || emp.hireDate;
+      if (joinDateValue) {
+        const hireDate = new Date(joinDateValue);
         const currentDate = new Date(dateStr);
         hireDate.setHours(0, 0, 0, 0);
         currentDate.setHours(0, 0, 0, 0);
@@ -5614,18 +5606,16 @@ export const getGoalDetailDataUtil = (
           return;
         }
 
-        // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
-        if (emp.hireDate || emp.joinDate) {
-          const hireDate = new Date(emp.hireDate || emp.joinDate);
+        // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외 (DB 필드 joinDate 사용)
+        const joinDateValue = emp.joinDate || emp.hireDate;
+        if (joinDateValue) {
+          const hireDate = new Date(joinDateValue);
           const currentDate = new Date(dateStr);
           hireDate.setHours(0, 0, 0, 0);
           currentDate.setHours(0, 0, 0, 0);
           if (currentDate < hireDate) {
-            console.log(`❌ [목표달성률] ${emp.name} - 입사 전 제외 (체크날짜: ${dateStr}, 입사일: ${emp.hireDate || emp.joinDate})`);
             return; // 입사 전이므로 제외
           }
-        } else {
-          console.warn(`⚠️ [목표달성률] ${emp.name} - hireDate/joinDate 정보 없음`);
         }
 
         const workType = emp.workType || '주간';
