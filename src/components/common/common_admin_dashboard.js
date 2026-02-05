@@ -4012,7 +4012,7 @@ export const getGoalDataByYearUtil = (
   return monthlyData;
 };
 
-// 월별 비율 계산 헬퍼 함수 (일별 평균 방식)
+// 월별 비율 계산 헬퍼 함수 (총 횟수 방식)
 function calculateMonthlyRate(
   year,
   month,
@@ -4027,7 +4027,8 @@ function calculateMonthlyRate(
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const baseFilteredEmployees = getFilteredEmployees(employees, month);
 
-  let dailyRates = [];
+  let totalCount = 0; // 총 카운트 (출근/지각/결근 횟수)
+  let totalWorkDays = 0; // 총 근무일 수 (정상 근무일 × 직원 수)
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dateObj = new Date(year, month, day);
@@ -4232,14 +4233,13 @@ function calculateMonthlyRate(
       }
     });
 
-    const dailyRate = (count / targetEmployees.length) * 100;
-    dailyRates.push(dailyRate);
+    // 해당 날짜의 근무 건수 집계 (출근 대상자 수)
+    totalWorkDays += targetEmployees.length;
+    totalCount += count;
   }
 
-  const result =
-    dailyRates.length > 0
-      ? dailyRates.reduce((sum, rate) => sum + rate, 0) / dailyRates.length
-      : 0;
+  // 월별 비율 = (총 횟수 / 총 근무일 수) × 100
+  const result = totalWorkDays > 0 ? (totalCount / totalWorkDays) * 100 : 0;
 
   // 디버깅: 7월, 8월 데이터 확인
   return result;
