@@ -4394,6 +4394,7 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
+              hireDate: formatDateToString(emp.joinDate), // ✅ hireDate 추가 (joinDate와 동일)
               leaveDate:
                 emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
                   ? formatDateToString(emp.leaveDate)
