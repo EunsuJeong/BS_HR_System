@@ -638,6 +638,7 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
+              leaveDate: formatDateToString(emp.leaveDate), // ✅ 퇴사일 추가
               workType: emp.workType,
               payType: emp.salaryType,
               contractType: emp.contractType || '정규', // 계약형태
@@ -711,6 +712,7 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
+              leaveDate: formatDateToString(emp.leaveDate), // ✅ 퇴사일 추가
               workType: emp.workType,
               payType: emp.salaryType,
               contractType: emp.contractType || '정규', // 계약형태
@@ -3230,6 +3232,7 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
+              leaveDate: formatDateToString(emp.leaveDate), // ✅ 퇴사일 추가
               workType: emp.workType,
               payType: emp.salaryType,
               contractType: emp.contractType || '정규', // 계약형태
@@ -3277,6 +3280,7 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
+              leaveDate: formatDateToString(emp.leaveDate), // ✅ 퇴사일 추가
               workType: emp.workType,
               payType: emp.salaryType,
               contractType: emp.contractType || '정규', // 계약형태
@@ -3324,6 +3328,7 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
+              leaveDate: formatDateToString(emp.leaveDate), // ✅ 퇴사일 추가
               workType: emp.workType,
               payType: emp.salaryType,
               contractType: emp.contractType || '정규', // 계약형태
@@ -4374,6 +4379,7 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
+              leaveDate: formatDateToString(emp.leaveDate), // ✅ 퇴사일 추가
               workType: emp.workType,
               payType: emp.salaryType,
               contractType: emp.contractType || '정규', // 계약형태
@@ -4456,6 +4462,7 @@ const HRManagementSystem = () => {
                 position: emp.position,
                 role: emp.role,
                 joinDate: formatDateToString(emp.joinDate),
+                leaveDate: formatDateToString(emp.leaveDate), // ✅ 퇴사일 추가
                 workType: emp.workType,
                 payType: emp.salaryType,
                 contractType: emp.contractType || '정규', // 계약형태
@@ -4925,6 +4932,7 @@ const HRManagementSystem = () => {
               position: emp.position,
               role: emp.role,
               joinDate: formatDateToString(emp.joinDate),
+              leaveDate: formatDateToString(emp.leaveDate), // ✅ 퇴사일 추가
               workType: emp.workType,
               payType: emp.salaryType,
               contractType: emp.contractType || '정규', // 계약형태
