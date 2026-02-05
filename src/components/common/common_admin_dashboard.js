@@ -1935,6 +1935,18 @@ export const getEmployeesByStatus = ({
       // ✅ 퇴사자 제외
       if (emp.status === '퇴사') return false;
 
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
+      if (emp.hireDate) {
+        const hireDate = new Date(emp.hireDate);
+        const checkDate = new Date(targetDate);
+        // 입사일을 00:00:00으로 설정하여 비교
+        hireDate.setHours(0, 0, 0, 0);
+        checkDate.setHours(0, 0, 0, 0);
+        if (checkDate < hireDate) {
+          return false; // 입사 전이므로 제외
+        }
+      }
+
       const workType = emp.workType || '주간';
       const leaveType = emp.leaveType || null;
 
@@ -2436,10 +2448,24 @@ export const calculateAttendanceRateUtil = ({
       })
       .map((lr) => lr.employeeId);
 
-    // 해당 일자 출근 대상 직원 (연차자 제외)
-    const targetEmployees = baseFilteredEmployees.filter(
-      (emp) => !onLeaveToday.includes(emp.id)
-    );
+    // 해당 일자 출근 대상 직원 (연차자 + 입사 전 직원 제외)
+    const targetEmployees = baseFilteredEmployees.filter((emp) => {
+      // 연차자 제외
+      if (onLeaveToday.includes(emp.id)) return false;
+      
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
+      if (emp.hireDate) {
+        const hireDate = new Date(emp.hireDate);
+        const currentDate = new Date(dateStr);
+        hireDate.setHours(0, 0, 0, 0);
+        currentDate.setHours(0, 0, 0, 0);
+        if (currentDate < hireDate) {
+          return false; // 입사 전이므로 제외
+        }
+      }
+      
+      return true;
+    });
 
     if (targetEmployees.length === 0) {
       // 모든 직원이 연차인 경우 해당 날짜는 계산에서 제외
@@ -2628,10 +2654,24 @@ export const calculateLateRateUtil = ({
       })
       .map((lr) => lr.employeeId);
 
-    // 해당 일자 출근 대상 직원 (연차자 제외)
-    const targetEmployees = baseFilteredEmployees.filter(
-      (emp) => !onLeaveToday.includes(emp.id)
-    );
+    // 해당 일자 출근 대상 직원 (연차자 + 입사 전 직원 제외)
+    const targetEmployees = baseFilteredEmployees.filter((emp) => {
+      // 연차자 제외
+      if (onLeaveToday.includes(emp.id)) return false;
+      
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
+      if (emp.hireDate) {
+        const hireDate = new Date(emp.hireDate);
+        const currentDate = new Date(dateStr);
+        hireDate.setHours(0, 0, 0, 0);
+        currentDate.setHours(0, 0, 0, 0);
+        if (currentDate < hireDate) {
+          return false; // 입사 전이므로 제외
+        }
+      }
+      
+      return true;
+    });
 
     if (targetEmployees.length === 0) {
       // 모든 직원이 연차인 경우 해당 날짜는 계산에서 제외
@@ -2852,10 +2892,24 @@ export const calculateAbsentRateUtil = ({
       })
       .map((lr) => lr.employeeId);
 
-    // 해당 일자 출근 대상 직원 (연차자 제외)
-    const targetEmployees = baseFilteredEmployees.filter(
-      (emp) => !onLeaveToday.includes(emp.id)
-    );
+    // 해당 일자 출근 대상 직원 (연차자 + 입사 전 직원 제외)
+    const targetEmployees = baseFilteredEmployees.filter((emp) => {
+      // 연차자 제외
+      if (onLeaveToday.includes(emp.id)) return false;
+      
+      // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외
+      if (emp.hireDate) {
+        const hireDate = new Date(emp.hireDate);
+        const currentDate = new Date(dateStr);
+        hireDate.setHours(0, 0, 0, 0);
+        currentDate.setHours(0, 0, 0, 0);
+        if (currentDate < hireDate) {
+          return false; // 입사 전이므로 제외
+        }
+      }
+      
+      return true;
+    });
 
     if (targetEmployees.length === 0) {
       // 모든 직원이 연차인 경우 해당 날짜는 계산에서 제외
