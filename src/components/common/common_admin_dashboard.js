@@ -1401,9 +1401,9 @@ export const useDashboardCalculations = ({
   const getFilteredEmployees = (emp, m) =>
     emp.filter((e) => {
       const excluded = ['이철균', '이현주'].includes(e.name);
-      const resigned =
-        e.status === '퇴사' && new Date(e.leaveDate).getMonth() === m;
-      return !excluded && (!resigned || e.status !== '퇴사');
+      // ✅ 퇴사자는 무조건 제외 (시스템에서 invisible)
+      const resigned = e.status === '퇴사';
+      return !excluded && !resigned;
     });
 
   // *[2_관리자 모드] 2.1_대시보드 - 월별 출근율 계산*
@@ -1934,7 +1934,7 @@ export const getEmployeesByStatus = ({
     .filter((emp) => {
       // ✅ 퇴사자 제외
       if (emp.status === '퇴사') return false;
-      
+
       const workType = emp.workType || '주간';
       const leaveType = emp.leaveType || null;
 
