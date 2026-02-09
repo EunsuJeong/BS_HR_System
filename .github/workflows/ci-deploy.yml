@@ -1,4 +1,4 @@
-name: CI & Deploy (Frontend -> Vercel, Backend -> Railway)
+name: CI & Deploy (Frontend -> Vercel)
 
 on:
   push:
@@ -36,17 +36,4 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
-  deploy-backend:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Railway CLI
-        run: curl -sSL https://raw.githubusercontent.com/railwayapp/cli/master/install.sh | sh
-      - name: Deploy to Railway (requires RAILWAY_API_KEY and RAILWAY_PROJECT_ID secrets)
-        env:
-          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-        run: |
-          railway whoami || true
-          railway up --projectId $RAILWAY_PROJECT_ID --detach || true
+  # Backend deployment removed - using local PM2 + Ngrok instead
