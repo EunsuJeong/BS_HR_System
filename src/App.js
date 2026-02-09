@@ -4381,7 +4381,8 @@ const HRManagementSystem = () => {
 
         const dbEmployees = await EmployeeAPI.list();
 
-        if (dbEmployees && dbEmployees.length > 0) {
+        // ✅ 배열 응답 검증
+        if (Array.isArray(dbEmployees) && dbEmployees.length > 0) {
           // DB 데이터를 프론트엔드 형식으로 변환 (연차 정보 포함)
           const formattedEmployees = dbEmployees.map((emp) => {
             const baseEmp = {
@@ -4553,7 +4554,8 @@ const HRManagementSystem = () => {
         devLog('🔄 DB에서 연차 데이터 로딩 시작...');
         const dbLeaves = await LeaveAPI.list();
 
-        if (dbLeaves && dbLeaves.length > 0) {
+        // ✅ 배열 응답 검증
+        if (Array.isArray(dbLeaves) && dbLeaves.length > 0) {
           // DB 데이터를 프론트엔드 형식으로 변환
           const formattedLeaves = dbLeaves.map((leave) => ({
             id: leave._id,
@@ -4609,7 +4611,8 @@ const HRManagementSystem = () => {
         const includeScheduled = currentUser?.role === 'admin';
         const dbNotices = await NoticeAPI.list(includeScheduled);
 
-        if (dbNotices && dbNotices.length > 0) {
+        // ✅ 배열 응답 검증
+        if (Array.isArray(dbNotices) && dbNotices.length > 0) {
           const formattedNotices = dbNotices.map((notice) => {
             // attachments가 문자열 배열인 경우 객체 배열로 변환 (하위호환성)
             let attachments = notice.attachments || [];
@@ -4731,7 +4734,8 @@ const HRManagementSystem = () => {
           isAdmin ? 'admin' : null
         );
 
-        if (dbSuggestions && dbSuggestions.length > 0) {
+        // ✅ 배열 응답 검증
+        if (Array.isArray(dbSuggestions) && dbSuggestions.length > 0) {
           const formattedSuggestions = dbSuggestions.map((suggestion) => ({
             id: suggestion._id,
             _id: suggestion._id,
