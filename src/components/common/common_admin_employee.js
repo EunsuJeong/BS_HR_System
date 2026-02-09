@@ -341,6 +341,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
             salaryType: newEmployee.payType || '시급',
             status: newEmployee.status || '재직',
             address: newEmployee.address || '',
+            password: defaultPassword, // ✅ 기본 비밀번호 추가
           };
 
           const response = await EmployeeAPI.create(employeePayload);

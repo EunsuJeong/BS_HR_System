@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const moment = require('moment-timezone');
+const bcrypt = require('bcryptjs');
 
 const {
   Employee,
@@ -122,16 +123,18 @@ router.put('/employees/:employeeId/password', async (req, res) => {
       });
     }
 
-    // 현재 비밀번호 확인
-    if (employee.password !== currentPassword) {
+    // 현재 비밀번호 확인 (해싱된 비밀번호와 비교)
+    const isPasswordValid = await bcrypt.compare(currentPassword, employee.password);
+    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
         error: '현재 비밀번호가 일치하지 않습니다.',
       });
     }
 
-    // 새 비밀번호 업데이트
-    employee.password = newPassword;
+    // 새 비밀번호 해싱 및 업데이트
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    employee.password = hashedPassword;
     employee.updatedAt = new Date();
     await employee.save();
 
@@ -221,6 +224,11 @@ router.put('/employees/:id', async (req, res) => {
       req.body.leaveDate = parseDateString(req.body.leaveDate);
     }
 
+    // 비밀번호가 수정되는 경우 해싱
+    if (req.body.password) {
+      req.body.password = await bcrypt.hash(req.body.password, 10);
+    }
+
     // usedLeave를 leaveUsed로 변환 (프론트엔드 호환성)
     if (req.body.usedLeave !== undefined) {
       req.body.leaveUsed = req.body.usedLeave;
@@ -289,6 +297,12 @@ router.post('/employees', async (req, res) => {
     if (req.body.leaveDate && typeof req.body.leaveDate === 'string') {
       req.body.leaveDate = parseDateString(req.body.leaveDate);
     }
+
+    // 비밀번호 해싱
+    if (req.body.password) {
+      req.body.password = await bcrypt.hash(req.body.password, 10);
+    }
+
     const employee = new Employee(req.body);
 
     await employee.save();
