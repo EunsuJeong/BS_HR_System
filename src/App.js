@@ -608,7 +608,12 @@ const HRManagementSystem = () => {
     const loadAdminsFromDB = async () => {
       try {
         const dbAdmins = await AdminAPI.list();
-        setAdmins(dbAdmins);
+        // ✅ 배열 응답 검증
+        if (Array.isArray(dbAdmins)) {
+          setAdmins(dbAdmins);
+        } else {
+          setAdmins([]);
+        }
       } catch (error) {
         console.error('❌ [관리자 로드] DB 관리자 로드 실패:', error);
         setAdmins([]);
@@ -626,7 +631,7 @@ const HRManagementSystem = () => {
       try {
         // 1. 직원 데이터 로드
         const dbEmployees = await EmployeeAPI.list();
-        if (dbEmployees && dbEmployees.length > 0) {
+        if (Array.isArray(dbEmployees) && dbEmployees.length > 0) {
           const formattedEmployees = dbEmployees.map((emp) => {
             const baseEmp = {
               id: emp.employeeId,
@@ -666,7 +671,7 @@ const HRManagementSystem = () => {
 
         // 2. 연차 데이터 로드
         const dbLeaves = await LeaveAPI.list();
-        if (dbLeaves && dbLeaves.length > 0) {
+        if (Array.isArray(dbLeaves) && dbLeaves.length > 0) {
           const formattedLeaves = dbLeaves.map((leave) => ({
             id: leave._id,
             employeeId: leave.employeeId,
@@ -703,7 +708,7 @@ const HRManagementSystem = () => {
         }
 
         // 3. 직원 데이터 재계산 (연차 정보 포함)
-        if (dbEmployees && dbEmployees.length > 0) {
+        if (Array.isArray(dbEmployees) && dbEmployees.length > 0) {
           const updatedEmployees = dbEmployees.map((emp) => {
             const baseEmp = {
               id: emp.employeeId,
@@ -730,7 +735,7 @@ const HRManagementSystem = () => {
               // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
             };
-            const formattedLeaves = dbLeaves
+            const formattedLeaves = Array.isArray(dbLeaves)
               ? dbLeaves.map((leave) => ({
                   id: leave._id,
                   employeeId: leave.employeeId,

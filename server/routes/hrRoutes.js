@@ -124,7 +124,10 @@ router.put('/employees/:employeeId/password', async (req, res) => {
     }
 
     // 현재 비밀번호 확인 (해싱된 비밀번호와 비교)
-    const isPasswordValid = await bcrypt.compare(currentPassword, employee.password);
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      employee.password
+    );
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
