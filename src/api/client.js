@@ -1,6 +1,6 @@
 // Lightweight API client for frontend
-// Railway 백엔드 URL (프로덕션)
-const PRODUCTION_API_URL = 'https://bshrsystem-production.up.railway.app/api';
+// Ngrok 백엔드 URL (로컬 서버 HTTPS 터널)
+const PRODUCTION_API_URL = 'https://hydrokinetic-disbelievingly-gaynelle.ngrok-free.dev/api';
 const BASE = process.env.REACT_APP_API_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? PRODUCTION_API_URL : 'http://localhost:5000/api');
 
