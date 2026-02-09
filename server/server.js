@@ -104,12 +104,6 @@ app.use(express.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 // app.use(morgan('dev')); // API 요청 로그 비활성화
 
-// ✅ OPTIONS preflight 요청 명시적 처리
-app.options('*', (req, res) => {
-  console.log('✅ OPTIONS preflight 요청:', req.path, 'from', req.headers.origin);
-  res.sendStatus(200);
-});
-
 // Socket.io 인스턴스를 app.locals에 저장하여 라우트에서 사용 가능하게 함
 app.locals.io = io;
 
