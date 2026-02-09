@@ -66,6 +66,7 @@ const allowedOrigins = [
   'http://localhost:3001',
   'http://localhost:3002',
   'https://bs-hr-system.vercel.app', // Vercel 프로덕션 URL
+  'https://hydrokinetic-disbelievingly-gaynelle.ngrok-free.dev', // Ngrok 로컬 서버
   process.env.FRONTEND_URL, // Vercel 배포 URL (환경변수)
 ].filter(Boolean); // undefined 제거
 
@@ -81,6 +82,8 @@ app.use(
       if (
         allowedOrigins.includes(origin) ||
         origin.match(/\.vercel\.app$/) || // Vercel 프리뷰 배포
+        origin.match(/\.ngrok-free\.dev$/) || // Ngrok 무료 플랜
+        origin.match(/\.ngrok\.io$/) || // Ngrok 유료 플랜
         origin.match(/^https?:\/\/localhost/) // 로컬호스트 모든 포트
       ) {
         callback(null, true);
