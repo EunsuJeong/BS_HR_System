@@ -25,6 +25,7 @@ async function request(path, options = {}) {
   const url = path.startsWith('http') ? path : `${BASE}${path}`;
   const headers = {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true', // Ngrok 경고 페이지 우회
     ...(options.headers || {}),
   };
   const init = { ...options, headers };
