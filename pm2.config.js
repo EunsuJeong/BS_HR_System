@@ -36,7 +36,7 @@ module.exports = {
       // ==================== 로그 설정 ====================
       // 로그 파일 경로 (Windows: C:\Users\[User]\Desktop\...\logs\)
       error_file: './logs/pm2-error.log', // 에러 로그
-      out_file: './logs/pm2-out.log', // 표준 출력 로그
+      out_file: 'NUL', // 표준 출력 무시 (Windows)
       log_file: './logs/pm2-combined.log', // 병합 로그
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z', // 로그 타임스탬프 포맷
       time: true, // 로그에 타임스탬프 추가

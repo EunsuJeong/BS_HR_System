@@ -203,17 +203,17 @@ router.get('/monthly/:year/:month', async (req, res) => {
     const { year, month } = req.params;
     const yearMonth = `${year}-${String(month).padStart(2, '0')}`;
 
-    console.log(`🔍 [Payroll API] 급여 데이터 조회: ${yearMonth}`);
+    // console.log(`🔍 [Payroll API] 급여 데이터 조회: ${yearMonth}`);
 
     const payrolls = await Payroll.find({ yearMonth })
       .lean()
       .sort({ employeeId: 1 });
 
-    console.log(`✅ [Payroll API] 조회 완료: ${payrolls.length}건`);
+    // console.log(`✅ [Payroll API] 조회 완료: ${payrolls.length}건`);
 
-    if (payrolls.length > 0) {
-      console.log(`📝 [Payroll API] 첫 번째 데이터:`, payrolls[0]);
-    }
+    // if (payrolls.length > 0) {
+    //   console.log(`📝 [Payroll API] 첫 번째 데이터:`, payrolls[0]);
+    // }
 
     res.json({
       success: true,
@@ -243,9 +243,9 @@ router.get('/employee/:employeeId', async (req, res) => {
       query.year = parseInt(year);
     }
 
-    console.log(
-      `🔍 [Payroll API] 직원 급여 조회: ${employeeId}, year: ${year || 'all'}`
-    );
+    // console.log(
+    //   `🔍 [Payroll API] 직원 급여 조회: ${employeeId}, year: ${year || 'all'}`
+    // );
 
     const payrolls = await Payroll.find(query)
       .lean()

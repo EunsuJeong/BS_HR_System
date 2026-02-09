@@ -634,11 +634,6 @@ export const logSystemEvent = (
     HIGH: 'color: #FF5722;',
     CRITICAL: 'color: #F44336; font-weight: bold;',
   };
-  devLog(
-    `%c[${priority}][${type}] ${timestamp}: ${message}`,
-    logColors[priority] || '',
-    details
-  );
 
   try {
     // TODO: 시스템 로그를 MongoDB SystemLog 컬렉션에 저장
