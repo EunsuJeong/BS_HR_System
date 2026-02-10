@@ -1,6 +1,8 @@
 // Lightweight API client for frontend
-// Ngrok 백엔드 URL (로컬 서버 HTTPS 터널)
-const PRODUCTION_API_URL = 'https://hydrokinetic-disbelievingly-gaynelle.ngrok-free.dev/api';
+// 로컬 서버 배포용 (FBD_One 브랜치)
+// 프로덕션 환경: bssystem.iptime.org:5000 (로컬 PC 서버)
+// 개발 환경: localhost:5000 (로컬 개발)
+const PRODUCTION_API_URL = 'http://bssystem.iptime.org:5000/api';
 const BASE = process.env.REACT_APP_API_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? PRODUCTION_API_URL : 'http://localhost:5000/api');
 
@@ -25,7 +27,6 @@ async function request(path, options = {}) {
   const url = path.startsWith('http') ? path : `${BASE}${path}`;
   const headers = {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true', // Ngrok 경고 페이지 우회
     ...(options.headers || {}),
   };
   const init = { ...options, headers };

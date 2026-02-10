@@ -60,14 +60,15 @@ const io = { emit: () => {}, on: () => {} };
 const PORT = process.env.PORT || 5000;
 
 // ================== 미들웨어 ==================
-// CORS 설정 - 프로덕션 환경 고려
+// CORS 설정 - 로컬 서버 배포 (FBD_One)
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:3002',
-  'https://bs-hr-system.vercel.app', // Vercel 프로덕션 URL
-  'https://hydrokinetic-disbelievingly-gaynelle.ngrok-free.dev', // Ngrok 로컬 서버
-  process.env.FRONTEND_URL, // Vercel 배포 URL (환경변수)
+  'http://bssystem.iptime.org:3000', // ipTIME DDNS 로컬 서버
+  'http://bssystem.iptime.org:5000', // 백엔드 포트
+  'https://bs-hr-system.vercel.app', // Vercel 프로덕션 URL (백업)
+  process.env.FRONTEND_URL, // 환경변수로 설정된 URL
 ].filter(Boolean); // undefined 제거
 
 app.use(
@@ -82,9 +83,10 @@ app.use(
       if (
         allowedOrigins.includes(origin) ||
         origin.match(/\.vercel\.app$/) || // Vercel 프리뷰 배포
-        origin.match(/\.ngrok-free\.dev$/) || // Ngrok 무료 플랜
-        origin.match(/\.ngrok\.io$/) || // Ngrok 유료 플랜
-        origin.match(/^https?:\/\/localhost/) // 로컬호스트 모든 포트
+        origin.match(/\.iptime\.org/) || // ipTIME DDNS 도메인
+        origin.match(/^https?:\/\/localhost/) || // 로컬호스트 모든 포트
+        origin.match(/^https?:\/\/192\.168\./) || // 사내 네트워크
+        origin.match(/^https?:\/\/10\./) // 사내 네트워크 (추가)
       ) {
         callback(null, true);
       } else {
@@ -96,7 +98,7 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 

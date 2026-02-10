@@ -313,7 +313,7 @@ const HRManagementSystem = () => {
       return '0';
     }
     const num = Number(value);
-    return isNaN(num) ? '0' : num.toLocaleString();
+    return isNaN(num) ? '0' : Math.round(num).toLocaleString();
   };
 
   //---[1_공통] 1.3.2_공휴일 관리 STATE---//
@@ -2671,18 +2671,40 @@ const HRManagementSystem = () => {
           attendanceSheetMonth
         ).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-        // 연차 정보가 있으면 근무시간 계산에서 제외
-        if (attendance.leaveType) {
-          // 연차, 반차, 경조, 공가, 휴직, 결근, 외출, 조퇴 등은 근무시간에 포함하지 않음
-          // 단, totalWorkDays나 다른 통계는 별도 처리
+        // ✅ 해당 날짜의 연차 신청 정보 확인
+        const dayLeaveRequest = leaveRequests.find((leave) => {
+          if (leave.employeeId !== employeeId) return false;
+          if (leave.status !== '승인') return false;
+          const leaveStartDate = leave.startDate?.split('T')[0] || leave.startDate;
+          const leaveEndDate = leave.endDate?.split('T')[0] || leave.endDate;
+          return dateStr >= leaveStartDate && dateStr <= leaveEndDate;
+        });
+
+        // 연차/경조/공가/휴직/결근 등은 근무시간 계산에서 제외 (반차 제외)
+        if (attendance.leaveType || dayLeaveRequest) {
+          const leaveType = dayLeaveRequest?.type || attendance.leaveType;
+          
+          // 반차(오전), 반차(오후)가 아닌 경우에만 근무시간 계산 건너뛰기
           if (
-            attendance.leaveType === 'annual' ||
-            attendance.checkIn === '연차' ||
-            attendance.checkOut === '연차'
+            leaveType !== '반차(오전)' &&
+            leaveType !== '반차(오후)' &&
+            (leaveType === 'annual' ||
+              leaveType === '연차' ||
+              leaveType === '경조' ||
+              leaveType === '공가' ||
+              leaveType === '휴직' ||
+              leaveType === '결근' ||
+              attendance.checkIn === '연차' ||
+              attendance.checkOut === '연차')
           ) {
-            annualLeave++;
+            if (leaveType === 'annual' || leaveType === '연차') {
+              annualLeave++;
+            }
+            continue; // 근무시간 계산 건너뛰기
           }
-          continue; // 근무시간 계산 건너뛰기
+          
+          // ⚠️ 반차인 경우: 출퇴근 시간이 있으면 아래에서 계산하되,
+          // 최대 4시간으로 제한 (또는 실제 출퇴근 시간 기준 계산)
         }
 
         if (attendance.checkIn && attendance.checkOut) {
@@ -2728,26 +2750,46 @@ const HRManagementSystem = () => {
               dateStr
             );
 
-            regularHours += categorized.기본 || 0;
-            earlyHours += categorized.조출 || 0;
-            overtimeHours += categorized.연장 || 0;
-            nightHours += categorized.심야 || 0;
-            overtimeNightHours += categorized['연장+심야'] || 0;
+            // ✅ 반차인 경우 근무 시간 조정 (최대 4시간으로 제한)
+            let adjustedCategorized = categorized;
+            if (dayLeaveRequest && (dayLeaveRequest.type === '반차(오전)' || dayLeaveRequest.type === '반차(오후)')) {
+              const dailyTotal = Object.values(categorized).reduce(
+                (sum, hours) => sum + (hours || 0),
+                0
+              );
+              
+              // 반차는 최대 4시간까지만 인정
+              if (dailyTotal > 4) {
+                const ratio = 4 / dailyTotal;
+                adjustedCategorized = {};
+                Object.keys(categorized).forEach(key => {
+                  adjustedCategorized[key] = (categorized[key] || 0) * ratio;
+                });
+                
+                console.warn(`⚠️ [반차 조정] ${employee.name} ${dateStr}: ${dailyTotal}시간 → 4시간으로 제한`);
+              }
+            }
+
+            regularHours += adjustedCategorized.기본 || 0;
+            earlyHours += adjustedCategorized.조출 || 0;
+            overtimeHours += adjustedCategorized.연장 || 0;
+            nightHours += adjustedCategorized.심야 || 0;
+            overtimeNightHours += adjustedCategorized['연장+심야'] || 0;
 
             // 특근 관련 (특근, 특근+심야를 합산)
             holidayHours +=
-              (categorized.특근 || 0) + (categorized['특근+심야'] || 0);
+              (adjustedCategorized.특근 || 0) + (adjustedCategorized['특근+심야'] || 0);
 
             // 조출+특근 관련 (조출+특근, 특근+조출을 합산)
             earlyHolidayHours +=
-              (categorized['조출+특근'] || 0) + (categorized['특근+조출'] || 0);
+              (adjustedCategorized['조출+특근'] || 0) + (adjustedCategorized['특근+조출'] || 0);
 
             // 특근+연장 관련 (특근+연장, 특근+연장+심야를 합산)
             holidayOvertimeHours +=
-              (categorized['특근+연장'] || 0) +
-              (categorized['특근+연장+심야'] || 0);
+              (adjustedCategorized['특근+연장'] || 0) +
+              (adjustedCategorized['특근+연장+심야'] || 0);
 
-            const dailyTotal = Object.values(categorized).reduce(
+            const dailyTotal = Object.values(adjustedCategorized).reduce(
               (sum, hours) => sum + (hours || 0),
               0
             );

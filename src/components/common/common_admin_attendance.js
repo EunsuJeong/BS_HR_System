@@ -829,6 +829,9 @@ export const useAttendanceManagement = ({
 
       const employee = employees.find((emp) => emp.id === employeeId);
 
+      // 디버깅: 신미선 씨 데이터 로그 (이름으로 체크)
+      const isDebugTarget = employee && employee.name === '신미선';
+
       // employee를 찾지 못한 경우 빈 결과 반환
       if (!employee) {
         const emptyResult = {
@@ -895,6 +898,16 @@ export const useAttendanceManagement = ({
             dateStr
           );
 
+          // 디버깅 로그
+          if (isDebugTarget) {
+            console.log(`📊 [신미선] ${dateStr} (${day}일)`, {
+              checkIn: attendance.checkIn,
+              checkOut: attendance.checkOut,
+              shiftType,
+              categorized,
+            });
+          }
+
           regularHours += categorized.기본 || 0;
           earlyHours += categorized.조출 || 0;
           overtimeHours += categorized.연장 || 0;
@@ -903,6 +916,7 @@ export const useAttendanceManagement = ({
           overtimeNightHours += categorized['연장+심야'] || 0;
           holidayOvertimeHours += categorized['특근+연장'] || 0;
 
+          // 추가 특근 항목
           holidayHours += categorized['특근+심야'] || 0;
           holidayOvertimeHours += categorized['특근+연장+심야'] || 0;
 
@@ -918,6 +932,10 @@ export const useAttendanceManagement = ({
             (categorized['특근+심야'] || 0) +
             (categorized['특근+연장+심야'] || 0);
           totalHours += dailyTotal;
+
+          if (isDebugTarget) {
+            console.log(`   → dailyTotal: ${dailyTotal}시간, 누적 totalHours: ${totalHours}시간`);
+          }
 
           // 위에서 계산한 shiftType을 사용하여 지각/조퇴 판정
           // 평일에만 지각 체크 (주말/휴일은 특근이므로 지각 개념 없음)
@@ -984,6 +1002,20 @@ export const useAttendanceManagement = ({
         overtimeNightHours,
         holidayOvertimeHours,
       };
+
+      // 디버깅 로그: 최종 결과
+      if (isDebugTarget) {
+        console.log(`✅ [신미선] 최종 합계:`, {
+          totalHours: result.totalHours,
+          regularHours: result.regularHours,
+          earlyHours: result.earlyHours,
+          overtimeHours: result.overtimeHours,
+          holidayHours: result.holidayHours,
+          nightHours: result.nightHours,
+          overtimeNightHours: result.overtimeNightHours,
+          holidayOvertimeHours: result.holidayOvertimeHours,
+        });
+      }
 
       attendanceStatsCache.set(cacheKey, result);
       return result;

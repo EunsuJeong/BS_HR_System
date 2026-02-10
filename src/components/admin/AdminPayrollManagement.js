@@ -221,64 +221,98 @@ const AdminPayrollManagement = ({
             <div className="text-center">
               <div className="font-medium text-gray-600">총 급여합계</div>
               <div className="text-lg font-bold text-green-600">
-                {getFilteredPayrollData()
-                  .reduce(
-                    (sum, row) =>
-                      sum +
-                      (parseFloat(row.급여합계?.toString().replace(/,/g, '')) ||
-                        0),
-                    0
-                  )
-                  .toLocaleString()}
+                {(() => {
+                  const total = Math.round(
+                    getFilteredPayrollData()
+                      .reduce(
+                        (sum, row) =>
+                          sum +
+                          (parseFloat(row.급여합계?.toString().replace(/,/g, '')) ||
+                            0),
+                        0
+                      )
+                  );
+                  return total.toLocaleString();
+                })()}
                 원
               </div>
             </div>
             <div className="text-center">
               <div className="font-medium text-gray-600">총 공제합계</div>
               <div className="text-lg font-bold text-red-600">
-                {getFilteredPayrollData()
-                  .reduce(
-                    (sum, row) =>
-                      sum +
-                      (parseFloat(row.공제합계?.toString().replace(/,/g, '')) ||
-                        0),
-                    0
-                  )
-                  .toLocaleString()}
+                {(() => {
+                  const total = Math.round(
+                    getFilteredPayrollData()
+                      .reduce(
+                        (sum, row) =>
+                          sum +
+                          (parseFloat(row.공제합계?.toString().replace(/,/g, '')) ||
+                            0),
+                        0
+                      )
+                  );
+                  return total.toLocaleString();
+                })()}
                 원
               </div>
             </div>
             <div className="text-center">
               <div className="font-medium text-gray-600">총 차인지급액</div>
               <div className="text-lg font-bold text-purple-600">
-                {getFilteredPayrollData()
-                  .reduce(
-                    (sum, row) =>
-                      sum +
-                      (parseFloat(
-                        row.차인지급액?.toString().replace(/,/g, '')
-                      ) || 0),
-                    0
-                  )
-                  .toLocaleString()}
+                {(() => {
+                  const totalPayment = Math.round(
+                    getFilteredPayrollData()
+                      .reduce(
+                        (sum, row) =>
+                          sum +
+                          (parseFloat(row.급여합계?.toString().replace(/,/g, '')) ||
+                            0),
+                        0
+                      )
+                  );
+                  const totalDeduction = Math.round(
+                    getFilteredPayrollData()
+                      .reduce(
+                        (sum, row) =>
+                          sum +
+                          (parseFloat(row.공제합계?.toString().replace(/,/g, '')) ||
+                            0),
+                        0
+                      )
+                  );
+                  return (totalPayment - totalDeduction).toLocaleString();
+                })()}
                 원
               </div>
             </div>
             <div className="text-center">
               <div className="font-medium text-gray-600">평균 급여</div>
               <div className="text-lg font-bold text-orange-600">
-                {getFilteredPayrollData().length > 0
-                  ? Math.round(
-                      getFilteredPayrollData().reduce(
+                {(() => {
+                  if (getFilteredPayrollData().length === 0) return '0';
+                  const totalPayment = Math.round(
+                    getFilteredPayrollData()
+                      .reduce(
                         (sum, row) =>
                           sum +
-                          (parseFloat(
-                            row.차인지급액?.toString().replace(/,/g, '')
-                          ) || 0),
+                          (parseFloat(row.급여합계?.toString().replace(/,/g, '')) ||
+                            0),
                         0
-                      ) / getFilteredPayrollData().length
-                    ).toLocaleString()
-                  : 0}
+                      )
+                  );
+                  const totalDeduction = Math.round(
+                    getFilteredPayrollData()
+                      .reduce(
+                        (sum, row) =>
+                          sum +
+                          (parseFloat(row.공제합계?.toString().replace(/,/g, '')) ||
+                            0),
+                        0
+                      )
+                  );
+                  const actualTotal = totalPayment - totalDeduction;
+                  return Math.round(actualTotal / getFilteredPayrollData().length).toLocaleString();
+                })()}
                 원
               </div>
             </div>

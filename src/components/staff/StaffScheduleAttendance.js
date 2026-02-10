@@ -525,12 +525,10 @@ const StaffScheduleAttendance = ({
                     const leaveType =
                       selectedDateLeave?.type || selectedDateLeave?.leaveType;
 
-                    // ❌ 연차, 경조, 공가, 휴직, 결근, 병가 → 출근시간 미표시 (기타는 출근으로 표시)
+                    // ❌ 연차, 휴직, 결근, 병가 → 출근시간 미표시 (기타는 출근으로 표시)
                     if (
                       [
                         '연차',
-                        '경조',
-                        '공가',
                         '휴직',
                         '결근',
                         '병가',
@@ -553,7 +551,28 @@ const StaffScheduleAttendance = ({
                       );
                     }
 
-                    // ✅ 반차(오후), 외출, 조퇴 → 실제 출근 시간 표시 (없으면 "-")
+                    // ✅ 경조, 공가 → 출근 시간 있으면 표시, 없으면 휴가 유형 표시
+                    if (leaveType === '경조' || leaveType === '공가') {
+                      const hasCheckIn = selectedDateAttendance?.checkIn;
+                      return (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-600">
+                            {getText('출근시간', 'Check-in Time')}
+                          </span>
+                          {hasCheckIn ? (
+                            <span className="text-xs font-semibold px-3 text-blue-600">
+                              {selectedDateAttendance.checkIn}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-orange-100 text-orange-600">
+                              {leaveType}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // ✅ 반차(오후), 외출, 조퇴, 기타 → 실제 출근 시간 표시 (없으면 "-")
                     return (
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-gray-600">
@@ -571,12 +590,10 @@ const StaffScheduleAttendance = ({
                     const leaveType =
                       selectedDateLeave?.type || selectedDateLeave?.leaveType;
 
-                    // ❌ 연차, 경조, 공가, 휴직, 결근, 병가 → 퇴근시간 미표시 (기타는 출근으로 표시)
+                    // ❌ 연차, 휴직, 결근, 병가 → 퇴근시간 미표시 (기타는 출근으로 표시)
                     if (
                       [
                         '연차',
-                        '경조',
-                        '공가',
                         '휴직',
                         '결근',
                         '병가',
@@ -613,7 +630,28 @@ const StaffScheduleAttendance = ({
                       );
                     }
 
-                    // ✅ 반차(오전), 외출 → 실제 퇴근 시간 표시 (없으면 "-")
+                    // ✅ 경조, 공가 → 퇴근 시간 있으면 표시, 없으면 휴가 유형 표시
+                    if (leaveType === '경조' || leaveType === '공가') {
+                      const hasCheckOut = selectedDateAttendance?.checkOut;
+                      return (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-600">
+                            {getText('퇴근시간', 'Check-out Time')}
+                          </span>
+                          {hasCheckOut ? (
+                            <span className="text-xs font-semibold px-3 text-green-600">
+                              {selectedDateAttendance.checkOut}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-orange-100 text-orange-600">
+                              {leaveType}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // ✅ 반차(오전), 외출, 기타 → 실제 퇴근 시간 표시 (없으면 "-")
                     return (
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-gray-600">
