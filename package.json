@@ -54,6 +54,7 @@
     "start:mongodb": "node start-mongodb.js",
     "start": "concurrently \"npm run start:mongodb\" \"nodemon server/server.js\" \"craco start\"",
     "start:local": "concurrently \"nodemon server/server.js\" \"craco start\"",
+    "start:prod": "concurrently \"nodemon server/server.js\" \"node start-production-local.js\"",
     "start:frontend": "set PORT=3000 && craco start",
     "build": "craco build",
     "test": "craco test",

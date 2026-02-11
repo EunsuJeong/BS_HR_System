@@ -426,15 +426,32 @@ export const useSafetyManagement = (dependencies = {}) => {
 
   // [2_관리자 모드] 2.1_안전관리 - 무사고 일수 계산
   const getAccidentFreeDays = useCallback(() => {
-    if (safetyAccidents.length === 0) return 365; // 기본값
-
-    const lastAccidentDate = new Date(
-      Math.max(...safetyAccidents.map((acc) => new Date(acc.date)))
-    );
+    // 최근 사고 일자: 2025년 12월 2일 (기준일)
+    const defaultLastAccidentDate = new Date('2025-12-02');
+    
+    let lastAccidentDate;
+    
+    if (safetyAccidents.length === 0) {
+      // 사고 기록이 없으면 기준일부터 계산
+      lastAccidentDate = defaultLastAccidentDate;
+    } else {
+      // 사고 기록이 있으면 가장 최근 사고 날짜 찾기
+      lastAccidentDate = new Date(
+        Math.max(...safetyAccidents.map((acc) => new Date(acc.date)))
+      );
+      
+      // 기준일보다 이전 사고만 있다면 기준일 사용
+      if (lastAccidentDate < defaultLastAccidentDate) {
+        lastAccidentDate = defaultLastAccidentDate;
+      }
+    }
+    
     const today = new Date();
     const diffTime = today - lastAccidentDate;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // 365일 제한 없이 계속 카운트 가능
+    return diffDays >= 0 ? diffDays : 0;
   }, [safetyAccidents]);
 
   // [2_관리자 모드] 2.1_안전관리 - 무사고 달성 알림 확인 및 발송
