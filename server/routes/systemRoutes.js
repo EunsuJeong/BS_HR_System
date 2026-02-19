@@ -249,28 +249,48 @@ router.get('/backups', async (req, res) => {
   try {
     const fs = require('fs');
     const path = require('path');
-    const BACKUP_DIR = path.join(__dirname, '../../backups');
+    const BACKUP_DIR = 'D:/BS_HR_System/backups';
 
     // 백업 디렉토리가 없으면 빈 배열 반환
     if (!fs.existsSync(BACKUP_DIR)) {
       return res.json({ success: true, backups: [] });
     }
 
-    const files = fs.readdirSync(BACKUP_DIR);
-    const backupFiles = files
-      .filter(file => file.startsWith('backup_') && file.endsWith('.json'))
-      .map(file => {
-        const filePath = path.join(BACKUP_DIR, file);
-        const stats = fs.statSync(filePath);
-        return {
-          filename: file,
+    const backupFiles = [];
+
+    const collectJsonFiles = (currentDir) => {
+      const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = path.join(currentDir, entry.name);
+
+        if (entry.isDirectory()) {
+          collectJsonFiles(fullPath);
+          continue;
+        }
+
+        if (!entry.isFile() || !entry.name.endsWith('.json')) {
+          continue;
+        }
+
+        const stats = fs.statSync(fullPath);
+        const relativePath = path
+          .relative(BACKUP_DIR, fullPath)
+          .replace(/\\/g, '/');
+
+        backupFiles.push({
+          filename: entry.name,
+          relativePath,
           size: stats.size,
           sizeInMB: (stats.size / 1024 / 1024).toFixed(2),
           createdAt: stats.mtime,
-          age: Math.floor((Date.now() - stats.mtimeMs) / (1000 * 60 * 60 * 24)) // 일 단위
-        };
-      })
-      .sort((a, b) => b.createdAt - a.createdAt); // 최신순 정렬
+          age: Math.floor((Date.now() - stats.mtimeMs) / (1000 * 60 * 60 * 24)), // 일 단위
+        });
+      }
+    };
+
+    collectJsonFiles(BACKUP_DIR);
+    backupFiles.sort((a, b) => b.createdAt - a.createdAt); // 최신순 정렬
 
     console.log(`✅ [GET /system/backups] 백업 파일 ${backupFiles.length}개 조회`);
     res.json({ success: true, backups: backupFiles });

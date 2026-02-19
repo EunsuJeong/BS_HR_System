@@ -130,19 +130,21 @@ const AdminEmployeeManagement = ({
     return null;
   };
 
-  // 직원의 근무 형태 표시 (현재 월 근태 기준)
+  // 직원의 근무 형태 표시 (DB 우선, 근태 데이터는 보조)
   const getWorkTypeDisplay = (employee) => {
-    // 현재 월 근태 데이터 기준으로 실제 근무형태 확인
-    const actualWorkType = getActualWorkType(employee.id);
+    // DB에 근무형태가 명시되어 있으면 우선 사용
+    if (employee.workType) {
+      return employee.workType === '주간/야간' ? '주/야' : employee.workType;
+    }
 
+    // DB에 없을 경우에만 현재 월 근태 데이터로 추정
+    const actualWorkType = getActualWorkType(employee.id);
     if (actualWorkType) {
-      // 현재 월에 근태 데이터가 있으면 실제 분석 결과 표시
       return actualWorkType === '주간/야간' ? '주/야' : actualWorkType;
     }
 
-    // 현재 월에 근태 데이터가 없으면 DB의 workType 표시 (단, "주간/야간"은 제외)
-    const dbWorkType = employee.workType || '주간';
-    return dbWorkType === '주간/야간' ? '주간' : dbWorkType;
+    // 둘 다 없으면 기본값
+    return '주간';
   };
 
   return (
@@ -203,13 +205,11 @@ const AdminEmployeeManagement = ({
                         (!employeeSearchFilter.payType ||
                           emp.payType === employeeSearchFilter.payType) &&
                         (!employeeSearchFilter.workType ||
-                          (employeeSearchFilter.workType === '주간/야간'
-                            ? getActualWorkType(emp.id) === '주간/야간'
-                            : getActualWorkType(emp.id) ===
-                                employeeSearchFilter.workType ||
-                              (!getActualWorkType(emp.id) &&
-                                emp.workType ===
-                                  employeeSearchFilter.workType))) &&
+                          (() => {
+                            // DB 근무형태 우선 (근태 데이터는 보조)
+                            const workType = emp.workType || getActualWorkType(emp.id) || '주간';
+                            return workType === employeeSearchFilter.workType;
+                          })()) &&
                         (!employeeSearchFilter.status ||
                           (emp.status || '재직') ===
                             employeeSearchFilter.status)
@@ -692,13 +692,11 @@ const AdminEmployeeManagement = ({
                       (!employeeSearchFilter.payType ||
                         emp.payType === employeeSearchFilter.payType) &&
                       (!employeeSearchFilter.workType ||
-                        (employeeSearchFilter.workType === '주간/야간'
-                          ? getActualWorkType(emp.id) === '주간/야간'
-                          : getActualWorkType(emp.id) ===
-                              employeeSearchFilter.workType ||
-                            (!getActualWorkType(emp.id) &&
-                              emp.workType ===
-                                employeeSearchFilter.workType))) &&
+                        (() => {
+                          // DB 근무형태 우선 (근태 데이터는 보조)
+                          const workType = emp.workType || getActualWorkType(emp.id) || '주간';
+                          return workType === employeeSearchFilter.workType;
+                        })()) &&
                       (!employeeSearchFilter.status ||
                         (emp.status || '재직') === employeeSearchFilter.status)
                   )

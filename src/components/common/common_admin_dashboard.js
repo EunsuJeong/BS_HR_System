@@ -4352,7 +4352,7 @@ export const getWorkLifeBalanceDataByYearUtil = (
     };
 
     const filteredEmpsForOvertime = employees.filter(
-      (e) => !['이철균', '이현주'].includes(e.name)
+      (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
     );
 
     filteredEmpsForOvertime.forEach((emp, empIndex) => {

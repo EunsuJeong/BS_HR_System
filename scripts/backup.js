@@ -3,15 +3,23 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-// 백업 디렉토리 생성
-const backupDir = path.join(__dirname, '..', 'backups');
+function pad2(value) {
+  return String(value).padStart(2, '0');
+}
+
+const now = new Date();
+const year = String(now.getFullYear());
+const month = pad2(now.getMonth() + 1);
+const day = pad2(now.getDate());
+
+// 백업 디렉토리 생성 (년/월 단위)
+const backupDir = path.join('D:/BS_HR_System/backups', year, month);
 if (!fs.existsSync(backupDir)) {
   fs.mkdirSync(backupDir, { recursive: true });
 }
 
-// 현재 날짜/시간으로 백업 파일명 생성
-const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-const backupFile = path.join(backupDir, `backup_${timestamp}.json`);
+// 파일명: YYYY_MM_DD.json
+const backupFile = path.join(backupDir, `${year}_${month}_${day}.json`);
 
 console.log('🔄 MongoDB 백업 시작...');
 console.log(`📁 백업 파일: ${backupFile}`);

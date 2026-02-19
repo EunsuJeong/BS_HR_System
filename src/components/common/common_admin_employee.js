@@ -260,6 +260,12 @@ export const useEmployeeManagement = (dependencies = {}) => {
             aVal = a.payType || '';
             bVal = b.payType || '';
             break;
+          case 'workType':
+            // 정렬 순서: 야간(1) < 주간(2) < 주간/야간(3)
+            const workTypeOrder = { '야간': 1, '주간': 2, '주간/야간': 3 };
+            aVal = workTypeOrder[a.workType || '주간'] || 2;
+            bVal = workTypeOrder[b.workType || '주간'] || 2;
+            break;
           case 'contractType':
             aVal = a.contractType || '정규직';
             bVal = b.contractType || '정규직';
@@ -322,10 +328,9 @@ export const useEmployeeManagement = (dependencies = {}) => {
           // DB에 저장
           const { default: EmployeeAPI } = await import('../../api/employee');
 
-          // 연락처 마지막 4자리를 기본 비밀번호로 설정
-          const defaultPassword = newEmployee.phone
-            ? newEmployee.phone.slice(-4)
-            : '1234';
+          // 비밀번호 우선순위: 1) 사용자 입력 2) 연락처 마지막 4자리 3) 기본값 '1234'
+          const password = newEmployee.password || 
+                          (newEmployee.phone ? newEmployee.phone.slice(-4) : '1234');
 
           const employeePayload = {
             employeeId: newEmployee.id,
@@ -341,7 +346,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
             salaryType: newEmployee.payType || '시급',
             status: newEmployee.status || '재직',
             address: newEmployee.address || '',
-            password: defaultPassword, // ✅ 기본 비밀번호 추가
+            password: password, // ✅ 사용자 입력 비밀번호 우선 사용
           };
 
           const response = await EmployeeAPI.create(employeePayload);
@@ -349,7 +354,7 @@ export const useEmployeeManagement = (dependencies = {}) => {
           // 로컬 state 업데이트
           setEmployees([
             ...employees,
-            { ...newEmployee, password: defaultPassword },
+            { ...newEmployee, password: password },
           ]);
 
           setNewEmployee({

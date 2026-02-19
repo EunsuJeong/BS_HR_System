@@ -460,6 +460,39 @@ export const categorizeWorkTime = (
     };
   }
 
+  const isValidTime = (timeStr) => {
+    if (typeof timeStr !== 'string') return false;
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return false;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    return (
+      Number.isFinite(hours) &&
+      Number.isFinite(minutes) &&
+      hours >= 0 &&
+      hours <= 23 &&
+      minutes >= 0 &&
+      minutes <= 59
+    );
+  };
+
+  // '-', '경조', 공백 등 시간 형식이 아닌 값은 근무시간 계산 제외
+  if (!isValidTime(checkIn) || !isValidTime(checkOut)) {
+    return {
+      기본: 0,
+      조출: 0,
+      연장: 0,
+      특근: 0,
+      심야: 0,
+      '연장+심야': 0,
+      '조출+특근': 0,
+      '특근+연장': 0,
+      '특근+심야': 0,
+      '특근+연장+심야': 0,
+      '특근+조출': 0,
+    };
+  }
+
   // 1. 적용직급 확인 - 특정 직급은 기본만 적용 (현재 미적용: EXCLUDE_EXTRA_RANKS = [])
   if (EXCLUDE_EXTRA_RANKS.includes(employee.position || employee.직급 || '')) {
     const startMinutes = timeToMinutes(checkIn);
@@ -687,6 +720,26 @@ export const calcDailyWage = (
   COMPANY_WAGE_RULES
 ) => {
   if (!startTime || !endTime) {
+    return { totalWage: 0, breakTime: 0, workTime: 0, details: [] };
+  }
+
+  const isValidTime = (timeStr) => {
+    if (typeof timeStr !== 'string') return false;
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return false;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    return (
+      Number.isFinite(hours) &&
+      Number.isFinite(minutes) &&
+      hours >= 0 &&
+      hours <= 23 &&
+      minutes >= 0 &&
+      minutes <= 59
+    );
+  };
+
+  if (!isValidTime(startTime) || !isValidTime(endTime)) {
     return { totalWage: 0, breakTime: 0, workTime: 0, details: [] };
   }
 

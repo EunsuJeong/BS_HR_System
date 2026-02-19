@@ -112,12 +112,21 @@ const AdminAttendanceManagement = ({
     return shiftTypes.has('주간') && shiftTypes.has('야간');
   };
 
-  // 직원의 근무 형태 표시 (주간/야간 시프트가 있으면 "주/야")
+  // 직원의 근무 형태 표시 (DB 우선, 근태 데이터는 보조)
   const getWorkTypeDisplay = (employee) => {
+    // DB에 근무형태가 명시되어 있으면 우선 사용
+    if (employee.workType === '주간/야간') {
+      return '주/야';
+    }
+    if (employee.workType) {
+      return employee.workType;
+    }
+    
+    // DB에 없을 경우에만 현재 월 근태 데이터로 추정
     if (hasShiftWork(employee.id)) {
       return '주/야';
     }
-    return employee.workType || '주간';
+    return '주간';
   };
 
   return (

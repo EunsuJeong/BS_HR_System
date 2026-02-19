@@ -8,10 +8,14 @@ const path = require('path');
 const mongoose = require('mongoose');
 
 // 백업 디렉토리 경로
-const BACKUP_DIR = path.join(__dirname, '../../backups');
+const BACKUP_DIR = 'D:/BS_HR_System/backups';
 
 // 백업 보관 기간 (일)
 const BACKUP_RETENTION_DAYS = 15;
+
+function pad2(value) {
+  return String(value).padStart(2, '0');
+}
 
 /**
  * 백업 디렉토리 생성
@@ -30,9 +34,18 @@ async function performBackup() {
   try {
     ensureBackupDirectory();
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupFileName = `backup_${timestamp}.json`;
-    const backupFilePath = path.join(BACKUP_DIR, backupFileName);
+    const now = new Date();
+    const year = String(now.getFullYear());
+    const month = pad2(now.getMonth() + 1);
+    const day = pad2(now.getDate());
+
+    const monthlyDir = path.join(BACKUP_DIR, year, month);
+    if (!fs.existsSync(monthlyDir)) {
+      fs.mkdirSync(monthlyDir, { recursive: true });
+    }
+
+    const backupFileName = `${year}_${month}_${day}.json`;
+    const backupFilePath = path.join(monthlyDir, backupFileName);
 
     console.log('🗄️ 백업 시작:', new Date().toLocaleString('ko-KR'));
 
@@ -79,8 +92,8 @@ async function performBackup() {
     console.log(`  - 총 문서 수: ${backupMetadata.totalDocuments}`);
     console.log(`  - 파일 크기: ${(fs.statSync(backupFilePath).size / 1024 / 1024).toFixed(2)} MB`);
 
-    // 오래된 백업 파일 삭제
-    await deleteOldBackups();
+    // 오래된 백업 파일 자동 삭제 비활성화
+    // await deleteOldBackups();
 
     return true;
   } catch (error) {
@@ -93,54 +106,59 @@ async function performBackup() {
  * 15일이 지난 백업 파일 자동 삭제
  */
 async function deleteOldBackups() {
-  try {
-    const files = fs.readdirSync(BACKUP_DIR);
-    const now = Date.now();
-    const retentionPeriod = BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000; // 15일을 밀리초로 변환
-
-    let deletedCount = 0;
-
-    for (const file of files) {
-      if (!file.startsWith('backup_') || !file.endsWith('.json')) {
-        continue;
-      }
-
-      const filePath = path.join(BACKUP_DIR, file);
-      const stats = fs.statSync(filePath);
-      const fileAge = now - stats.mtimeMs;
-
-      // 15일이 지난 파일 삭제
-      if (fileAge > retentionPeriod) {
-        fs.unlinkSync(filePath);
-        deletedCount++;
-        console.log(`🗑️ 오래된 백업 삭제: ${file}`);
-      }
-    }
-
-    if (deletedCount > 0) {
-      console.log(`✅ ${deletedCount}개의 오래된 백업 파일 삭제 완료`);
-    }
-  } catch (error) {
-    console.error('❌ 오래된 백업 삭제 실패:', error);
-  }
+  // 자동 삭제 비활성화
+  // try {
+  //   const files = fs.readdirSync(BACKUP_DIR);
+  //   const now = Date.now();
+  //   const retentionPeriod = BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000; // 15일을 밀리초로 변환
+  //
+  //   let deletedCount = 0;
+  //
+  //   for (const file of files) {
+  //     if (!file.startsWith('backup_') || !file.endsWith('.json')) {
+  //       continue;
+  //     }
+  //
+  //     const filePath = path.join(BACKUP_DIR, file);
+  //     const stats = fs.statSync(filePath);
+  //     const fileAge = now - stats.mtimeMs;
+  //
+  //     // 15일이 지난 파일 삭제
+  //     if (fileAge > retentionPeriod) {
+  //       fs.unlinkSync(filePath);
+  //       deletedCount++;
+  //       console.log(`🗑️ 오래된 백업 삭제: ${file}`);
+  //     }
+  //   }
+  //
+  //   if (deletedCount > 0) {
+  //     console.log(`✅ ${deletedCount}개의 오래된 백업 파일 삭제 완료`);
+  //   }
+  // } catch (error) {
+  //   console.error('❌ 오래된 백업 삭제 실패:', error);
+  // }
 }
 
 /**
- * 백업 스케줄러 시작 (비활성화됨 - GitHub Actions 사용)
+ * 백업 스케줄러 시작
  */
 function startBackupScheduler() {
-  // 자정 자동 백업 비활성화 (GitHub Actions로 대체)
-  // cron.schedule('0 0 * * *', async () => {
-  //   console.log('\n========================================');
-  //   console.log('⏰ 예약된 백업 작업 시작');
-  //   console.log('========================================');
-  //   await performBackup();
-  // }, {
-  //   timezone: 'Asia/Seoul'
-  // });
+  // 매일 자정(00:00, KST) 자동 백업
+  cron.schedule(
+    '0 0 * * *',
+    async () => {
+      console.log('\n========================================');
+      console.log('⏰ 예약된 백업 작업 시작 (매일 자정)');
+      console.log('========================================');
+      await performBackup();
+    },
+    {
+      timezone: 'Asia/Seoul',
+    }
+  );
 
-  console.log('ℹ️  로컬 자동 백업 비활성화 (GitHub Actions 사용)');
-  console.log('💡 수동 백업: npm run backup:create');
+  console.log('✅ 자동 백업 스케줄러 시작됨 (매일 00:00 KST)');
+  console.log('📁 백업 저장 경로:', BACKUP_DIR);
 }
 
 /**

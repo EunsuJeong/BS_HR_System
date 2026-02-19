@@ -829,8 +829,8 @@ export const useAttendanceManagement = ({
 
       const employee = employees.find((emp) => emp.id === employeeId);
 
-      // 디버깅: 신미선 씨 데이터 로그 (이름으로 체크)
-      const isDebugTarget = employee && employee.name === '신미선';
+      // 디버깅: 신미선 씨 데이터 로그 (이름으로 체크) - 비활성화
+      const isDebugTarget = false; // employee && employee.name === '신미선';
 
       // employee를 찾지 못한 경우 빈 결과 반환
       if (!employee) {
