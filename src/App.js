@@ -491,7 +491,15 @@ const HRManagementSystem = () => {
 
   // *[1_공통] 1.3.2.5_공휴일 데이터 가져오기 (레거시 호환)*
   const getKoreanHolidays = (year) => {
-    return holidayData[year] || {};
+    if (holidayData[year] && Object.keys(holidayData[year]).length > 0) {
+      return holidayData[year];
+    }
+
+    try {
+      return holidayService.getBasicHolidays(year) || {};
+    } catch (error) {
+      return {};
+    }
   };
 
   // *[1_공통] 1.3.2.6_공휴일 강제 새로고침*
@@ -909,6 +917,18 @@ const HRManagementSystem = () => {
       if (yearHolidays[dateStr] || yearHolidays[shortKey]) {
         return true;
       }
+    }
+
+    // holidayData 로딩 전에도 기본 공휴일은 즉시 인식
+    try {
+      const fallbackHolidays = holidayService.getBasicHolidays(year) || {};
+      const [, monthStr, dayStr] = dateStr.split('-');
+      const shortKey = `${monthStr}-${dayStr}`;
+      if (fallbackHolidays[dateStr] || fallbackHolidays[shortKey]) {
+        return true;
+      }
+    } catch (error) {
+      // 폴백 실패 시 기존 로직 유지
     }
 
     if (!yearHolidays && !holidayLoadingStatus[year]) {
@@ -2332,15 +2352,34 @@ const HRManagementSystem = () => {
     }
   }, [currentUser, currentYear, currentMonth]); // attendanceSheetYear/Month 제거 - 무한루프 방지
 
+  const normalizeAttendanceTime = useCallback((value) => {
+    if (!value || typeof value !== 'string') {
+      return '';
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '-' || trimmed === '--') {
+      return '';
+    }
+
+    return trimmed;
+  }, []);
+
   // *[2_관리자 모드] 2.8_근태 데이터 관리 함수들*
   const getAttendanceForEmployee = useCallback(
     (employeeId, year, month, day) => {
       const dateKey = getDateKey(year, month, day);
       const employeeKey = `${employeeId}_${dateKey}`;
 
-      const attendanceData = attendanceSheetData[employeeKey] || {
+      const rawAttendanceData = attendanceSheetData[employeeKey] || {
         checkIn: '',
         checkOut: '',
+      };
+
+      const attendanceData = {
+        ...rawAttendanceData,
+        checkIn: normalizeAttendanceTime(rawAttendanceData.checkIn),
+        checkOut: normalizeAttendanceTime(rawAttendanceData.checkOut),
       };
 
       // 해당 날짜의 승인된 연차 정보 찾기
@@ -2365,7 +2404,7 @@ const HRManagementSystem = () => {
 
       return attendanceData;
     },
-    [attendanceSheetData, leaveRequests]
+    [attendanceSheetData, leaveRequests, normalizeAttendanceTime]
   );
 
   const setAttendanceForEmployee = useCallback(
@@ -2452,10 +2491,33 @@ const HRManagementSystem = () => {
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(
         day
       ).padStart(2, '0')}`;
+      const nextDate = new Date(year, month - 1, day);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = `${nextDate.getFullYear()}-${String(
+        nextDate.getMonth() + 1
+      ).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+      const leaveCheckDates =
+        employeeWorkType === '야간' ? [dateStr, nextDateStr] : [dateStr];
 
       const dayOfWeek = new Date(year, month - 1, day).getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isPublicHoliday = isHolidayDate(year, month, day);
+
+      const approvedLeaveRecord = employeeId
+        ? leaveRequests.find((leave) => {
+            if (leave.status !== '승인') return false;
+            if (leave.employeeId !== employeeId) return false;
+
+            const startDate = leave.startDate.split('T')[0];
+            const endDate = leave.endDate.split('T')[0];
+            return leaveCheckDates.some(
+              (checkDate) => checkDate >= startDate && checkDate <= endDate
+            );
+          })
+        : null;
+
+      const effectiveLeaveType =
+        employeeLeaveType || attendance?.leaveType || approvedLeaveRecord?.type;
 
       if (employeeLeaveType === '휴직') {
         return null;
@@ -2467,6 +2529,16 @@ const HRManagementSystem = () => {
           return '출근';
         }
         return null;
+      }
+
+      // 평일은 승인된 연차/결근을 출퇴근기록보다 우선 판정
+      if (effectiveLeaveType) {
+        if (effectiveLeaveType === '결근') {
+          return '결근';
+        }
+        if (effectiveLeaveType !== '휴직') {
+          return '연차';
+        }
       }
 
       // 1순위: 실제 출퇴근 기록이 있는 경우
@@ -2549,28 +2621,7 @@ const HRManagementSystem = () => {
         return '연차';
       }
 
-      // 승인된 연차 확인 (employeeId로 필터링)
-      if (employeeId) {
-        const leaveRecord = leaveRequests.find((leave) => {
-          if (leave.status !== '승인') return false;
-          if (leave.employeeId !== employeeId) return false;
-
-          // ISO 형식을 YYYY-MM-DD로 변환하여 비교
-          const startDate = leave.startDate.split('T')[0];
-          const endDate = leave.endDate.split('T')[0];
-
-          return dateStr >= startDate && dateStr <= endDate;
-        });
-
-        if (leaveRecord) {
-          // 📌 연차 유형에 따라 구분: '결근'은 결근으로, 나머지는 연차로
-          if (leaveRecord.type === '결근') {
-            return '결근';
-          } else {
-            return '연차';
-          }
-        }
-      }
+      // 승인된 연차는 상단 우선순위에서 처리됨
 
       // 3순위: 출퇴근 기록도 없고 연차도 없으면 결근
       return '결근';
@@ -5509,35 +5560,70 @@ const HRManagementSystem = () => {
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(
         day
       ).padStart(2, '0')}`;
-      const dateStrShort = `${String(month).padStart(2, '0')}-${String(
+      const shortDate = `${String(month).padStart(2, '0')}-${String(
         day
       ).padStart(2, '0')}`;
 
-      // 1. customHolidays 체크 (수동으로 추가된 휴일)
-      if (customHolidays[dateStr]) {
+      // 1. 기존 공휴일 판정 로직 재사용 (workTypeSettings, customHolidays, holidayData 포함)
+      if (isHoliday(dateStr)) {
         return true;
       }
 
-      // 2. holidayData 체크 (시스템 공휴일: 설날, 광복절, 추석 등)
-      const yearHolidays = holidayData[year] || {};
-      if (yearHolidays[dateStr] || yearHolidays[dateStrShort]) {
-        return true;
+      // 2. holidayService 폴백 (holidayData 로딩 지연/누락 대비)
+      try {
+        const fallbackHolidays = holidayService.getBasicHolidays(year) || {};
+        if (fallbackHolidays[dateStr] || fallbackHolidays[shortDate]) {
+          return true;
+        }
+      } catch (error) {
+        // 폴백 실패 시 다음 판정으로 진행
       }
 
-      // 3. scheduleEvents에서 category가 '공휴일'인 이벤트 체크
-      const isHoliday = scheduleEvents.some((event) => {
-        if (event.category !== '공휴일') {
+      const toKstDateString = (value) => {
+        if (!value) return '';
+
+        // 이미 YYYY-MM-DD면 그대로 사용
+        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          return value;
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return '';
+        }
+
+        return new Intl.DateTimeFormat('sv-SE', {
+          timeZone: 'Asia/Seoul',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(date);
+      };
+
+      // 3. scheduleEvents에서 공휴일 이벤트 체크 (category/type 모두 허용, 기간 포함)
+      const isScheduleHoliday = scheduleEvents.some((event) => {
+        const isHolidayEvent =
+          event.category === '공휴일' || event.type === '공휴일';
+        if (!isHolidayEvent) {
           return false;
         }
 
-        // startDate가 해당 날짜와 일치하는지 확인
-        const eventStartDate = event.startDate?.substring(0, 10); // YYYY-MM-DD 형식
-        return eventStartDate === dateStr;
+        const eventStart = toKstDateString(event.startDate || event.date);
+        const eventEnd = toKstDateString(
+          event.endDate || event.startDate || event.date
+        );
+
+        if (!eventStart) {
+          return false;
+        }
+
+        // 단일일/기간 모두 포함 판정
+        return dateStr >= eventStart && dateStr <= (eventEnd || eventStart);
       });
 
-      return isHoliday;
+      return isScheduleHoliday;
     },
-    [customHolidays, holidayData, scheduleEvents]
+    [isHoliday, scheduleEvents, holidayService]
   );
 
   // *[2_관리자 모드] 2.1_대시보드 - 출근 상태 관리*

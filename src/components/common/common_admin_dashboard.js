@@ -18,6 +18,13 @@ import {
 import { SafetyAccidentAPI } from '../../api/safety';
 import { NotificationAPI } from '../../api/communication';
 
+const toLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // ============================================================
 // [2_관리자 모드] 2.1_대시보드 - HOOKS
 // ============================================================
@@ -66,15 +73,24 @@ export const useDashboardStats = ({
     let targetDate, targetYesterday;
 
     if (dashboardDateFilter === 'today') {
-      targetDate = new Date().toISOString().split('T')[0];
+      targetDate = toLocalDateString();
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      targetYesterday = yesterday.toISOString().split('T')[0];
+      targetYesterday = toLocalDateString(yesterday);
     } else {
       targetDate = dashboardSelectedDate;
       const selectedDate = new Date(dashboardSelectedDate);
       selectedDate.setDate(selectedDate.getDate() - 1);
-      targetYesterday = selectedDate.toISOString().split('T')[0];
+      targetYesterday = toLocalDateString(selectedDate);
+    }
+
+    const checkDate = new Date(targetDate);
+    const today = new Date();
+    checkDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    if (checkDate > today) {
+      devLog('🔕 미래 날짜는 출근/결근 집계를 계산하지 않음:', targetDate);
+      return stats;
     }
 
     devLog('🔍 대상 날짜:', { targetDate, targetYesterday });
@@ -127,6 +143,20 @@ export const useDashboardStats = ({
           targetMonth,
           targetDay
         );
+
+        const checkInValue = String(attendanceData?.checkIn || '').trim();
+        const hasRealCheckIn =
+          checkInValue !== '' && checkInValue !== '-' && checkInValue !== '--';
+
+        // 공휴일은 실제 출근자만 포함 (출근 안 한 직원은 결근도 아님)
+        if (!hasRealCheckIn) {
+          return;
+        }
+
+        // 공휴일 실출근자는 출근으로 고정
+        stats.totalDayShift++;
+        stats.present++;
+        return;
       }
       // 📌 평일이면 시프트 판정 우선순위 적용 (사용자 기준)
       // 1순위: 출근시간으로 주간 또는 야간 판정 (workType 무관)
@@ -206,7 +236,7 @@ export const useDashboardStats = ({
         }
       } // else (평일 시프트 판정 종료)
 
-      // 4. 상태 분석
+      // 4. 상태 분석 (평일만)
       let status = analyzeAttendanceStatusForDashboard(
         attendanceData,
         checkDateObj.getFullYear(),
@@ -222,7 +252,12 @@ export const useDashboardStats = ({
       }
 
       // 5. 결근인 경우 attendance 배열 확인
-      if (status === '결근') {
+      if (
+        status === '결근' &&
+        !isHoliday &&
+        attendanceData &&
+        (attendanceData.checkIn || attendanceData.checkOut)
+      ) {
         const attendanceTarget = emp.attendance
           ? emp.attendance.find((att) => att.date === checkDate)
           : null;
@@ -1614,6 +1649,13 @@ export const useDashboardAttendance = ({
     );
     const employeeList = getEmployeesByStatusLocal(status, false); // 주간 근무자만
     devLog(`🔍 검색된 주간 ${status} 직원:`, employeeList);
+
+    if (!employeeList || employeeList.length === 0) {
+      setSelectedStatusEmployees([]);
+      setShowEmployeeListPopup(false);
+      return;
+    }
+
     setSelectedStatusEmployees(employeeList);
     setSelectedStatus(`주간 ${status}`);
     setSelectedStatusDate(targetDate);
@@ -1654,6 +1696,13 @@ export const useDashboardAttendance = ({
     );
     const employeeList = getEmployeesByStatusLocal(status, true); // 야간 근무자만
     devLog(`🔍 검색된 야간 ${status} 직원:`, employeeList);
+
+    if (!employeeList || employeeList.length === 0) {
+      setSelectedStatusEmployees([]);
+      setShowEmployeeListPopup(false);
+      return;
+    }
+
     setSelectedStatusEmployees(employeeList);
     setSelectedStatus(`야간 ${status}`);
     setSelectedStatusDate(targetDate);
@@ -1722,6 +1771,7 @@ export const useDashboardAttendance = ({
         getAttendanceForEmployee,
         analyzeAttendanceStatusForDashboard,
         devLog,
+        isHolidayDate,
       });
 
       devLog(
@@ -1729,6 +1779,10 @@ export const useDashboardAttendance = ({
         updatedEmployeeList
       );
       setSelectedStatusEmployees(updatedEmployeeList);
+
+      if (!updatedEmployeeList || updatedEmployeeList.length === 0) {
+        setShowEmployeeListPopup(false);
+      }
     }
   }, [
     dashboardDateFilter,
@@ -1737,6 +1791,7 @@ export const useDashboardAttendance = ({
     showEmployeeListPopup,
     selectedStatus,
     employees,
+    isHolidayDate,
   ]);
 
   return {
@@ -1947,9 +2002,18 @@ export const getEmployeesByStatus = ({
 }) => {
   let targetDate;
   if (dashboardDateFilter === 'today') {
-    targetDate = new Date().toISOString().split('T')[0];
+    targetDate = toLocalDateString();
   } else {
     targetDate = dashboardSelectedDate;
+  }
+
+  const checkDate = new Date(targetDate);
+  const today = new Date();
+  checkDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  if (checkDate > today) {
+    devLog(`🔕 미래 날짜(${targetDate})는 상태별 목록을 표시하지 않음`);
+    return [];
   }
 
   devLog(
@@ -2019,6 +2083,17 @@ export const getEmployeesByStatus = ({
             targetDay
           );
         }
+
+        const checkInValue = String(attendanceData?.checkIn || '').trim();
+        const hasRealCheckIn =
+          checkInValue !== '' && checkInValue !== '-' && checkInValue !== '--';
+
+        // 공휴일은 실출근자만 출근으로 간주
+        if (!hasRealCheckIn) {
+          return false;
+        }
+
+        return status === '출근';
       }
       // 📌 평일이면 시프트 판정 우선순위 적용 (사용자 기준)
       // 1순위: 출근시간으로 주간 또는 야간 판정 (workType 무관)
@@ -2143,7 +2218,12 @@ export const getEmployeesByStatus = ({
         empStatus = '출근';
       }
 
-      if (empStatus === '결근') {
+      if (
+        empStatus === '결근' &&
+        !isHoliday &&
+        attendanceData &&
+        (attendanceData.checkIn || attendanceData.checkOut)
+      ) {
         const attendanceTarget = emp.attendance
           ? emp.attendance.find((att) => att.date === checkDate)
           : null;
@@ -2311,13 +2391,18 @@ export const getEmployeesByStatus = ({
         checkOutTime = attendanceData.checkOut || '';
       }
 
+      const leaveTypeDisplay =
+        attendanceData?.leaveType ||
+        (emp.leaveType && emp.leaveType !== '휴직' ? emp.leaveType : '-') ||
+        '-';
+
       return {
         id: emp.id,
         name: emp.name,
         department: emp.department,
         position: emp.position,
         workType: actualShift, // 실제 시프트 저장
-        leaveType: emp.leaveType || '-',
+        leaveType: leaveTypeDisplay,
         time: checkInTime,
         checkIn: checkInTime,
         checkOut: checkOutTime,
@@ -5562,10 +5647,16 @@ export const getGoalDetailDataUtil = (
   const detailData = [];
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // ✅ 이철균, 이현주, 퇴사자 제외
-  const filteredEmps = employees.filter(
-    (e) => !['이철균', '이현주'].includes(e.name) && e.status !== '퇴사'
+  // ✅ 기본 제외 대상 (특정 인원만 제외)
+  const baseFilteredEmps = employees.filter(
+    (e) => !['이철균', '이현주'].includes(e.name)
   );
+
+  // ✅ 일반 지표는 퇴사자 제외, 퇴사율 지표는 퇴사자 포함
+  const filteredEmps =
+    metric === '퇴사율'
+      ? baseFilteredEmps
+      : baseFilteredEmps.filter((e) => e.status !== '퇴사');
 
   let filteredData = [];
 
@@ -5590,8 +5681,18 @@ export const getGoalDetailDataUtil = (
       return [{ text: '퇴사자 없음' }];
     }
   } else {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dateObj = new Date(year, month, day);
+      dateObj.setHours(0, 0, 0, 0);
+
+      // 미래 날짜는 집계에서 제외
+      if (dateObj > today) {
+        continue;
+      }
+
       const dayOfWeek = dateObj.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isPublicHoliday = isHolidayDate(year, month + 1, day);
