@@ -8,13 +8,25 @@ const path = require('path');
 const mongoose = require('mongoose');
 
 // 백업 디렉토리 경로
-const BACKUP_DIR = 'D:/BS_HR_System/backups';
+// 우선순위: BACKUP_DIR 환경변수 > D:/BS_HR_System/backups
+const DEFAULT_BACKUP_DIR = path.resolve('D:/BS_HR_System/backups');
+const BACKUP_DIR = process.env.BACKUP_DIR
+  ? path.resolve(process.env.BACKUP_DIR)
+  : DEFAULT_BACKUP_DIR;
 
 // 백업 보관 기간 (일)
 const BACKUP_RETENTION_DAYS = 15;
 
 function pad2(value) {
   return String(value).padStart(2, '0');
+}
+
+function getBackupFilePath(targetDate = new Date()) {
+  const year = String(targetDate.getFullYear());
+  const month = pad2(targetDate.getMonth() + 1);
+  const day = pad2(targetDate.getDate());
+  const backupFileName = `${year}_${month}_${day}.json`;
+  return path.join(BACKUP_DIR, year, month, backupFileName);
 }
 
 /**
@@ -33,6 +45,10 @@ function ensureBackupDirectory() {
 async function performBackup() {
   try {
     ensureBackupDirectory();
+
+    if (!mongoose.connection || !mongoose.connection.db) {
+      throw new Error('MongoDB 연결이 준비되지 않아 백업을 진행할 수 없습니다.');
+    }
 
     const now = new Date();
     const year = String(now.getFullYear());
@@ -102,6 +118,23 @@ async function performBackup() {
   }
 }
 
+async function checkAndRunCatchupBackup() {
+  try {
+    const todayBackupPath = getBackupFilePath(new Date());
+
+    if (fs.existsSync(todayBackupPath)) {
+      console.log('ℹ️ 오늘 백업 파일이 이미 존재하여 보정 백업을 건너뜁니다.');
+      return false;
+    }
+
+    console.log('⚠️ 오늘 백업 파일이 없어 보정 백업을 즉시 실행합니다.');
+    return await performBackup();
+  } catch (error) {
+    console.error('❌ 보정 백업 실행 실패:', error.message);
+    return false;
+  }
+}
+
 /**
  * 15일이 지난 백업 파일 자동 삭제
  */
@@ -159,6 +192,11 @@ function startBackupScheduler() {
 
   console.log('✅ 자동 백업 스케줄러 시작됨 (매일 00:00 KST)');
   console.log('📁 백업 저장 경로:', BACKUP_DIR);
+
+  // 자정 실행 누락 대비: 서버 시작 시 당일 백업 파일이 없으면 즉시 1회 보정
+  if (process.env.BACKUP_CATCHUP_ON_START !== 'false') {
+    checkAndRunCatchupBackup();
+  }
 }
 
 /**
@@ -176,4 +214,6 @@ module.exports = {
   manualBackup,
   performBackup,
   deleteOldBackups,
+  checkAndRunCatchupBackup,
+  getBackupFilePath,
 };

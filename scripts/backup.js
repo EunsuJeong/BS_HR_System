@@ -12,8 +12,12 @@ const year = String(now.getFullYear());
 const month = pad2(now.getMonth() + 1);
 const day = pad2(now.getDate());
 
+const backupRootDir = process.env.BACKUP_DIR
+  ? path.resolve(process.env.BACKUP_DIR)
+  : path.resolve('D:/BS_HR_System/backups');
+
 // 백업 디렉토리 생성 (년/월 단위)
-const backupDir = path.join('D:/BS_HR_System/backups', year, month);
+const backupDir = path.join(backupRootDir, year, month);
 if (!fs.existsSync(backupDir)) {
   fs.mkdirSync(backupDir, { recursive: true });
 }
