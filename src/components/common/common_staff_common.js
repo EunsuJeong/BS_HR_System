@@ -23,27 +23,6 @@ export const useStaffPWAInitializer = (currentUser) => {
   useEffect(() => {
     if (currentUser?.role === 'employee') {
 
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker
-          .register('/service-worker.js')
-          .then((registration) => {
-          })
-          .catch((error) => {
-            console.warn('⚠️ [직원모드] Service Worker 등록 실패:', error);
-          });
-
-        navigator.serviceWorker
-          .register('/firebase-messaging-sw.js')
-          .then((registration) => {
-          })
-          .catch((error) => {
-            console.warn(
-              '⚠️ [직원모드] Firebase Messaging SW 등록 실패:',
-              error
-            );
-          });
-      }
-
       const initializeFCM = async () => {
         try {
           const token = await requestFCMPermission();
@@ -62,26 +41,6 @@ export const useStaffPWAInitializer = (currentUser) => {
         }
       });
 
-      let deferredPrompt;
-      const handleBeforeInstallPrompt = (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-      };
-
-      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-      window.addEventListener('appinstalled', () => {
-        deferredPrompt = null;
-      });
-
-      return () => {
-        window.removeEventListener(
-          'beforeinstallprompt',
-          handleBeforeInstallPrompt
-        );
-      };
-    } else if (currentUser?.role === 'admin') {
-      // 관리자 모드 - PWA/FCM 비활성화
     }
   }, [currentUser]);
 };

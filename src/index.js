@@ -26,6 +26,16 @@ async function warmupBackend() {
   }
 }
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/service-worker.js')
+      .catch((error) => {
+        console.warn('⚠️ [PWA] Service Worker 등록 실패:', error);
+      });
+  });
+}
+
 // Initialize app after backend warmup
 warmupBackend().then(() => {
   const root = ReactDOM.createRoot(document.getElementById('root'));

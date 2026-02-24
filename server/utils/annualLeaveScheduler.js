@@ -429,6 +429,7 @@ async function checkAnnualLeaveExpiry(io) {
             baseAnnual: nextPeriod.totalAnnual,
             carryOverLeave: carryOverLeave, // 기록용 (수당 계산용)
             totalAnnual: nextPeriod.totalAnnual, // 총연차 = 기본연차
+            leaveUsed: 0, // 기준 사용연차도 리셋 (프론트 계산 동기화)
             usedAnnual: 0,
             remainAnnual: nextPeriod.totalAnnual // 잔여 = 총연차
           });
