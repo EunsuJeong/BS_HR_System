@@ -1414,11 +1414,11 @@ const AdminLeaveManagement = ({
                                 </span>
                               )}
                             </td>
-                            <td className="text-center py-1 px-2">
+                            <td className="text-center py-1 px-2 whitespace-nowrap">
                               {isEditing ? (
-                                <>
+                                <div className="inline-flex items-center gap-1">
                                   <button
-                                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
+                                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
                                     onClick={() =>
                                       handleSaveLeaveHistory(lr.id)
                                     }
@@ -1431,11 +1431,11 @@ const AdminLeaveManagement = ({
                                   >
                                     취소
                                   </button>
-                                </>
+                                </div>
                               ) : lr.status === '대기' ? (
-                                <>
+                                <div className="inline-flex items-center gap-1">
                                   <button
-                                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
+                                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
                                     onClick={() => handleApproveLeave(lr.id)}
                                   >
                                     승인
@@ -1446,7 +1446,7 @@ const AdminLeaveManagement = ({
                                   >
                                     반려
                                   </button>
-                                </>
+                                </div>
                               ) : (
                                 <button
                                   className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
