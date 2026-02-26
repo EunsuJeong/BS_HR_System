@@ -253,7 +253,7 @@ const AdminSuggestionManagement = ({
                     ▼
                   </button>
                 </th>
-                <th className="text-center py-1 px-2 min-w-[80px]">
+                <th className="text-center py-1 px-2 min-w-[110px]">
                   유형
                   <button
                     onClick={() => handleSuggestionSort('type')}
@@ -262,7 +262,7 @@ const AdminSuggestionManagement = ({
                     ▼
                   </button>
                 </th>
-                <th className="text-center py-1 px-2 min-w-[350px]">
+                <th className="text-center py-1 px-1 min-w-[220px]">
                   내용
                   <button
                     onClick={() => handleSuggestionSort('content')}
@@ -271,7 +271,7 @@ const AdminSuggestionManagement = ({
                     ▼
                   </button>
                 </th>
-                <th className="text-center py-1 px-2 min-w-[120px]">
+                <th className="text-center py-1 px-2 min-w-[220px]">
                   비고
                   <button
                     onClick={() => handleSuggestionSort('remark')}
@@ -400,7 +400,7 @@ const AdminSuggestionManagement = ({
                             getSuggestionCategoryText(s.type, 'ko')
                           )}
                         </td>
-                        <td className="text-center py-2 px-2">
+                        <td className="text-center py-2 px-1">
                           {isEditing ? (
                             <textarea
                               value={editingSuggestionData.content || s.content}
@@ -410,11 +410,11 @@ const AdminSuggestionManagement = ({
                                   content: e.target.value,
                                 }))
                               }
-                              className="w-full px-2 py-1 border rounded"
+                              className="w-full px-1 py-1 border rounded"
                               rows="2"
                             />
                           ) : (
-                            <div className="max-w-xs text-center whitespace-normal break-words line-clamp-3 mx-auto">
+                            <div className="w-full text-center whitespace-pre-wrap break-words mx-auto">
                               {s.content}
                             </div>
                           )}
@@ -436,7 +436,7 @@ const AdminSuggestionManagement = ({
                             />
                           ) : (
                             <div
-                              className="max-w-[100px] text-center whitespace-normal break-words line-clamp-2 mx-auto"
+                              className="min-w-[220px] text-center whitespace-pre-wrap break-words mx-auto"
                               title={s.remark || '-'}
                             >
                               {s.remark || '-'}

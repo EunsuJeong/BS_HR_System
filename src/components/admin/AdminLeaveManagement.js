@@ -1145,7 +1145,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2 w-[450px]">
+                    <th className="text-center py-1 px-2 w-[320px]">
                       사유
                       <button
                         onClick={() => handleLeaveSort('reason')}
@@ -1316,7 +1316,7 @@ const AdminLeaveManagement = ({
                                 lr.type
                               )}
                             </td>
-                            <td className="text-center py-2 px-2 w-[450px] break-words whitespace-normal">
+                            <td className="text-center py-2 px-2 w-[320px] break-words whitespace-normal">
                               {isEditing ? (
                                 <input
                                   type="text"
