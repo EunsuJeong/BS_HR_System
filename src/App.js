@@ -1168,6 +1168,11 @@ const HRManagementSystem = () => {
 
   // *[2_관리자 모드] 2.0.2_탭 변경 함수*
   const handleTabChange = (tabId) => {
+    // 권한 체크: permissions 배열이 있으면 포함된 탭만 허용
+    if (currentUser?.permissions?.length && !currentUser.permissions.includes(tabId)) {
+      return;
+    }
+
     // 근태관리 탭에서 나갈 때 통계 저장
     if (activeTab === 'attendance' && tabId !== 'attendance') {
       if (saveStatsRef.current) {
@@ -1180,6 +1185,14 @@ const HRManagementSystem = () => {
     setActiveTab(tabId);
     localStorage.setItem('activeTab', tabId);
   };
+
+  // *[2_관리자 모드] 2.0.2.1_로그인 후 권한 없는 탭이면 dashboard로 복귀*
+  useEffect(() => {
+    if (currentUser?.permissions?.length && !currentUser.permissions.includes(activeTab)) {
+      setActiveTab('dashboard');
+      localStorage.setItem('activeTab', 'dashboard');
+    }
+  }, [currentUser]);
 
   // *[2_관리자 모드] 2.0.3_스크롤 최상단 복귀 useEffect*
   useEffect(() => {
@@ -6144,6 +6157,11 @@ const HRManagementSystem = () => {
     { id: 'system', label: '시스템 관리', icon: Settings },
   ];
 
+  // 권한 기반 메뉴 필터링 (permissions 배열이 있으면 해당 메뉴만 표시)
+  const filteredMenuItems = currentUser?.permissions?.length
+    ? menuItems.filter(item => currentUser.permissions.includes(item.id))
+    : menuItems;
+
   /* ========== RENDER CONTENT - 메뉴별 화면 렌더링 ========== */
   const renderContent = () => {
     switch (activeTab) {
@@ -6732,7 +6750,7 @@ const HRManagementSystem = () => {
         js */
         <AdminMain
           currentUser={currentUser}
-          menuItems={menuItems}
+          menuItems={filteredMenuItems}
           activeTab={activeTab}
           handleTabChange={handleTabChange}
           setCurrentMonth={setCurrentMonth}

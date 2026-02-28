@@ -36,13 +36,12 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Initialize app after backend warmup
-warmupBackend().then(() => {
-  const root = ReactDOM.createRoot(document.getElementById('root'));
-  root.render(
-    <App />
-  );
-});
+// 앱은 즉시 렌더링, 백엔드 warmup은 백그라운드에서 실행
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <App />
+);
+warmupBackend(); // 백그라운드 실행 (렌더링 블로킹 없음)
 
 // Disabled for performance in development
 // reportWebVitals();
