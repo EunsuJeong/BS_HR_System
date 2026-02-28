@@ -31,6 +31,8 @@ const AdminSuggestionManagement = ({
   setEditingSuggestionRow,
   editingSuggestionData,
   setEditingSuggestionData,
+  currentUser,
+  handleConfirmSuggestion,
 }) => {
   // 검색 필터 변경시 페이지 1로 리셋
   useEffect(() => {
@@ -456,6 +458,7 @@ const AdminSuggestionManagement = ({
                               className="w-20 px-2 py-1 border rounded text-center"
                             >
                               <option value="대기">대기</option>
+                              <option value="확인">확인</option>
                               <option value="승인">승인</option>
                               <option value="반려">반려</option>
                             </select>
@@ -485,28 +488,53 @@ const AdminSuggestionManagement = ({
                                 취소
                               </button>
                             </>
-                          ) : s.status === '대기' ? (
-                            <>
-                              <button
-                                className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
-                                onClick={() => handleApproveSuggestion(s.id)}
-                              >
-                                승인
-                              </button>
-                              <button
-                                className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                                onClick={() => handleRejectSuggestion(s.id)}
-                              >
-                                반려
-                              </button>
-                            </>
+                          ) : currentUser?.allowedDepartments?.length ? (
+                            // 부서장: 대기→확인/반려, 나머지→비활성
+                            s.status === '대기' ? (
+                              <>
+                                <button
+                                  className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs mr-1 hover:bg-green-200"
+                                  onClick={() => handleConfirmSuggestion(s.id)}
+                                >
+                                  확인
+                                </button>
+                                <button
+                                  className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                  onClick={() => handleRejectSuggestion(s.id)}
+                                >
+                                  반려
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )
                           ) : (
-                            <button
-                              className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
-                              onClick={() => handleEditSuggestion(s)}
-                            >
-                              수정
-                            </button>
+                            // 전체관리자: 확인→승인/반려, 대기→대기텍스트, 승인/반려→수정
+                            s.status === '확인' ? (
+                              <>
+                                <button
+                                  className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
+                                  onClick={() => handleApproveSuggestion(s.id)}
+                                >
+                                  승인
+                                </button>
+                                <button
+                                  className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                  onClick={() => handleRejectSuggestion(s.id)}
+                                >
+                                  반려
+                                </button>
+                              </>
+                            ) : s.status === '대기' ? (
+                              <span className="text-xs text-yellow-600">대기</span>
+                            ) : (
+                              <button
+                                className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                                onClick={() => handleEditSuggestion(s)}
+                              >
+                                수정
+                              </button>
+                            )
                           )}
                         </td>
                       </tr>

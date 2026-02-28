@@ -47,6 +47,8 @@ const AdminLeaveManagement = ({
   setEditingLeaveHistoryRow,
   editingLeaveHistoryData,
   setEditingLeaveHistoryData,
+  currentUser,
+  handleConfirmLeave,
 }) => {
   // 검색 필터 변경시 페이지 1로 리셋
   useEffect(() => {
@@ -275,15 +277,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
-                      퇴사일
-                      <button
-                        onClick={() => handleAnnualLeaveSort('resignDate')}
-                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        ▼
-                      </button>
-                    </th>
+                    {/* 퇴사일 컬럼 비표시 */}
                     <th className="text-center py-1 px-2">
                       근속년수
                       <button
@@ -624,27 +618,7 @@ const AdminLeaveManagement = ({
                               emp.hireDate || emp.joinDate || '미등록'
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
-                            {isEditing ? (
-                              <input
-                                type="date"
-                                value={
-                                  editAnnualData.resignDate ||
-                                  emp.resignDate ||
-                                  ''
-                                }
-                                onChange={(e) =>
-                                  setEditAnnualData((prev) => ({
-                                    ...prev,
-                                    resignDate: e.target.value,
-                                  }))
-                                }
-                                className="w-28 px-2 py-1 border rounded text-center"
-                              />
-                            ) : (
-                              emp.resignDate || '-'
-                            )}
-                          </td>
+                          {/* 퇴사일 셀 비표시 */}
                           <td className="text-center py-1 px-2">
                             {annualData.years}년 {annualData.months}개월
                           </td>
@@ -1399,6 +1373,7 @@ const AdminLeaveManagement = ({
                                   className="w-20 px-2 py-1 border rounded text-center"
                                 >
                                   <option value="대기">대기</option>
+                                  <option value="확인">확인</option>
                                   <option value="승인">승인</option>
                                   <option value="반려">반려</option>
                                   <option value="취소">취소</option>
@@ -1432,28 +1407,53 @@ const AdminLeaveManagement = ({
                                     취소
                                   </button>
                                 </div>
-                              ) : lr.status === '대기' ? (
-                                <div className="inline-flex items-center gap-1">
-                                  <button
-                                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
-                                    onClick={() => handleApproveLeave(lr.id)}
-                                  >
-                                    승인
-                                  </button>
-                                  <button
-                                    className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                                    onClick={() => handleRejectLeave(lr.id)}
-                                  >
-                                    반려
-                                  </button>
-                                </div>
+                              ) : currentUser?.allowedDepartments?.length ? (
+                                // 부서장: 대기→확인/반려, 나머지→비활성
+                                lr.status === '대기' ? (
+                                  <div className="inline-flex items-center gap-1">
+                                    <button
+                                      className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                                      onClick={() => handleConfirmLeave(lr.id)}
+                                    >
+                                      확인
+                                    </button>
+                                    <button
+                                      className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                      onClick={() => handleRejectLeave(lr.id)}
+                                    >
+                                      반려
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-400">-</span>
+                                )
                               ) : (
-                                <button
-                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
-                                  onClick={() => handleEditLeaveHistory(lr)}
-                                >
-                                  수정
-                                </button>
+                                // 전체관리자: 확인→승인/반려, 대기→대기텍스트, 승인/반려→수정
+                                lr.status === '확인' ? (
+                                  <div className="inline-flex items-center gap-1">
+                                    <button
+                                      className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                                      onClick={() => handleApproveLeave(lr.id)}
+                                    >
+                                      승인
+                                    </button>
+                                    <button
+                                      className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                      onClick={() => handleRejectLeave(lr.id)}
+                                    >
+                                      반려
+                                    </button>
+                                  </div>
+                                ) : lr.status === '대기' ? (
+                                  <span className="text-xs text-yellow-600">대기</span>
+                                ) : (
+                                  <button
+                                    className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                                    onClick={() => handleEditLeaveHistory(lr)}
+                                  >
+                                    수정
+                                  </button>
+                                )
                               )}
                             </td>
                           </tr>

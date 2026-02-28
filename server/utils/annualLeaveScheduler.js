@@ -315,8 +315,9 @@ async function checkAnnualLeaveExpiry(io) {
   try {
     console.log('✅ [연차만료알림] 연차 만료일 체크 시작...');
 
-    const today = new Date();
-    const year = today.getFullYear();
+    // KST 기준 오늘 날짜 문자열 (YYYY-MM-DD)
+    const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const year = new Date().getFullYear();
 
     // 재직 중인 직원 조회
     const employees = await Employee.find({ status: '재직' });
@@ -324,23 +325,34 @@ async function checkAnnualLeaveExpiry(io) {
     let notificationCount = 0;
 
     for (const employee of employees) {
-      const annualPeriod = calculateAnnualLeavePeriod(employee);
-      if (!annualPeriod) continue;
+      // DB의 annualLeaveEnd 우선 사용 (없으면 joinDate 기반 계산으로 폴백)
+      const annualEndStr = employee.annualLeaveEnd;
+      const annualStartStr = employee.annualLeaveStart;
+      if (!annualEndStr || !annualStartStr) continue;
 
-      const endDate = new Date(annualPeriod.annualEnd);
-      const daysUntilExpiry = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
-
-      // 사용한 연차 계산
-      const usedAnnual = await calculateUsedAnnualLeave(
-        employee.id,
-        annualPeriod.annualStart,
-        annualPeriod.annualEnd
+      // KST 기준 만료일까지 일수 계산 (문자열 날짜 직접 비교)
+      const daysUntilExpiry = Math.round(
+        (new Date(annualEndStr + 'T00:00:00+09:00') - new Date(todayKST + 'T00:00:00+09:00'))
+        / (1000 * 60 * 60 * 24)
       );
 
+      // calculateAnnualLeavePeriod는 totalAnnual 계산용으로만 사용
+      const annualPeriod = calculateAnnualLeavePeriod(employee) || {};
+
+      // 사용한 연차 계산 (DB의 연차 기간 기준)
+      const usedAnnual = await calculateUsedAnnualLeave(
+        employee.id,
+        annualStartStr,
+        annualEndStr
+      );
+
+      const totalAnnual = employee.totalAnnual || employee.baseAnnual || annualPeriod.totalAnnual || 15;
       const annualData = {
-        ...annualPeriod,
+        annualStart: annualStartStr,
+        annualEnd: annualEndStr,
+        totalAnnual,
         usedAnnual,
-        remainAnnual: annualPeriod.totalAnnual - usedAnnual
+        remainAnnual: totalAnnual - usedAnnual
       };
 
       // ============ 1. 연차 만료 예고 알림 (180일, 90일, 30일, 7일 전) ============
@@ -351,11 +363,9 @@ async function checkAnnualLeaveExpiry(io) {
           if (daysUntilExpiry === days) {
             const notificationKey = `leaveExpiry${days}_${employee.id}_${year}`;
 
-            // 오늘 이미 보낸 알림인지 체크 (DB에서 조회)
-            const todayStart = new Date(today);
-            todayStart.setHours(0, 0, 0, 0);
-            const todayEnd = new Date(today);
-            todayEnd.setHours(23, 59, 59, 999);
+            // 오늘 이미 보낸 알림인지 체크 (KST 기준)
+            const todayStart = new Date(todayKST + 'T00:00:00+09:00');
+            const todayEnd = new Date(todayKST + 'T23:59:59+09:00');
 
             const existingNotif = await Notification.findOne({
               'related.entity': 'annualLeave',
@@ -396,15 +406,14 @@ async function checkAnnualLeaveExpiry(io) {
         }
       }
 
-      // ============ 2. 연차 갱신 처리 (만료일 다음날) ============
-      if (daysUntilExpiry === -1) {
+      // ============ 2. 연차 갱신 처리 (만료일 다음날 이후) ============
+      // daysUntilExpiry < 0: 만료일이 지났음 (누락된 경우도 소급 처리)
+      if (daysUntilExpiry < 0) {
         console.log(`🔄 [연차갱신] ${employee.name}님 연차 갱신 시작...`);
 
-        // 오늘 이미 갱신했는지 체크
-        const todayStart = new Date(today);
-        todayStart.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(today);
-        todayEnd.setHours(23, 59, 59, 999);
+        // 오늘 이미 갱신했는지 체크 (KST 기준)
+        const todayStart = new Date(todayKST + 'T00:00:00+09:00');
+        const todayEnd = new Date(todayKST + 'T23:59:59+09:00');
 
         const existingRenewal = await Notification.findOne({
           'related.entity': 'annualLeaveRenewal',
@@ -419,8 +428,8 @@ async function checkAnnualLeaveExpiry(io) {
           // 이월 연차 계산
           const carryOverLeave = calculateCarryOverLeave(annualData.remainAnnual);
 
-          // 다음 연차 기간 계산
-          const nextPeriod = calculateNextAnnualPeriod(employee, annualPeriod.annualEnd);
+          // 다음 연차 기간 계산 (DB의 만료일 기준)
+          const nextPeriod = calculateNextAnnualPeriod(employee, annualEndStr);
 
           // Employee DB 업데이트
           await Employee.findByIdAndUpdate(employee._id, {

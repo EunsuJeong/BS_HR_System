@@ -17,10 +17,11 @@ import * as XLSX from 'xlsx';
  * 건의사항 상태별 색상 스타일
  */
 export const STATUS_COLORS = {
-  승인: 'bg-blue-100 text-blue-800',
   대기: 'bg-yellow-100 text-yellow-800',
-  취소: 'bg-gray-100 text-gray-800',
+  확인: 'bg-green-100 text-green-800',
+  승인: 'bg-blue-100 text-blue-800',
   반려: 'bg-red-100 text-red-800',
+  취소: 'bg-gray-100 text-gray-800',
 };
 
 // ============================================================
@@ -46,6 +47,28 @@ export const useSuggestionApproval = (dependencies = {}) => {
     suggestionSortField = '',
     suggestionSortOrder = 'asc',
   } = dependencies;
+
+  // [2_관리자 모드] 2.7_건의관리 - 건의사항 확인 (부서장)
+  const handleConfirmSuggestion = useCallback(
+    async (suggestionId) => {
+      try {
+        await SuggestionAPI.update(suggestionId, {
+          status: '확인',
+          approver: currentUser.name,
+          approvalDate: new Date().toISOString(),
+        });
+        setSuggestions((prev) =>
+          prev.map((sg) =>
+            sg.id === suggestionId ? { ...sg, status: '확인' } : sg
+          )
+        );
+      } catch (error) {
+        console.error('❌ 건의사항 확인 실패:', error);
+        alert('건의사항 확인 중 오류가 발생했습니다.');
+      }
+    },
+    [currentUser, setSuggestions]
+  );
 
   // [2_관리자 모드] 2.7_건의관리 - 건의사항 승인 시작
   const handleApproveSuggestion = useCallback(
@@ -168,6 +191,7 @@ export const useSuggestionApproval = (dependencies = {}) => {
   );
 
   return {
+    handleConfirmSuggestion,
     handleApproveSuggestion,
     handleRejectSuggestion,
     handleSuggestionApprovalConfirm,

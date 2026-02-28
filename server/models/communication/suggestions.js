@@ -14,7 +14,7 @@ const suggestionSchema = new mongoose.Schema(
     content: String,
     status: {
       type: String,
-      enum: ['대기', '승인', '반려', '취소'],
+      enum: ['대기', '확인', '승인', '반려', '취소'],
       default: '대기',
     },
     remark: String, // 승인/반려 사유

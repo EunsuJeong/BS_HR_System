@@ -220,8 +220,9 @@ export const useStaffLeave = (dependencies = {}) => {
 
     const availableLeave = remainAnnualLeave - pendingLeave;
 
-    // 연차가 차감되는 유형에 대해서만 잔여 연차 확인 (대기 상태도 포함)
-    if (days > 0 && availableLeave < days) {
+    // 연차/반차 유형에 대해서만 잔여 연차 확인 (외출·조퇴 등은 연차 차감 없이 신청 가능)
+    const isAnnualLeaveType = leaveForm.type === '연차' || leaveForm.type.startsWith('반차');
+    if (isAnnualLeaveType && days > 0 && availableLeave < days) {
       setLeaveFormError(
         getText(
           `잔여 연차가 부족합니다. (사용 가능: ${availableLeave}일, 신청: ${days}일)`,

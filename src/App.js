@@ -5413,7 +5413,7 @@ const HRManagementSystem = () => {
   });
 
   // *[2_관리자 모드] 2.6_연차관리 - 연차 승인/반려 훅*
-  const { handleApproveLeave, handleRejectLeave, handleLeaveApprovalConfirm } =
+  const { handleApproveLeave, handleRejectLeave, handleLeaveApprovalConfirm, handleConfirmLeave } =
     useLeaveApproval({
       leaveRequests,
       setLeaveRequests,
@@ -5431,6 +5431,7 @@ const HRManagementSystem = () => {
     handleApproveSuggestion,
     handleRejectSuggestion,
     handleSuggestionApprovalConfirm,
+    handleConfirmSuggestion,
   } = useSuggestionApproval({
     suggestions,
     setSuggestions,
@@ -6546,6 +6547,8 @@ const HRManagementSystem = () => {
             setEditingLeaveHistoryRow={setEditingLeaveHistoryRow}
             editingLeaveHistoryData={editingLeaveHistoryData}
             setEditingLeaveHistoryData={setEditingLeaveHistoryData}
+            currentUser={currentUser}
+            handleConfirmLeave={handleConfirmLeave}
           />
         );
 
@@ -6580,6 +6583,8 @@ const HRManagementSystem = () => {
             setEditingSuggestionRow={setEditingSuggestionRow}
             editingSuggestionData={editingSuggestionData}
             setEditingSuggestionData={setEditingSuggestionData}
+            currentUser={currentUser}
+            handleConfirmSuggestion={handleConfirmSuggestion}
           />
         );
 

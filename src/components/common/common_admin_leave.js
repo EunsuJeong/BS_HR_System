@@ -147,6 +147,29 @@ export const useLeaveApproval = (dependencies = {}) => {
     setShowLeaveApprovalPopup = () => {},
   } = dependencies;
 
+  // [2_관리자 모드] 2.6_연차관리 - 연차 확인 (부서장)
+  const handleConfirmLeave = useCallback(
+    async (leaveId) => {
+      try {
+        const { default: LeaveAPI } = await import('../../api/leave');
+        await LeaveAPI.updateStatus(leaveId, {
+          status: '확인',
+          approvedBy: currentUser.id || currentUser.employeeId,
+          approverName: currentUser.name,
+        });
+        setLeaveRequests((prev) =>
+          prev.map((lr) =>
+            lr.id === leaveId ? { ...lr, status: '확인' } : lr
+          )
+        );
+      } catch (error) {
+        console.error('❌ 연차 확인 실패:', error);
+        alert('연차 확인 중 오류가 발생했습니다.');
+      }
+    },
+    [currentUser, setLeaveRequests]
+  );
+
   // [2_관리자 모드] 2.6_연차관리 - 연차 승인 시작
   const handleApproveLeave = useCallback(
     (leaveId) => {
@@ -441,6 +464,7 @@ export const useLeaveApproval = (dependencies = {}) => {
   );
 
   return {
+    handleConfirmLeave,
     handleApproveLeave,
     handleRejectLeave,
     handleLeaveApprovalConfirm,
