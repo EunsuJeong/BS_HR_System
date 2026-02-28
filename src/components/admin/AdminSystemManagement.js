@@ -6,6 +6,7 @@ import CommonAIService from '../common/common_admin_ai';
 import { AI_MODEL_TYPES, AI_MODELS_LIST } from '../common/common_admin_system';
 
 const AdminSystemManagement = ({
+  currentUser,
   unifiedApiKey,
   setUnifiedApiKey,
   showUnifiedApiKey,
@@ -32,8 +33,8 @@ const AdminSystemManagement = ({
 }) => {
   return (
     <div className="space-y-6">
-      {/* 🆕 통합 AI 설정 (권장) */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6 max-w-4xl mx-auto shadow-lg">
+      {/* 🆕 통합 AI 설정 (권장) - 제한 관리자는 비표시 */}
+      {!currentUser?.allowedDepartments?.length && <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6 max-w-4xl mx-auto shadow-lg">
         <div className="flex items-center gap-3 mb-4">
           <div className="bg-blue-500 text-white rounded-full p-2">
             <Settings className="w-6 h-6" />
@@ -246,9 +247,10 @@ const AdminSystemManagement = ({
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
-      {/* AI 챗봇 권한 관리 섹션 */}
+      {/* AI 챗봇 권한 관리 섹션 - 제한 관리자는 비표시 */}
+      {!currentUser?.allowedDepartments?.length &&
       <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-4xl mx-auto">
         <h3 className="text-2xl font-semibold text-gray-800 mb-6">
           AI 챗봇 권한 관리
@@ -421,8 +423,7 @@ const AdminSystemManagement = ({
           </div>
 
         </div>
-      </div>
-
+      </div>}
 
       {/* 관리자 비밀번호 변경 섹션 */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-4xl mx-auto">

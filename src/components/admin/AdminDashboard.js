@@ -13,6 +13,7 @@ import {
  * UI만 담당하며 모든 로직과 상태는 props로 받음
  */
 const AdminDashboard = ({
+  currentUser,
   // 상태값
   dashboardDateFilter,
   setDashboardDateFilter,
@@ -510,7 +511,7 @@ const AdminDashboard = ({
       </div>
 
       {/* 중단: 목표달성률 + 워라밸/안전/교육 현황 + 안전 현황 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 ${currentUser?.allowedDepartments?.length ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-4`}>
         {/* 목표달성률 */}
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between">
           <div className="flex justify-between items-center mb-3">
@@ -518,15 +519,17 @@ const AdminDashboard = ({
               이번달 목표달성률 ({new Date().getFullYear()} /{' '}
               {String(new Date().getMonth() + 1).padStart(2, '0')})
             </h3>
-            <button
-              onClick={() => {
-                setSelectedYear(new Date().getFullYear());
-                setShowGoalDetailsPopup(true);
-              }}
-              className="text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
-            >
-              더 보기
-            </button>
+            {!currentUser?.allowedDepartments?.length && (
+              <button
+                onClick={() => {
+                  setSelectedYear(new Date().getFullYear());
+                  setShowGoalDetailsPopup(true);
+                }}
+                className="text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
+              >
+                더 보기
+              </button>
+            )}
           </div>
           <div className="space-y-2">
             <div className="flex justify-between">
@@ -583,8 +586,8 @@ const AdminDashboard = ({
             </div>
           </div>
         </div>
-        {/* 워라밸 지표 */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between">
+        {/* 워라밸 지표 - 제한 관리자는 비표시 */}
+        {!currentUser?.allowedDepartments?.length && <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between">
           <div className="flex justify-between items-center mb-3">
             <h4 className="text-lg font-semibold">
               이번달 워라밸 지표 ({new Date().getFullYear()} /{' '}
@@ -659,7 +662,7 @@ const AdminDashboard = ({
               </span>
             </div>
           </div>
-        </div>
+        </div>}
         {/* 안전 현황 */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-3">
@@ -728,8 +731,8 @@ const AdminDashboard = ({
         </div>
       </div>
 
-      {/* 하단: AI 추천사항 */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200">
+      {/* 하단: AI 추천사항 - 제한 관리자는 비표시 */}
+      {!currentUser?.allowedDepartments?.length && <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <Settings className="w-6 h-6 text-purple-600 mr-3" />
@@ -821,7 +824,7 @@ const AdminDashboard = ({
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* 직원 리스트 팝업 */}
       {showEmployeeListPopup && (

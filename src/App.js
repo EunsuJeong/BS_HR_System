@@ -6176,6 +6176,7 @@ const HRManagementSystem = () => {
       case 'dashboard':
         return (
           <AdminDashboard
+            currentUser={currentUser}
             dashboardDateFilter={dashboardDateFilter}
             setDashboardDateFilter={setDashboardDateFilter}
             dashboardSelectedDate={dashboardSelectedDate}
@@ -6359,6 +6360,7 @@ const HRManagementSystem = () => {
       case 'notification-management':
         return (
           <AdminNotificationManagement
+            currentUser={currentUser}
             regularNotificationForm={regularNotificationForm}
             setRegularNotificationForm={setRegularNotificationForm}
             realtimeNotificationForm={realtimeNotificationForm}
@@ -6709,6 +6711,7 @@ const HRManagementSystem = () => {
       case 'system':
         return (
           <AdminSystemManagement
+            currentUser={currentUser}
             unifiedApiKey={unifiedApiKey}
             setUnifiedApiKey={setUnifiedApiKey}
             showUnifiedApiKey={showUnifiedApiKey}

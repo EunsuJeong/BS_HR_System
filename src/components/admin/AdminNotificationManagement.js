@@ -7,6 +7,7 @@ import {
 } from '../common/common_admin_notification';
 
 const AdminNotificationManagement = ({
+  currentUser,
   regularNotificationForm,
   setRegularNotificationForm,
   realtimeNotificationForm,
@@ -184,8 +185,8 @@ const AdminNotificationManagement = ({
           </div>
         </div>
       </div>
-      {/* 우측: 알림 로그 - notification-management 메뉴에서만 표시 */}
-      {activeTab === 'notification-management' && (
+      {/* 우측: 알림 로그 - notification-management 메뉴에서만 표시, 제한 관리자는 비표시 */}
+      {activeTab === 'notification-management' && !currentUser?.allowedDepartments?.length && (
         <div className="w-1/2 flex flex-col">
           <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
             <div className="flex items-center justify-between mb-6">
