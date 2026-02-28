@@ -6162,6 +6162,13 @@ const HRManagementSystem = () => {
     ? menuItems.filter(item => currentUser.permissions.includes(item.id))
     : menuItems;
 
+  // 부서 기반 데이터 필터링 (allowedDepartments가 있으면 해당 부서만 표시)
+  const deptFilter = (list) => {
+    const allowed = currentUser?.allowedDepartments;
+    if (!allowed?.length) return list;
+    return list.filter(item => allowed.includes(item.department));
+  };
+
   /* ========== RENDER CONTENT - 메뉴별 화면 렌더링 ========== */
   const renderContent = () => {
     switch (activeTab) {
@@ -6498,7 +6505,7 @@ const HRManagementSystem = () => {
           <AdminLeaveManagement
             leaveManagementTab={leaveManagementTab}
             setLeaveManagementTab={setLeaveManagementTab}
-            employees={employees}
+            employees={deptFilter(employees)}
             setEmployees={setEmployees}
             leaveSearch={leaveSearch}
             setLeaveSearch={setLeaveSearch}
@@ -6511,7 +6518,7 @@ const HRManagementSystem = () => {
             annualLeaveSortField={annualLeaveSortField}
             annualLeaveSortOrder={annualLeaveSortOrder}
             handleAnnualLeaveSort={handleAnnualLeaveSort}
-            leaveRequests={leaveRequests}
+            leaveRequests={deptFilter(leaveRequests)}
             setLeaveRequests={setLeaveRequests}
             getSortedLeaveRequests={getSortedLeaveRequests}
             getFilteredLeaveRequests={getFilteredLeaveRequests}
@@ -6544,7 +6551,7 @@ const HRManagementSystem = () => {
       case 'suggestion-management':
         return (
           <AdminSuggestionManagement
-            suggestions={suggestions}
+            suggestions={deptFilter(suggestions)}
             setSuggestions={setSuggestions}
             suggestionSearch={suggestionSearch}
             setSuggestionSearch={setSuggestionSearch}
