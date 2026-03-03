@@ -490,7 +490,7 @@ const AdminDashboard = ({
                 연차
               </span>
               <span className="text-5xl font-extrabold text-blue-700">
-                {leaveRequests.filter((lr) => lr.status === '대기' || lr.status === '확인').length}건
+                {leaveRequests.filter((lr) => lr.status === '대기').length}건
               </span>
             </div>
             {/* 건의 사항 승인대기 */}

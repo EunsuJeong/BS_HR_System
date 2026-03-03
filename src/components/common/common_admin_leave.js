@@ -162,12 +162,33 @@ export const useLeaveApproval = (dependencies = {}) => {
             lr.id === leaveId ? { ...lr, status: '확인' } : lr
           )
         );
+        alert('연차 확인이 완료되었습니다. 최종 승인 대기 중입니다.');
+
+        // 알림 전송 (실패해도 메인 흐름에 영향 없음)
+        try {
+          const targetLeave = leaveRequests.find((lr) => lr.id === leaveId);
+          if (targetLeave) {
+            const targetEmployee = employees.find(
+              (emp) => emp.id === targetLeave.employeeId
+            );
+            if (targetEmployee) {
+              send자동알림({
+                처리유형: '연차 확인',
+                대상자: targetEmployee,
+                처리자: currentUser.name,
+                알림내용: `${targetLeave.name || targetLeave.employeeName}님의 ${targetLeave.type} 신청이 부서장 확인되었습니다.\n기간: ${targetLeave.startDate}${targetLeave.endDate !== targetLeave.startDate ? ` ~ ${targetLeave.endDate}` : ''}\n확인자: ${currentUser.name}`,
+              });
+            }
+          }
+        } catch (notifyErr) {
+          console.warn('⚠️ 확인 알림 전송 실패 (무시):', notifyErr);
+        }
       } catch (error) {
         console.error('❌ 연차 확인 실패:', error);
         alert('연차 확인 중 오류가 발생했습니다.');
       }
     },
-    [currentUser, setLeaveRequests]
+    [currentUser, setLeaveRequests, leaveRequests, employees, send자동알림]
   );
 
   // [2_관리자 모드] 2.6_연차관리 - 연차 승인 시작

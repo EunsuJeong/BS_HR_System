@@ -892,6 +892,8 @@ const AdminLeaveManagement = ({
                                   취소
                                 </button>
                               </>
+                            ) : currentUser?.allowedDepartments?.length ? (
+                              <span className="text-xs text-gray-400">-</span>
                             ) : (
                               <button
                                 className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
@@ -1616,3 +1618,4 @@ const AdminLeaveManagement = ({
 };
 
 export default AdminLeaveManagement;
+
