@@ -219,9 +219,15 @@ export const useEmployeeManagement = (dependencies = {}) => {
   // [2_관리자 모드] 2.2_직원 관리 - 직원 목록 정렬
   const getSortedEmployees = useCallback(
     (employeeList) => {
+      // 퇴사자 우선순위: 퇴사자는 항상 맨 아래
+      const isResigned = (emp) => (emp.status || '재직') === '퇴사';
+
       // 정렬 필드가 없으면 기본적으로 사번 오름차순 정렬
       if (!employeeSortField) {
         return [...employeeList].sort((a, b) => {
+          const aResigned = isResigned(a) ? 1 : 0;
+          const bResigned = isResigned(b) ? 1 : 0;
+          if (aResigned !== bResigned) return aResigned - bResigned;
           const aId = (a.id || '').toString();
           const bId = (b.id || '').toString();
           return aId.localeCompare(bId);
@@ -229,6 +235,12 @@ export const useEmployeeManagement = (dependencies = {}) => {
       }
 
       return [...employeeList].sort((a, b) => {
+        // 퇴사자는 항상 맨 아래 (status 컬럼 정렬 시에는 제외)
+        if (employeeSortField !== 'status') {
+          const aResigned = isResigned(a) ? 1 : 0;
+          const bResigned = isResigned(b) ? 1 : 0;
+          if (aResigned !== bResigned) return aResigned - bResigned;
+        }
         let aVal, bVal;
 
         switch (employeeSortField) {

@@ -175,6 +175,7 @@ const AdminSuggestionManagement = ({
             >
               <option value="전체">전체 상태</option>
               <option value="대기">대기</option>
+              <option value="확인">확인</option>
               <option value="승인">승인</option>
               <option value="반려">반려</option>
             </select>
