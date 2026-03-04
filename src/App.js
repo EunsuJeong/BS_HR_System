@@ -2514,7 +2514,8 @@ const HRManagementSystem = () => {
 
       const dayOfWeek = new Date(year, month - 1, day).getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const isPublicHoliday = isHolidayDate(year, month, day);
+      // holidayData/customHolidays를 포함한 정확한 공휴일 판정 (대체공휴일 포함)
+      const isPublicHoliday = isHolidayDate(year, month, day, customHolidays, holidayData);
 
       const approvedLeaveRecord = employeeId
         ? leaveRequests.find((leave) => {
@@ -2639,7 +2640,7 @@ const HRManagementSystem = () => {
       // 3순위: 출퇴근 기록도 없고 연차도 없으면 결근
       return '결근';
     },
-    [leaveRequests]
+    [leaveRequests, customHolidays, holidayData]
   );
 
   const calculateMonthlyStats = useCallback(

@@ -36,14 +36,17 @@ export const exportOrganizationToXLSX = (employeeData, getWorkPeriodText) => {
     부서: emp.department,
     세부부서: emp.subDepartment || '',
     직책: emp.role || '팀원',
+    근무형태: emp.workType || '주간',
     급여형태: emp.payType || '',
+    계약유형: emp.contractType || '정규',
     입사일: emp.joinDate,
     퇴사일: emp.leaveDate || '',
     근속년수: getWorkPeriodText(emp.joinDate),
-    근무형태: emp.workType || '주간',
     상태: emp.status || '재직',
     연락처: emp.phone || '',
     주소: emp.address || '',
+    비밀번호: emp.password || '',
+    마지막로그인: emp.lastLogin || '',
   }));
 
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -843,31 +846,42 @@ export const generateChartImage = async (chartType, employees, scheduleEvents) =
     }
   };
 
-  export const handleDownloadAttendanceList = (sortedEmployees, selectedStatus) =>    
+  export const handleDownloadAttendanceList = (sortedEmployees, selectedStatus) =>
    {
-    const headers =
-      selectedStatus === '출근' || selectedStatus === '지각'
-        ? ['시간', '사번', '이름', '직급', '부서']
-        : ['사번', '이름', '직급', '부서'];
+    const isAttendance = selectedStatus.includes('출근') || selectedStatus.includes('지각');
+    const isLeave = selectedStatus.includes('연차') || selectedStatus.includes('반차');
+
+    const headers = isAttendance
+      ? ['출근시간', '사번', '이름', '직급', '부서']
+      : isLeave
+      ? ['사번', '이름', '직급', '부서', '연차유형']
+      : ['사번', '이름', '직급', '부서'];
 
     let csvContent = headers.join(',') + '\n';
 
     sortedEmployees.forEach((employee) => {
-      const row =
-        selectedStatus === '출근' || selectedStatus === '지각'
-          ? [
-              employee.time || '-',
-              employee.id,
-              employee.name,
-              employee.position || employee.title || '사원',
-              employee.department,
-            ]
-          : [
-              employee.id,
-              employee.name,
-              employee.position || employee.title || '사원',
-              employee.department,
-            ];
+      const row = isAttendance
+        ? [
+            employee.time || '-',
+            employee.id,
+            employee.name,
+            employee.position || employee.title || '사원',
+            employee.department,
+          ]
+        : isLeave
+        ? [
+            employee.id,
+            employee.name,
+            employee.position || employee.title || '사원',
+            employee.department,
+            employee.leaveType || '-',
+          ]
+        : [
+            employee.id,
+            employee.name,
+            employee.position || employee.title || '사원',
+            employee.department,
+          ];
       csvContent += row.join(',') + '\n';
     });
 

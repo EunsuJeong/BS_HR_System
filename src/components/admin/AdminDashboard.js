@@ -490,7 +490,11 @@ const AdminDashboard = ({
                 연차
               </span>
               <span className="text-5xl font-extrabold text-blue-700">
-                {leaveRequests.filter((lr) => lr.status === '대기').length}건
+                {leaveRequests.filter((lr) =>
+                  currentUser?.allowedDepartments?.length
+                    ? lr.status === '대기' && currentUser.allowedDepartments.includes(lr.department)
+                    : lr.status === '확인'
+                ).length}건
               </span>
             </div>
             {/* 건의 사항 승인대기 */}
@@ -502,7 +506,11 @@ const AdminDashboard = ({
                 건의 사항
               </span>
               <span className="text-5xl font-extrabold text-blue-700">
-                {suggestions.filter((s) => s.status === '대기' || s.status === '확인').length}건
+                {suggestions.filter((s) =>
+                  currentUser?.allowedDepartments?.length
+                    ? s.status === '대기' && currentUser.allowedDepartments.includes(s.department)
+                    : s.status === '확인'
+                ).length}건
               </span>
             </div>
             {/* END ADMIN */}

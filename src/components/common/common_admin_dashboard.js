@@ -5917,10 +5917,14 @@ export const getGoalDetailDataUtil = (
       let employeeList;
       if (metric === '지각률') {
         employeeList = group.employees
+          .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
           .map((emp) => `${emp.name}(${emp.checkIn})`)
           .join(', ');
       } else {
-        employeeList = group.employees.map((emp) => emp.name).join(', ');
+        employeeList = group.employees
+          .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+          .map((emp) => emp.name)
+          .join(', ');
       }
 
       detailData.push({
