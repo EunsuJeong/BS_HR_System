@@ -8,8 +8,8 @@
   "devCommand": "npm run start:frontend",
   "redirects": [
     {
-      "source": "/:path*",
-      "destination": "http://bssystem.iptime.org:3000/:path*",
+      "source": "/(.*)",
+      "destination": "http://bssystem.iptime.org:3000/$1",
       "permanent": false
     }
   ],
