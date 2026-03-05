@@ -739,9 +739,10 @@ const AdminNoticeManagement = ({
                   pointer-events: none;
                 }
                 [contenteditable] { font-size: 12px; }
-                [contenteditable] font[size="1"] { font-size: 10px !important; }
-                [contenteditable] font[size="2"] { font-size: 12px !important; }
-                [contenteditable] font[size="3"] { font-size: 14px !important; }
+                [contenteditable] * { font-size: 12px !important; }
+                [contenteditable] font[size="1"], [contenteditable] font[size="1"] * { font-size: 10px !important; }
+                [contenteditable] font[size="2"], [contenteditable] font[size="2"] * { font-size: 12px !important; }
+                [contenteditable] font[size="3"], [contenteditable] font[size="3"] * { font-size: 14px !important; }
                 [contenteditable] img {
                   max-width: 100%;
                   height: auto;

@@ -258,6 +258,23 @@ export const useNoticeManagement = (dependencies = {}) => {
     [setNoticeForm, setEditingNoticeId, setNoticeFiles]
   );
 
+  // [2_관리자 모드] 2.3_공지 관리 - 인라인 font-size 제거 (저장 전 정규화)
+  const normalizeNoticeFontSize = (html) => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      doc.querySelectorAll('[style]').forEach((el) => {
+        el.style.removeProperty('font-size');
+        if (!el.getAttribute('style') || el.getAttribute('style').trim() === '') {
+          el.removeAttribute('style');
+        }
+      });
+      return doc.body.innerHTML;
+    } catch {
+      return html;
+    }
+  };
+
   // [2_관리자 모드] 2.3_공지 관리 - 공지사항 작성 완료
   const handleNoticeCreate = async () => {
     if (!noticeForm.title.trim() || !noticeForm.content.trim()) {
@@ -306,7 +323,7 @@ export const useNoticeManagement = (dependencies = {}) => {
       // 2. 공지사항 등록
       const noticeData = {
         title: noticeForm.title,
-        content: noticeForm.content,
+        content: normalizeNoticeFontSize(noticeForm.content),
         author: currentUser?.name || currentUser?.id || 'Admin',
         attachments: uploadedAttachments,
         isImportant: noticeForm.isImportant || false,
@@ -393,7 +410,7 @@ export const useNoticeManagement = (dependencies = {}) => {
       // 2. 공지사항 수정
       const noticeData = {
         title: noticeForm.title,
-        content: noticeForm.content,
+        content: normalizeNoticeFontSize(noticeForm.content),
         attachments: uploadedAttachments,
         isImportant: noticeForm.isImportant || false,
       };
