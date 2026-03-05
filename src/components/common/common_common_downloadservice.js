@@ -188,47 +188,80 @@ export const exportPayrollXLSX = (
   rows.push(detailHeaders);
 
   payrollTableData.forEach((emp) => {
+    const n = (v) => parseFloat((v || '0').toString().replace(/,/g, '')) || 0;
+
+    // 급여합계 계산 (프론트엔드와 동일)
+    const 급여합계 =
+      n(emp.기본급) +
+      n(emp.연장수당_금액) +
+      n(emp.휴일근로수당_금액) +
+      n(emp.야간근로수당_금액) +
+      n(emp.지각조퇴_금액) +
+      n(emp.결근무급주휴_금액) +
+      n(emp.차량) +
+      n(emp.교통비) +
+      n(emp.통신비) +
+      n(emp.기타수당) +
+      n(emp.년차수당_금액) +
+      n(emp.상여금);
+
+    // 공제합계 계산 (프론트엔드와 동일)
+    const 공제합계 =
+      n(emp.소득세) +
+      n(emp.지방세) +
+      n(emp.국민연금) +
+      n(emp.건강보험) +
+      n(emp.장기요양) +
+      n(emp.고용보험) +
+      n(emp.가불금과태료) +
+      n(emp['매칭IRP적립']) +
+      n(emp.경조비기타공제) +
+      n(emp.기숙사) +
+      n(emp.건강보험연말정산) +
+      n(emp.장기요양연말정산) +
+      n(emp.연말정산징수세액);
+
     const row = [
-      emp.부서 || emp.department || '',
-      emp.성명 || emp.name || '',
-      emp.직급 || emp.position || '사원',
-      emp.입사일자 || emp.joinDate || '',
-      formatNumber(emp.시급 || emp.hourlyWage || 0),
-      formatNumber(emp.기본시간 || emp.basicHours || 0),
-      formatNumber(emp.기본급 || emp.basicPay || 0),
-      formatNumber(emp.연장시간 || emp.overtimeHours || 0),
-      formatNumber(emp.연장수당 || emp.overtimePay || 0),
-      formatNumber(emp.휴일근로시간 || emp.holidayWorkHours || 0),
-      formatNumber(emp.휴일근로수당 || emp.holidayWorkPay || 0),
-      formatNumber(emp.야간근로시간 || emp.nightWorkHours || 0),
-      formatNumber(emp.야간근로수당 || emp.nightWorkPay || 0),
-      formatNumber(emp.지각조퇴시간 || emp.lateEarlyHours || 0),
-      formatNumber(emp.지각조퇴공제 || emp.lateEarlyDeduction || 0),
-      formatNumber(emp.결근일수 || emp.absentDays || 0),
-      formatNumber(emp.결근공제 || emp.absentDeduction || 0),
-      formatNumber(emp.차량수당 || emp.carAllowance || 0),
-      formatNumber(emp.교통비 || emp.transportAllowance || 0),
-      formatNumber(emp.통신비 || emp.phoneAllowance || 0),
-      formatNumber(emp.기타수당 || emp.otherAllowance || 0),
-      formatNumber(emp.년차일수 || emp.annualLeaveDays || 0),
-      formatNumber(emp.년차수당 || emp.annualLeavePay || 0),
-      formatNumber(emp.상여금 || emp.bonus || 0),
-      formatNumber(emp.급여합계 || emp.totalSalary || 0),
-      formatNumber(emp.소득세 || emp.incomeTax || 0),
-      formatNumber(emp.지방세 || emp.localTax || 0),
-      formatNumber(emp.국민연금 || emp.nationalPension || 0),
-      formatNumber(emp.건강보험 || emp.healthInsurance || 0),
-      formatNumber(emp.장기요양 || emp.longTermCare || 0),
-      formatNumber(emp.고용보험 || emp.employmentInsurance || 0),
-      formatNumber(emp.가불금과태료 || emp.advanceDeduction || 0),
-      formatNumber(emp.매칭IRP적립 || emp.irpMatching || 0),
-      formatNumber(emp.경조비기타공제 || emp.otherDeduction || 0),
-      formatNumber(emp.기숙사 || emp.dormitory || 0),
-      formatNumber(emp.건강보험연말정산 || emp.healthYearEnd || 0),
-      formatNumber(emp.장기요양연말정산 || emp.longTermYearEnd || 0),
-      formatNumber(emp.연말정산징수세액 || emp.taxYearEnd || 0),
-      formatNumber(emp.공제합계 || emp.totalDeduction || 0),
-      formatNumber(emp.차인지급액 || emp.netSalary || 0),
+      emp.부서 || '',
+      emp.성명 || '',
+      emp.직급 || '',
+      emp.입사일자 || '',
+      formatNumber(emp.시급 || 0),
+      formatNumber(emp.기본시간 || 0),
+      formatNumber(emp.기본급 || 0),
+      formatNumber(emp.연장수당_시간 || 0),
+      formatNumber(emp.연장수당_금액 || 0),
+      formatNumber(emp.휴일근로수당_시간 || 0),
+      formatNumber(emp.휴일근로수당_금액 || 0),
+      formatNumber(emp.야간근로수당_시간 || 0),
+      formatNumber(emp.야간근로수당_금액 || 0),
+      formatNumber(emp.지각조퇴_시간 || 0),
+      formatNumber(emp.지각조퇴_금액 || 0),
+      formatNumber(emp.결근무급주휴_일수 || 0),
+      formatNumber(emp.결근무급주휴_금액 || 0),
+      formatNumber(emp.차량 || 0),
+      formatNumber(emp.교통비 || 0),
+      formatNumber(emp.통신비 || 0),
+      formatNumber(emp.기타수당 || 0),
+      formatNumber(emp.년차수당_일수 || 0),
+      formatNumber(emp.년차수당_금액 || 0),
+      formatNumber(emp.상여금 || 0),
+      formatNumber(급여합계),
+      formatNumber(emp.소득세 || 0),
+      formatNumber(emp.지방세 || 0),
+      formatNumber(emp.국민연금 || 0),
+      formatNumber(emp.건강보험 || 0),
+      formatNumber(emp.장기요양 || 0),
+      formatNumber(emp.고용보험 || 0),
+      formatNumber(emp.가불금과태료 || 0),
+      formatNumber(emp['매칭IRP적립'] || 0),
+      formatNumber(emp.경조비기타공제 || 0),
+      formatNumber(emp.기숙사 || 0),
+      formatNumber(emp.건강보험연말정산 || 0),
+      formatNumber(emp.장기요양연말정산 || 0),
+      formatNumber(emp.연말정산징수세액 || 0),
+      formatNumber(공제합계),
+      formatNumber(급여합계 - 공제합계),
       formatNumber(emp.결근무휴 || 0),
       formatNumber(emp.년차 || 0),
       formatNumber(emp.지각조퇴외출 || 0),
