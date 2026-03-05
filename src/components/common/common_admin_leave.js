@@ -1834,9 +1834,10 @@ export const exportEmployeeLeaveStatusToXLSX = (
       이름: emp.name,
       직급: emp.position || '사원',
       부서: emp.department || '미분류',
-      직책: emp.role || '미분류',
       입사일: emp.hireDate || emp.joinDate || '미등록',
       근속년수: `${annualData.years}년 ${annualData.months}개월`,
+      근무형태: emp.workType || '-',
+      계약형태: emp.contractType || '-',
       연차시작일: annualData.annualStart,
       연차종료일: annualData.annualEnd,
       기본연차:
