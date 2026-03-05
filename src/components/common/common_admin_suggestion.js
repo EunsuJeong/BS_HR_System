@@ -385,11 +385,7 @@ export const exportSuggestionsToXLSX = (
   const filteredData = getFilteredSuggestions(suggestions);
   const rows = filteredData.map((sg) => ({
     신청일: sg.applyDate,
-    결재일: sg.approvedDate
-      ? formatDateByLang(sg.approvedDate)
-      : sg.rejectedDate
-      ? formatDateByLang(sg.rejectedDate)
-      : '-',
+    결재일: sg.approvalDate ? formatDateByLang(sg.approvalDate) : '-',
     사번: sg.employeeId,
     이름: sg.name,
     부서: sg.department,
