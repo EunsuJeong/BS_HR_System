@@ -250,6 +250,7 @@ export const useStaffLeave = (dependencies = {}) => {
       requestedDays = 1;
     }
 
+    const isTimeType = ['외출', '조퇴'].includes(leaveForm.type);
     const newLeave = {
       id: Date.now(),
       employeeId: currentUser.id || currentUser.employeeId,
@@ -263,7 +264,9 @@ export const useStaffLeave = (dependencies = {}) => {
       type: leaveForm.type, // 프론트엔드 호환성을 위해 type도 추가
       reason: leaveForm.reason,
       contact: leaveForm.contact || currentUser.phone,
-      status: '대기',
+      startTime: isTimeType ? (leaveForm.startTime || null) : null,
+      endTime: isTimeType ? (leaveForm.endTime || null) : null,
+      status: ['대표', '임원', '관리'].includes(currentUser.department) ? '확인' : '대기',
       requestDate: now.toISOString().slice(0, 10),
       requestDateTime: now.toISOString(),
       requestedDays: requestedDays, // 새 스키마 필드
@@ -304,6 +307,8 @@ export const useStaffLeave = (dependencies = {}) => {
       requestedDays: savedLeave.requestedDays || savedLeave.days,
       reason: savedLeave.reason,
       contact: savedLeave.contact,
+      startTime: savedLeave.startTime || null,
+      endTime: savedLeave.endTime || null,
       status: savedLeave.status,
       requestDate: savedLeave.requestDate || now.toISOString(), // ISO 문자열 그대로 저장
       requestDateTime: savedLeave.requestDateTime || now.toISOString(),
@@ -332,6 +337,8 @@ export const useStaffLeave = (dependencies = {}) => {
       type: '연차',
       reason: '',
       contact: '',
+      startTime: '',
+      endTime: '',
     });
     setLeaveFormPreview(null);
   }, [

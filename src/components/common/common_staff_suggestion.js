@@ -70,7 +70,7 @@ export const useStaffSuggestion = (dependencies = {}) => {
         type: suggestionInput,
         title: finalTitle,
         content: applyContent,
-        status: '대기',
+        status: ['대표', '임원', '관리'].includes(currentUser.department) ? '확인' : '대기',
       });
 
 
@@ -152,12 +152,16 @@ export const useStaffSuggestion = (dependencies = {}) => {
 export const getSuggestionCategoryText = (title, selectedLanguage) => {
   if (selectedLanguage === 'en') {
     if (title === '구매') return 'Purchase (Consumables)';
-    if (title === '기타') return 'Suggestion (to CEO)';
+    if (title === '대표이사') return 'Suggestion (to CEO)';
+    if (title === '관리팀') return 'Suggestion (to Management)';
+    if (title === '기타') return 'Other';
     return title;
   }
   // 한글일 때
   if (title === '구매') return '구매 (소모품)';
-  if (title === '기타') return '건의 (대표이사)';
+  if (title === '대표이사') return '건의 (대표이사)';
+  if (title === '관리팀') return '건의 (관리팀)';
+  if (title === '기타') return '기타';
   return title;
 };
 

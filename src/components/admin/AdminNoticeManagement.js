@@ -575,9 +575,61 @@ const AdminNoticeManagement = ({
 
             {/* 공지사항 내용 입력 */}
             <div className="flex-1 flex flex-col min-h-0">
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex-shrink-0">
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex-shrink-0">
                 내용
               </label>
+              {/* 서식 도구 모음 */}
+              <div className="flex gap-1 mb-1 flex-shrink-0 items-center">
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    contentEditableRef.current?.focus();
+                    document.execCommand('bold');
+                  }}
+                  className="w-7 h-7 border rounded text-xs font-bold hover:bg-gray-100 active:bg-gray-200 select-none flex items-center justify-center"
+                  title="굵게 (Bold)"
+                >
+                  B
+                </button>
+                <div className="w-px h-5 bg-gray-300 mx-0.5" />
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    contentEditableRef.current?.focus();
+                    document.execCommand('fontSize', false, '1');
+                  }}
+                  className="px-1.5 h-7 border rounded text-2xs hover:bg-gray-100 active:bg-gray-200 select-none flex items-center justify-center"
+                  title="작게"
+                >
+                  작게
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    contentEditableRef.current?.focus();
+                    document.execCommand('fontSize', false, '2');
+                  }}
+                  className="px-1.5 h-7 border rounded text-xs hover:bg-gray-100 active:bg-gray-200 select-none flex items-center justify-center"
+                  title="보통"
+                >
+                  보통
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    contentEditableRef.current?.focus();
+                    document.execCommand('fontSize', false, '3');
+                  }}
+                  className="px-1.5 h-7 border rounded text-sm hover:bg-gray-100 active:bg-gray-200 select-none flex items-center justify-center"
+                  title="크게"
+                >
+                  크게
+                </button>
+              </div>
               <div className="relative flex-1 min-h-0 max-h-full overflow-hidden">
                 {/* 이미지 리사이즈 핸들 */}
                 {selectedImage &&
@@ -652,6 +704,7 @@ const AdminNoticeManagement = ({
                   contentEditable
                   data-placeholder="공지사항 내용을 입력하세요 (이미지 붙여넣기 가능)"
                   className="w-full h-full max-h-full px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none overflow-y-auto"
+                  style={{ fontSize: '12px' }}
                   onFocus={() => {
                     isUserEditingRef.current = true;
                   }}
@@ -685,6 +738,10 @@ const AdminNoticeManagement = ({
                   color: #9ca3af;
                   pointer-events: none;
                 }
+                [contenteditable] { font-size: 12px; }
+                [contenteditable] font[size="1"] { font-size: 10px !important; }
+                [contenteditable] font[size="2"] { font-size: 12px !important; }
+                [contenteditable] font[size="3"] { font-size: 14px !important; }
                 [contenteditable] img {
                   max-width: 100%;
                   height: auto;

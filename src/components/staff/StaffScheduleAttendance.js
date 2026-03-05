@@ -334,9 +334,10 @@ const StaffScheduleAttendance = ({
                     isHolidayDateFn
                   );
 
-                  // 공휴일 우선 처리: 시스템 공휴일이든 커스텀 공휴일이든 회색으로 표시
+                  // 공휴일 처리: 출근 시 초록, 미출근 시 회색
+                  const holidayAttended = ['출근', '지각', '조퇴', '기타', '근무중'].includes(attStatus);
                   const dotColor = isHoliday
-                    ? 'bg-gray-400'
+                    ? (holidayAttended ? 'bg-green-400' : 'bg-gray-400')
                     : getAttendanceDotColor(attStatus);
 
                   // 해당 날짜의 일정 이벤트 가져오기

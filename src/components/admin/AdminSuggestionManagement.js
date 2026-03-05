@@ -144,7 +144,9 @@ const AdminSuggestionManagement = ({
             >
               <option value="전체">전체 유형</option>
               <option value="구매">구매 (소모품)</option>
-              <option value="기타">건의 (대표이사)</option>
+              <option value="대표이사">건의 (대표이사)</option>
+              <option value="관리팀">건의 (관리팀)</option>
+              <option value="기타">기타</option>
             </select>
             <select
               value={suggestionSearch.department}
@@ -178,6 +180,7 @@ const AdminSuggestionManagement = ({
               <option value="확인">확인</option>
               <option value="승인">승인</option>
               <option value="반려">반려</option>
+              <option value="취소">취소</option>
             </select>
             <input
               type="text"

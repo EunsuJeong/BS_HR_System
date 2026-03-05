@@ -1269,6 +1269,8 @@ const HRManagementSystem = () => {
     type: '연차',
     reason: '',
     contact: '',
+    startTime: '',
+    endTime: '',
   });
   const [leaveFormError, setLeaveFormError] = useState('');
   const [leaveFormPreview, setLeaveFormPreview] = useState(null);

@@ -351,10 +351,32 @@ const StaffAnnualLeave = ({
                 ))}
               </select>
             </div>
+            {(leaveForm.type === '외출' || leaveForm.type === '조퇴') && (
+              <div className="flex flex-wrap gap-2 items-center">
+                <input
+                  type="time"
+                  name="startTime"
+                  value={leaveForm.startTime || ''}
+                  onChange={handleLeaveFormChange}
+                  disabled={leaveForm.type === '조퇴'}
+                  className={`${commonClass} border rounded flex-1 min-w-[100px] ${leaveForm.type === '조퇴' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                  placeholder="시작 시간"
+                />
+                <span className="flex items-center">~</span>
+                <input
+                  type="time"
+                  name="endTime"
+                  value={leaveForm.endTime || ''}
+                  onChange={handleLeaveFormChange}
+                  className={`${commonClass} border rounded flex-1 min-w-[100px]`}
+                  placeholder="끝 시간"
+                />
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               <textarea
                 name="reason"
-                placeholder={getText('사유(최대 25자 제한)', 'Reason (≤25 charS)')}
+                placeholder={leaveForm.type === '기타' ? '외근/출장-업체명' : getText('사유(최대 25자 제한)', 'Reason (≤25 charS)')}
                 value={leaveForm.reason}
                 onChange={handleLeaveFormChange}
                 onInput={(e) => {
@@ -377,7 +399,7 @@ const StaffAnnualLeave = ({
               />
               <textarea
                 name="contact"
-                placeholder={getText('비상연락망', 'Emergency Contact')}
+                placeholder={leaveForm.type === '기타' ? '등록유형 (출근/퇴근)' : getText('비상연락망', 'Emergency Contact')}
                 value={leaveForm.contact}
                 onChange={handleLeaveFormChange}
                 onInput={(e) => {

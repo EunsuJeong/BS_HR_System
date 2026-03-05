@@ -132,10 +132,20 @@ const StaffSuggestion = ({
                   ? 'Purchase (Consumables)'
                   : '구매 (소모품)'}
               </option>
-              <option value="기타">
+              <option value="대표이사">
                 {selectedLanguage === 'en'
                   ? 'Suggestion (to CEO)'
                   : '건의 (대표이사)'}
+              </option>
+              <option value="관리팀">
+                {selectedLanguage === 'en'
+                  ? 'Suggestion (to Management)'
+                  : '건의 (관리팀)'}
+              </option>
+              <option value="기타">
+                {selectedLanguage === 'en'
+                  ? 'Other'
+                  : '기타'}
               </option>
             </select>
             <button
@@ -473,10 +483,20 @@ const StaffSuggestion = ({
                       ? 'Purchase (Consumables)'
                       : '구매 (소모품)'}
                   </option>
-                  <option value="기타">
+                  <option value="대표이사">
                     {selectedLanguage === 'en'
                       ? 'Suggestion (to CEO)'
                       : '건의 (대표이사)'}
+                  </option>
+                  <option value="관리팀">
+                    {selectedLanguage === 'en'
+                      ? 'Suggestion (to Management)'
+                      : '건의 (관리팀)'}
+                  </option>
+                  <option value="기타">
+                    {selectedLanguage === 'en'
+                      ? 'Other'
+                      : '기타'}
                   </option>
                 </select>
               </div>

@@ -43,6 +43,8 @@ const leaveSchema = new mongoose.Schema(
       required: [true, '신청 사유는 필수입니다'],
     },
     contact: String,
+    startTime: { type: String, default: null }, // 외출/조퇴 시작 시간 (HH:MM)
+    endTime: { type: String, default: null },   // 외출/조퇴 종료 시간 (HH:MM)
 
     // 날짜 정보 (Date 타입으로 통일, UTC 기준)
     requestDate: {

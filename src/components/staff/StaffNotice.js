@@ -97,6 +97,12 @@ const StaffNotice = ({
 
   return (
     <>
+      <style>{`
+        .notice-content { font-size: 12px; }
+        .notice-content font[size="1"] { font-size: 10px !important; }
+        .notice-content font[size="2"] { font-size: 12px !important; }
+        .notice-content font[size="3"] { font-size: 14px !important; }
+      `}</style>
       {/* 공지사항 카드 */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
         <div className="flex items-center justify-between mb-3">
@@ -178,7 +184,7 @@ const StaffNotice = ({
                   {expandedNotices.has(notice.id) && (
                     <div className="mt-1 p-2 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                       <div
-                        className="text-xs text-gray-700"
+                        className="notice-content text-xs text-gray-700"
                         style={{ lineHeight: '1.15' }}
                         dangerouslySetInnerHTML={{
                           __html: linkifyText(notice.content || ''),
@@ -411,7 +417,7 @@ const StaffNotice = ({
                     </div>
                     <div className="border-t pt-4">
                       <div
-                        className="text-xs text-gray-700"
+                        className="notice-content text-xs text-gray-700"
                         style={{ lineHeight: '1.15' }}
                         dangerouslySetInnerHTML={{
                           __html: linkifyText(selectedNotice.content || ''),
