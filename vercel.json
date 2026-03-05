@@ -6,6 +6,13 @@
   "framework": "create-react-app",
   "installCommand": "npm install",
   "devCommand": "npm run start:frontend",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "http://bssystem.iptime.org:3000/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [],
   "headers": [
     {
