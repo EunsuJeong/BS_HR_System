@@ -592,43 +592,6 @@ const AdminNoticeManagement = ({
                 >
                   B
                 </button>
-                <div className="w-px h-5 bg-gray-300 mx-0.5" />
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    contentEditableRef.current?.focus();
-                    document.execCommand('fontSize', false, '1');
-                  }}
-                  className="px-1.5 h-7 border rounded text-2xs hover:bg-gray-100 active:bg-gray-200 select-none flex items-center justify-center"
-                  title="작게"
-                >
-                  작게
-                </button>
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    contentEditableRef.current?.focus();
-                    document.execCommand('fontSize', false, '2');
-                  }}
-                  className="px-1.5 h-7 border rounded text-xs hover:bg-gray-100 active:bg-gray-200 select-none flex items-center justify-center"
-                  title="보통"
-                >
-                  보통
-                </button>
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    contentEditableRef.current?.focus();
-                    document.execCommand('fontSize', false, '3');
-                  }}
-                  className="px-1.5 h-7 border rounded text-sm hover:bg-gray-100 active:bg-gray-200 select-none flex items-center justify-center"
-                  title="크게"
-                >
-                  크게
-                </button>
               </div>
               <div className="relative flex-1 min-h-0 max-h-full overflow-hidden">
                 {/* 이미지 리사이즈 핸들 */}
@@ -740,9 +703,6 @@ const AdminNoticeManagement = ({
                 }
                 [contenteditable] { font-size: 12px; }
                 [contenteditable] * { font-size: 12px !important; }
-                [contenteditable] font[size="1"], [contenteditable] font[size="1"] * { font-size: 10px !important; }
-                [contenteditable] font[size="2"], [contenteditable] font[size="2"] * { font-size: 12px !important; }
-                [contenteditable] font[size="3"], [contenteditable] font[size="3"] * { font-size: 14px !important; }
                 [contenteditable] img {
                   max-width: 100%;
                   height: auto;

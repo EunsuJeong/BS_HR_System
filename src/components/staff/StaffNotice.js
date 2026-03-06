@@ -98,11 +98,8 @@ const StaffNotice = ({
   return (
     <>
       <style>{`
-        .notice-content { font-size: 12px; }
-        .notice-content * { font-size: 12px !important; }
-        .notice-content font[size="1"], .notice-content font[size="1"] * { font-size: 10px !important; }
-        .notice-content font[size="2"], .notice-content font[size="2"] * { font-size: 12px !important; }
-        .notice-content font[size="3"], .notice-content font[size="3"] * { font-size: 14px !important; }
+        .notice-content { font-size: 14px; }
+        .notice-content * { font-size: 14px !important; }
       `}</style>
       {/* 공지사항 카드 */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
