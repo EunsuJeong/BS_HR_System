@@ -103,6 +103,28 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ✅ 직원 선호 언어 저장
+router.put('/employees/:employeeId/language', async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { preferredLanguage } = req.body;
+    if (!['ko', 'en'].includes(preferredLanguage)) {
+      return res.status(400).json({ success: false, error: '유효하지 않은 언어 코드입니다.' });
+    }
+    const employee = await Employee.findOneAndUpdate(
+      { employeeId },
+      { preferredLanguage },
+      { new: true }
+    );
+    if (!employee) {
+      return res.status(404).json({ success: false, error: '직원을 찾을 수 없습니다.' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ✅ 직원 비밀번호 변경
 router.put('/employees/:employeeId/password', async (req, res) => {
   try {

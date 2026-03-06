@@ -38,6 +38,7 @@ const employeeSchema = new mongoose.Schema(
     usedAnnual: Number, // 사용한 연차 (계산값)
 
     evalScore: Number,
+    preferredLanguage: { type: String, enum: ['ko', 'en'], default: null }, // 선호 언어 설정
     lastLogin: Date, // 마지막 로그인 시간 (KST)
     createdAt: { type: Date, default: Date.now },
 

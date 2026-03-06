@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
@@ -18,6 +18,8 @@ const CommonLogin = ({
   rememberUserId,
   setRememberUserId,
 }) => {
+  const [skipInFuture, setSkipInFuture] = useState(false);
+
   // 로그인 화면
   if (!currentUser) {
     return (
@@ -140,7 +142,7 @@ const CommonLogin = ({
 
           <div className="space-y-4">
             <button
-              onClick={() => handleLanguageSelect('ko')}
+              onClick={() => handleLanguageSelect('ko', skipInFuture)}
               className="w-full p-4 border-2 border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
             >
               <div className="text-left">
@@ -152,7 +154,7 @@ const CommonLogin = ({
             </button>
 
             <button
-              onClick={() => handleLanguageSelect('en')}
+              onClick={() => handleLanguageSelect('en', skipInFuture)}
               className="w-full p-4 border-2 border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
             >
               <div className="text-left">
@@ -162,6 +164,21 @@ const CommonLogin = ({
                 <div className="text-base text-gray-600">영어</div>
               </div>
             </button>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
+              <input
+                type="checkbox"
+                checked={skipInFuture}
+                onChange={(e) => setSkipInFuture(e.target.checked)}
+                className="w-4 h-4 accent-indigo-600"
+              />
+              <span className="text-sm text-gray-600">
+                이 언어만 보기
+                <span className="text-xs text-gray-400 ml-1">
+                  (이 화면이 다시 나타나지 않습니다)
+                </span>
+              </span>
+            </label>
           </div>
         </div>
       </div>

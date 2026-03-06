@@ -2466,11 +2466,20 @@ export const useLanguage = (dependencies = {}) => {
     setShowLanguageSelection = () => {},
     setCurrentYear = () => {},
     setCurrentMonth = () => {},
+    currentUser = null,
   } = dependencies;
 
   // [1_공통] 언어 선택
   const handleLanguageSelect = useCallback(
-    (language) => {
+    async (language, skipInFuture = false) => {
+      if (skipInFuture && currentUser?.employeeId) {
+        try {
+          const { default: api } = await import('../../api/client');
+          await api.put(`/hr/employees/${currentUser.employeeId}/language`, { preferredLanguage: language });
+        } catch (e) {
+          console.warn('언어 설정 저장 실패:', e);
+        }
+      }
       setSelectedLanguage(language);
       setShowLanguageSelection(false);
 
@@ -2479,6 +2488,7 @@ export const useLanguage = (dependencies = {}) => {
       setCurrentMonth(now.getMonth() + 1);
     },
     [
+      currentUser,
       setSelectedLanguage,
       setShowLanguageSelection,
       setCurrentYear,
@@ -2866,7 +2876,13 @@ export const useAuth = (dependencies = {}) => {
           setCurrentUser(employeeUser);
           sessionStorage.setItem('currentUser', JSON.stringify(employeeUser));
           setLoginError('');
-          setShowLanguageSelection(true); // 직원은 언어 선택 화면 표시
+          // DB에 저장된 언어 설정이 있으면 언어 선택 화면 생략
+          if (employeeUser.preferredLanguage) {
+            setSelectedLanguage(employeeUser.preferredLanguage);
+            setShowLanguageSelection(false);
+          } else {
+            setShowLanguageSelection(true);
+          }
 
           const now = new Date();
           setCurrentYear(now.getFullYear());

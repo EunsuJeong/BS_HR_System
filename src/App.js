@@ -4244,6 +4244,7 @@ const HRManagementSystem = () => {
     setShowLanguageSelection,
     setCurrentYear,
     setCurrentMonth,
+    currentUser,
   });
 
   // *[1_공통] 인증 및 비밀번호 변경*
