@@ -1827,7 +1827,13 @@ export const exportEmployeeLeaveStatusToXLSX = (
   calculateEmployeeAnnualLeave,
   leaveRequests = []
 ) => {
-  const employeeLeaveData = employees.map((emp) => {
+  const employeeLeaveData = [...employees]
+    .sort((a, b) => {
+      const aId = String(a.employeeNumber || a.id || '');
+      const bId = String(b.employeeNumber || b.id || '');
+      return aId.localeCompare(bId, undefined, { numeric: true });
+    })
+    .map((emp) => {
     const annualData = calculateEmployeeAnnualLeave(emp, leaveRequests);
     return {
       사번: emp.employeeNumber || emp.id,
@@ -1868,6 +1874,23 @@ export const exportEmployeeLeaveStatusToXLSX = (
  * @param {Function} formatDateByLang - 날짜 포맷 함수
  */
 export const exportLeaveHistoryToXLSX = (leaveData, formatDateByLang) => {
+  const fmt12h = (t) => {
+    if (!t) return '-';
+    const h = parseInt(t.split(':')[0], 10);
+    const p = h < 12 ? '오전' : '오후';
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${p} ${h12}:${t.split(':')[1]}`;
+  };
+  const getLeaveDaysXLSX = (lv) => {
+    if (lv.type === '연차') {
+      const start = new Date(lv.startDate);
+      const end = new Date(lv.endDate);
+      return Math.abs((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    } else if (lv.type && lv.type.startsWith('반차')) {
+      return 0.5;
+    }
+    return '-';
+  };
   const rows = leaveData.map((lv) => ({
     신청일: formatDateByLang(lv.requestDate),
     결재일: lv.approvedAt
@@ -1879,7 +1902,10 @@ export const exportLeaveHistoryToXLSX = (leaveData, formatDateByLang) => {
     이름: lv.name,
     시작일: formatDateByLang(lv.startDate),
     종료일: formatDateByLang(lv.endDate),
+    사용일수: getLeaveDaysXLSX(lv),
     유형: lv.type,
+    시작시간: lv.type === '외출' ? fmt12h(lv.startTime) : '-',
+    종료시간: (lv.type === '외출' || lv.type === '조퇴') ? fmt12h(lv.endTime) : '-',
     사유: lv.reason || '개인사정',
     비상연락망: lv.contact || '',
     비고: lv.remark || '-',

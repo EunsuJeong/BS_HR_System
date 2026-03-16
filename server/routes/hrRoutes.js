@@ -45,7 +45,7 @@ router.post('/login', async (req, res) => {
     if (!employee) {
       return res.status(401).json({
         success: false,
-        error: '재직 중인 직원을 찾을 수 없습니다. 사번을 확인해주세요.',
+        error: '재직 중인 직원을 찾을 수 없습니다. 직원명을 확인해주세요.',
       });
     }
 

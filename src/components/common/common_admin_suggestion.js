@@ -173,9 +173,13 @@ export const useSuggestionApproval = (dependencies = {}) => {
   // [2_관리자 모드] 2.7_건의 관리 - 건의사항 목록 필터링
   const getFilteredSuggestions = useCallback(
     (suggestionList) => {
-      return filterSuggestions(suggestionList, suggestionSearch);
+      // 제한 관리자(allowedDepartments 있음)는 '대표이사' 유형 건의 제외
+      const baseList = currentUser?.allowedDepartments?.length
+        ? suggestionList.filter((sg) => sg.type !== '대표이사')
+        : suggestionList;
+      return filterSuggestions(baseList, suggestionSearch);
     },
-    [suggestionSearch]
+    [suggestionSearch, currentUser]
   );
 
   // [2_관리자 모드] 2.7_건의 관리 - 건의사항 목록 정렬

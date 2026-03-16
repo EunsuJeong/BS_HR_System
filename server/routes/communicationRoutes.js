@@ -736,7 +736,7 @@ router.post('/suggestions', async (req, res) => {
       type: type || '기타',
       title,
       content,
-      status: ['대표', '임원', '관리'].includes(department) ? '확인' : '대기',
+      status: type === '대표이사' || ['대표', '임원', '관리'].includes(department) ? '확인' : '대기',
       applyDate: now.toISOString().split('T')[0],
       createdAt: now,
     });

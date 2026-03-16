@@ -95,16 +95,28 @@ const AdminSuggestionManagement = ({
 
   return (
     <div className="space-y-6 w-full h-full">
-      <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
-        <div className="flex items-center gap-4 mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 whitespace-nowrap">
-            건의 관리
-          </h3>
+      <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6">
+        <div className="flex flex-col gap-3 mb-4">
+          {/* 1행: 제목 + 다운로드 버튼 */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-800">건의 관리</h3>
+            <button
+              onClick={() =>
+                exportSuggestionsToXLSX(
+                  suggestions,
+                  getFilteredSuggestions,
+                  formatDateByLang
+                )
+              }
+              className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center text-sm"
+            >
+              <Download size={14} className="mr-1" />
+              다운로드
+            </button>
+          </div>
 
-          <div className="flex-1"></div>
-
-          {/* 검색 필터 */}
-          <div className="flex gap-2">
+          {/* 2행: 검색 필터 */}
+          <div className="flex flex-wrap gap-3">
             <input
               type="text"
               placeholder="연도"
@@ -112,19 +124,16 @@ const AdminSuggestionManagement = ({
               onChange={(e) =>
                 setSuggestionSearch((s) => ({ ...s, year: e.target.value }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-20"
+              className="px-2 py-1.5 border rounded-lg text-sm w-16"
             />
             <input
               type="text"
               placeholder="월"
               value={suggestionSearch.month}
               onChange={(e) =>
-                setSuggestionSearch((s) => ({
-                  ...s,
-                  month: e.target.value,
-                }))
+                setSuggestionSearch((s) => ({ ...s, month: e.target.value }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-20"
+              className="px-2 py-1.5 border rounded-lg text-sm w-12"
             />
             <input
               type="text"
@@ -133,14 +142,14 @@ const AdminSuggestionManagement = ({
               onChange={(e) =>
                 setSuggestionSearch((s) => ({ ...s, day: e.target.value }))
               }
-              className="px-3 py-1 border rounded-lg text-sm w-20"
+              className="px-2 py-1.5 border rounded-lg text-sm w-12"
             />
             <select
               value={suggestionSearch.type}
               onChange={(e) =>
                 setSuggestionSearch((s) => ({ ...s, type: e.target.value }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-40"
+              className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[120px]"
             >
               <option value="전체">전체 유형</option>
               <option value="구매">구매 (소모품)</option>
@@ -151,29 +160,21 @@ const AdminSuggestionManagement = ({
             <select
               value={suggestionSearch.department}
               onChange={(e) =>
-                setSuggestionSearch((s) => ({
-                  ...s,
-                  department: e.target.value,
-                }))
+                setSuggestionSearch((s) => ({ ...s, department: e.target.value }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-40"
+              className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
             >
               <option value="전체">전체 부서</option>
               {COMPANY_STANDARDS.DEPARTMENTS.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
+                <option key={dept} value={dept}>{dept}</option>
               ))}
             </select>
             <select
               value={suggestionSearch.status}
               onChange={(e) =>
-                setSuggestionSearch((s) => ({
-                  ...s,
-                  status: e.target.value,
-                }))
+                setSuggestionSearch((s) => ({ ...s, status: e.target.value }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-40"
+              className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
             >
               <option value="전체">전체 상태</option>
               <option value="대기">대기</option>
@@ -187,30 +188,13 @@ const AdminSuggestionManagement = ({
               placeholder="사번 또는 이름"
               value={suggestionSearch.keyword}
               onChange={(e) =>
-                setSuggestionSearch((s) => ({
-                  ...s,
-                  keyword: e.target.value,
-                }))
+                setSuggestionSearch((s) => ({ ...s, keyword: e.target.value }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-60"
+              className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[120px]"
             />
           </div>
-
-          <button
-            onClick={() =>
-              exportSuggestionsToXLSX(
-                suggestions,
-                getFilteredSuggestions,
-                formatDateByLang
-              )
-            }
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center whitespace-nowrap"
-          >
-            <Download size={16} className="mr-2" />
-            다운로드
-          </button>
         </div>
-        <div className="flex-1 overflow-y-auto overflow-x-auto">
+        <div className="overflow-x-auto max-h-[85vh] overflow-y-auto">
           <table className="w-full text-xs min-w-[1200px]">
             <thead className="bg-gray-100 sticky top-0 z-10">
               <tr>
@@ -556,23 +540,43 @@ const AdminSuggestionManagement = ({
           ).length;
           if (filteredCount <= 16) return null;
 
+          const totalPages = Math.ceil(filteredCount / 16);
+          const groupSize = 10;
+          const currentGroup = Math.floor((suggestionPage - 1) / groupSize);
+          const startPage = currentGroup * groupSize + 1;
+          const endPage = Math.min(startPage + groupSize - 1, totalPages);
+
           return (
-            <div className="flex justify-center mt-4 gap-1">
-              {Array.from({
-                length: Math.ceil(filteredCount / 16),
-              }).map((_, i) => (
+            <div className="flex flex-wrap justify-center mt-4 gap-1 px-2">
+              {startPage > 1 && (
                 <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    suggestionPage === i + 1
+                  className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                  onClick={() => setSuggestionPage(startPage - 1)}
+                >
+                  &lt;
+                </button>
+              )}
+              {Array.from({ length: endPage - startPage + 1 }).map((_, i) => (
+                <button
+                  key={startPage + i}
+                  className={`px-3 py-1 rounded text-sm ${
+                    suggestionPage === startPage + i
                       ? 'bg-blue-500 text-white'
                       : 'bg-gray-200 hover:bg-gray-300'
                   }`}
-                  onClick={() => setSuggestionPage(i + 1)}
+                  onClick={() => setSuggestionPage(startPage + i)}
                 >
-                  {i + 1}
+                  {startPage + i}
                 </button>
               ))}
+              {endPage < totalPages && (
+                <button
+                  className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                  onClick={() => setSuggestionPage(endPage + 1)}
+                >
+                  &gt;
+                </button>
+              )}
             </div>
           );
         })()}

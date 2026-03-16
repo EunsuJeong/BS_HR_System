@@ -138,11 +138,11 @@ async function createLeaveExpiryNotification(employee, annualData, daysUntilExpi
     recipients: {
       type: '개인',
       value: employee.name,
-      selectedEmployees: [employee.id]
+      selectedEmployees: [employee.employeeId]
     },
     related: {
       entity: 'annualLeave',
-      refId: employee.id,
+      refId: employee.employeeId,
       annualStart: annualData.annualStart,
       annualEnd: annualData.annualEnd,
       nextAnnualStart: (() => {
@@ -184,7 +184,7 @@ async function createAdminNotification(employee, originalNotification) {
       recipients: {
         type: '개인',
         value: admin.name,
-        selectedEmployees: [admin.id]
+        selectedEmployees: [admin.employeeId]
       },
       createdAt: new Date()
     });
@@ -249,11 +249,11 @@ async function createEmployeeRenewalNotification(employee, nextPeriod, carryOver
     recipients: {
       type: '개인',
       value: employee.name,
-      selectedEmployees: [employee.id]
+      selectedEmployees: [employee.employeeId]
     },
     related: {
       entity: 'annualLeaveRenewal',
-      refId: employee.id,
+      refId: employee.employeeId,
       annualStart: nextPeriod.annualStart,
       annualEnd: nextPeriod.annualEnd,
       totalAnnual: nextPeriod.totalAnnual,
@@ -295,11 +295,11 @@ async function createAdminRenewalSummary(employee, nextPeriod, carryOverLeave) {
       recipients: {
         type: '개인',
         value: admin.name,
-        selectedEmployees: [admin.id]
+        selectedEmployees: [admin.employeeId]
       },
       related: {
         entity: 'annualLeaveRenewal',
-        refId: employee.id,
+        refId: employee.employeeId,
         annualStart: nextPeriod.annualStart,
         annualEnd: nextPeriod.annualEnd
       },
@@ -341,7 +341,7 @@ async function checkAnnualLeaveExpiry(io) {
 
       // 사용한 연차 계산 (DB의 연차 기간 기준)
       const usedAnnual = await calculateUsedAnnualLeave(
-        employee.id,
+        employee.employeeId,
         annualStartStr,
         annualEndStr
       );
@@ -361,7 +361,7 @@ async function checkAnnualLeaveExpiry(io) {
 
         for (const days of notificationDays) {
           if (daysUntilExpiry === days) {
-            const notificationKey = `leaveExpiry${days}_${employee.id}_${year}`;
+            const notificationKey = `leaveExpiry${days}_${employee.employeeId}_${year}`;
 
             // 오늘 이미 보낸 알림인지 체크 (KST 기준)
             const todayStart = new Date(todayKST + 'T00:00:00+09:00');
@@ -369,7 +369,7 @@ async function checkAnnualLeaveExpiry(io) {
 
             const existingNotif = await Notification.findOne({
               'related.entity': 'annualLeave',
-              'related.refId': employee.id,
+              'related.refId': employee.employeeId,
               title: { $regex: `${days === 180 ? '6개월' : days === 90 ? '3개월' : days === 30 ? '30일' : '7일'} 전` },
               createdAt: {
                 $gte: todayStart,
@@ -394,7 +394,7 @@ async function checkAnnualLeaveExpiry(io) {
                 if (io) {
                   io.emit('new-notification', {
                     type: 'annualLeaveExpiry',
-                    employeeId: employee.id,
+                    employeeId: employee.employeeId,
                     notification: notification.toObject()
                   });
                 }
@@ -417,7 +417,7 @@ async function checkAnnualLeaveExpiry(io) {
 
         const existingRenewal = await Notification.findOne({
           'related.entity': 'annualLeaveRenewal',
-          'related.refId': employee.id,
+          'related.refId': employee.employeeId,
           createdAt: {
             $gte: todayStart,
             $lt: todayEnd
@@ -457,7 +457,7 @@ async function checkAnnualLeaveExpiry(io) {
           if (io) {
             io.emit('new-notification', {
               type: 'annualLeaveRenewal',
-              employeeId: employee.id,
+              employeeId: employee.employeeId,
               notification: employeeNotif.toObject()
             });
           }

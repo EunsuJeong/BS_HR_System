@@ -150,8 +150,8 @@ const AdminEmployeeManagement = ({
   return (
     <>
       <div className="space-y-6 w-full h-full">
-        <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
-          <div className="flex justify-between items-center mb-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 flex flex-col min-h-[500px]">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-4 md:mb-6">
             <div className="flex items-center gap-3">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 직원 관리
@@ -165,17 +165,17 @@ const AdminEmployeeManagement = ({
                 명
               </span>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowNewEmployeeModal(true)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center"
+                className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center text-sm"
               >
-                <Plus size={10} className="mr-2" />
+                <Plus size={14} className="mr-1" />
                 신규 직원 등록
               </button>
               <button
                 onClick={handleAnalyzeWorkType}
-                className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 flex items-center"
+                className="px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 flex items-center text-sm"
                 title={`${attendanceSheetYear}년 ${attendanceSheetMonth}월 근태 기준으로 근무형태 분석`}
               >
                 근무형태 분석
@@ -217,16 +217,16 @@ const AdminEmployeeManagement = ({
                   );
                   exportOrganizationToXLSX(filteredData);
                 }}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center"
+                className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center text-sm"
               >
-                <Download size={10} className="mr-2" />
+                <Download size={14} className="mr-1" />
                 조직도 다운로드
               </button>
             </div>
           </div>
 
           {/* 검색 필터 */}
-          <div className="text-sm grid grid-cols-8 gap-3 mb-3 p-2 bg-gray-50 rounded-lg">
+          <div className="text-sm grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 mb-3 p-2 bg-gray-50 rounded-lg">
             <select
               value={employeeSearchFilter.position}
               onChange={(e) =>
@@ -359,11 +359,11 @@ const AdminEmployeeManagement = ({
           </div>
 
           {/* 직원 테이블 */}
-          <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+          <div className="overflow-x-auto max-h-[85vh] overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="bg-gray-100 sticky top-0 z-10">
                 <tr>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     사번
                     <button
                       onClick={() => handleSort('id')}
@@ -380,7 +380,7 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     이름
                     <button
                       onClick={() => handleSort('name')}
@@ -397,7 +397,7 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     직급
                     <button
                       onClick={() => handleSort('position')}
@@ -414,7 +414,7 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     부서
                     <button
                       onClick={() => handleSort('department')}
@@ -431,24 +431,29 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1 whitespace-nowrap leading-none text-xs md:text-[12px] min-w-[80px]">
-                    세부부서
-                    <button
-                      onClick={() => handleSort('subDepartment')}
-                      className={`ml-1 text-xs hover:text-gray-700 ${
-                        employeeSortField === 'subDepartment'
-                          ? 'text-blue-600'
-                          : 'text-gray-500'
-                      }`}
-                    >
-                      {employeeSortField === 'subDepartment'
-                        ? employeeSortOrder === 'asc'
-                          ? '▲'
-                          : '▼'
-                        : '▼'}
-                    </button>
+                  <th className="text-center py-2 px-1 whitespace-nowrap leading-none text-xs md:text-[12px] min-w-[60px]">
+                    <div className="flex items-center justify-center gap-1">
+                      <div className="lg:flex lg:flex-col lg:items-center">
+                        <span>세부</span>
+                        <span>부서</span>
+                      </div>
+                      <button
+                        onClick={() => handleSort('subDepartment')}
+                        className={`text-xs hover:text-gray-700 ${
+                          employeeSortField === 'subDepartment'
+                            ? 'text-blue-600'
+                            : 'text-gray-500'
+                        }`}
+                      >
+                        {employeeSortField === 'subDepartment'
+                          ? employeeSortOrder === 'asc'
+                            ? '▲'
+                            : '▼'
+                          : '▼'}
+                      </button>
+                    </div>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     직책
                     <button
                       onClick={() => handleSort('role')}
@@ -531,7 +536,7 @@ const AdminEmployeeManagement = ({
                       </button>
                     </div>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     입사일
                     <button
                       onClick={() => handleSort('joinDate')}
@@ -548,7 +553,7 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     퇴사일
                     <button
                       onClick={() => handleSort('leaveDate')}
@@ -565,7 +570,7 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     근속년수
                     <button
                       onClick={() => handleSort('workPeriod')}
@@ -582,7 +587,7 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     상태
                     <button
                       onClick={() => handleSort('status')}
@@ -599,7 +604,7 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     연락처
                     <button
                       onClick={() => handleSort('phone')}
@@ -616,7 +621,7 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1">
+                  <th className="text-center py-2 px-1 whitespace-nowrap">
                     주소
                     <button
                       onClick={() => handleSort('address')}
@@ -633,39 +638,48 @@ const AdminEmployeeManagement = ({
                         : '▼'}
                     </button>
                   </th>
-                  <th className="text-center py-2 px-1">
-                    비밀번호
-                    <button
-                      onClick={() => handleSort('password')}
-                      className={`ml-1 text-xs hover:text-gray-700 ${
-                        employeeSortField === 'password'
-                          ? 'text-blue-600'
-                          : 'text-gray-500'
-                      }`}
-                    >
-                      {employeeSortField === 'password'
-                        ? employeeSortOrder === 'asc'
-                          ? '▲'
-                          : '▼'
-                        : '▼'}
-                    </button>
+                  <th className="text-center py-2 px-1 leading-none">
+                    <div className="flex items-center justify-center gap-1">
+                      <div className="flex flex-col items-center lg:flex-row">
+                        <span>비밀</span><span>번호</span>
+                      </div>
+                      <button
+                        onClick={() => handleSort('password')}
+                        className={`text-xs hover:text-gray-700 ${
+                          employeeSortField === 'password'
+                            ? 'text-blue-600'
+                            : 'text-gray-500'
+                        }`}
+                      >
+                        {employeeSortField === 'password'
+                          ? employeeSortOrder === 'asc'
+                            ? '▲'
+                            : '▼'
+                          : '▼'}
+                      </button>
+                    </div>
                   </th>
-                  <th className="text-center py-2 px-1">
-                    마지막 로그인
-                    <button
-                      onClick={() => handleSort('lastLogin')}
-                      className={`ml-1 text-xs hover:text-gray-700 ${
-                        employeeSortField === 'lastLogin'
-                          ? 'text-blue-600'
-                          : 'text-gray-500'
-                      }`}
-                    >
-                      {employeeSortField === 'lastLogin'
-                        ? employeeSortOrder === 'asc'
-                          ? '▲'
-                          : '▼'
-                        : '▼'}
-                    </button>
+                  <th className="text-center py-2 px-1 whitespace-nowrap leading-none">
+                    <div className="flex items-center justify-center gap-1">
+                      <div className="flex flex-col items-center lg:flex-row lg:gap-1">
+                        <span>마지막</span>
+                        <span>로그인</span>
+                      </div>
+                      <button
+                        onClick={() => handleSort('lastLogin')}
+                        className={`text-xs hover:text-gray-700 ${
+                          employeeSortField === 'lastLogin'
+                            ? 'text-blue-600'
+                            : 'text-gray-500'
+                        }`}
+                      >
+                        {employeeSortField === 'lastLogin'
+                          ? employeeSortOrder === 'asc'
+                            ? '▲'
+                            : '▼'
+                          : '▼'}
+                      </button>
+                    </div>
                   </th>
                   <th className="text-center py-2 px-1">관리</th>
                 </tr>
@@ -703,7 +717,7 @@ const AdminEmployeeManagement = ({
                 ).map((emp) => (
                   <tr key={emp.id} className="hover:bg-gray-50">
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <input
                           className="border rounded px-2 py-1 w-16 min-w-16 text-center"
                           value={editForm.id}
@@ -716,10 +730,10 @@ const AdminEmployeeManagement = ({
                         />
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">{emp.id}</td>
+                      <td className="text-center py-2 px-2">{emp.id}</td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <input
                           className="border rounded px-2 py-1 w-20 min-w-20 text-center"
                           value={editForm.name}
@@ -732,10 +746,10 @@ const AdminEmployeeManagement = ({
                         />
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">{emp.name}</td>
+                      <td className="text-center py-2 px-2 whitespace-nowrap">{emp.name}</td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <select
                           className="border rounded px-2 py-1 w-17 min-w-17 text-center"
                           value={editForm.position}
@@ -754,12 +768,12 @@ const AdminEmployeeManagement = ({
                         </select>
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2 whitespace-nowrap">
                         {emp.position || '사원'}
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <select
                           className="border rounded px-2 py-1 w-17 min-w-17 text-center"
                           value={editForm.department}
@@ -778,12 +792,12 @@ const AdminEmployeeManagement = ({
                         </select>
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2 whitespace-nowrap">
                         {emp.department}
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <select
                           className="border rounded px-2 py-1 w-17 min-w-17 text-center text-xs"
                           value={editForm.subDepartment || ''}
@@ -808,7 +822,7 @@ const AdminEmployeeManagement = ({
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <select
                           className="border rounded px-2 py-1 w-15 min-w-15 text-center"
                           value={editForm.role || '팀원'}
@@ -827,12 +841,12 @@ const AdminEmployeeManagement = ({
                         </select>
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2 whitespace-nowrap">
                         {emp.role || '팀원'}
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <select
                           className="border rounded px-2 py-1 w-15 min-w-15 text-center"
                           value={editForm.workType || '주간'}
@@ -856,7 +870,7 @@ const AdminEmployeeManagement = ({
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <select
                           className="border rounded px-2 py-1 w-15 min-w-15 text-center text-xs"
                           value={editForm.payType || ''}
@@ -903,7 +917,7 @@ const AdminEmployeeManagement = ({
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <input
                           type="date"
                           className="border rounded px-2 py-1 w-28 min-w-28 text-center"
@@ -917,10 +931,10 @@ const AdminEmployeeManagement = ({
                         />
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">{emp.joinDate}</td>
+                      <td className="text-center py-2 px-2 whitespace-nowrap">{emp.joinDate}</td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <input
                           type="date"
                           className="border rounded px-2 py-1 w-28 min-w-28 text-center"
@@ -937,7 +951,7 @@ const AdminEmployeeManagement = ({
                         />
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2 whitespace-nowrap">
                         {emp.leaveDate || '-'}
                       </td>
                     )}
@@ -945,7 +959,7 @@ const AdminEmployeeManagement = ({
                       {getWorkPeriodText(emp.joinDate)}
                     </td>
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <select
                           className="border rounded px-2 py-1 w-15 min-w-15 text-center"
                           value={editForm.status}
@@ -973,7 +987,7 @@ const AdminEmployeeManagement = ({
                         </select>
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2 whitespace-nowrap">
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
                             (emp.status || '재직') === '재직'
@@ -986,7 +1000,7 @@ const AdminEmployeeManagement = ({
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <input
                             type="tel"
@@ -1002,12 +1016,12 @@ const AdminEmployeeManagement = ({
                         </div>
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2 whitespace-nowrap">
                         {emp.phone || ''}
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <textarea
                           rows={1}
                           className="border rounded px-2 py-1 min-w-[220px] max-w-[500px] min-h-[32px] resize-none text-center text-xs"
@@ -1086,7 +1100,7 @@ const AdminEmployeeManagement = ({
                       </td>
                     )}
                     {editingEmpId === emp.id ? (
-                      <td className="text-center py-1 px-2">
+                      <td className="text-center py-2 px-2">
                         <input
                           type="text"
                           className="border rounded px-2 py-1 w-20 min-w-20 text-center"
@@ -1100,7 +1114,7 @@ const AdminEmployeeManagement = ({
                         />
                       </td>
                     ) : (
-                      <td className="text-center py-1 px-2">****</td>
+                      <td className="text-center py-2 px-2 whitespace-nowrap">****</td>
                     )}
                     <td className="text-center py-1 px-2 text-gray-600 text-xs">
                       {emp.lastLogin
@@ -1113,7 +1127,8 @@ const AdminEmployeeManagement = ({
                                 timeZone: 'Asia/Seoul',
                               })
                             );
-                            const yy = String(kstDate.getFullYear()).slice(-2);
+                            const yyyy = String(kstDate.getFullYear());
+                            const yy = yyyy.slice(-2);
                             const mm = String(kstDate.getMonth() + 1).padStart(
                               2,
                               '0'
@@ -1130,11 +1145,19 @@ const AdminEmployeeManagement = ({
                               2,
                               '0'
                             );
-                            return `${yy}-${mm}-${dd} ${hh}:${min}`;
+                            return (
+                              <span className="flex flex-col items-center lg:flex-row lg:justify-center lg:gap-1">
+                                <span>
+                                  <span className="lg:hidden">{`${yyyy}-${mm}-${dd}`}</span>
+                                  <span className="hidden lg:inline">{`${yy}-${mm}-${dd}`}</span>
+                                </span>
+                                <span>{`${hh}:${min}`}</span>
+                              </span>
+                            );
                           })()
                         : '-'}
                     </td>
-                    <td className="text-center py-1 px-2">
+                    <td className="text-center py-2 px-2">
                       <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap justify-center">
                         {editingEmpId === emp.id ? (
                           <>

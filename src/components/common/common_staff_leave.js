@@ -126,6 +126,60 @@ export const useStaffLeave = (dependencies = {}) => {
       return;
     }
 
+    // 외출/조퇴: 당일만 신청 가능
+    if (
+      (leaveForm.type === '외출' || leaveForm.type === '조퇴') &&
+      leaveForm.startDate !== leaveForm.endDate
+    ) {
+      setLeaveFormError(
+        getText(
+          '외출/조퇴는 당일만 신청 가능합니다.',
+          'Outing/Early leave can only be applied for a single day.'
+        )
+      );
+      return;
+    }
+
+    // 외출: 시작시간·종료시간 검증
+    if (leaveForm.type === '외출') {
+      const st = leaveForm.startTime;
+      const et = leaveForm.endTime;
+
+      if (!st || !et) {
+        setLeaveFormError(
+          getText(
+            '외출 시 시작시간과 종료시간을 모두 입력해주세요.',
+            'Please enter both start and end times for outing.'
+          )
+        );
+        return;
+      }
+
+      if (st === et) {
+        setLeaveFormError(
+          getText(
+            '시작시간과 종료시간이 같을 수 없습니다.',
+            'Start time and end time cannot be the same.'
+          )
+        );
+        return;
+      }
+
+      const [sh, sm] = st.split(':').map(Number);
+      const [eh, em] = et.split(':').map(Number);
+      const diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+
+      if (diffMinutes < 30) {
+        setLeaveFormError(
+          getText(
+            '외출은 시작시간과 종료시간이 최소 30분 이상 차이나야 합니다.',
+            'Outing start and end times must be at least 30 minutes apart.'
+          )
+        );
+        return;
+      }
+    }
+
     // 날짜 문자열을 로컬 시간으로 파싱 (YYYY-MM-DD 형식)
     const parseLocalDate = (dateStr) => {
       const [year, month, day] = dateStr.split('-').map(Number);

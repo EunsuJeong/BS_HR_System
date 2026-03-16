@@ -75,8 +75,8 @@ const AdminScheduleManagement = ({
   return (
     <div className="flex flex-col lg:flex-row gap-6 w-full">
       {/* 왼쪽: 일정 달력 */}
-      <div className="flex-1 min-w-[350px]">
-        <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
+      <div className="flex-1 min-w-0">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 flex flex-col min-h-[400px] lg:h-[870px]">
           <div className="flex justify-between items-start mb-6">
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -355,12 +355,12 @@ const AdminScheduleManagement = ({
       </div>
 
       {/* 오른쪽: 전체 일정 */}
-      <div className="flex-1 min-w-[350px] flex flex-col">
-        <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-gray-800">전체 일정</h4>
+      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 flex flex-col min-h-[400px] lg:h-[870px]">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-[20px] mb-4">
+            <h4 className="text-lg font-semibold text-gray-800 whitespace-nowrap">전체 일정</h4>
             {/* 검색 필터 */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap gap-3 lg:flex-1 min-w-0">
               <input
                 type="text"
                 value={scheduleSearch.year}
@@ -370,7 +370,7 @@ const AdminScheduleManagement = ({
                     year: e.target.value,
                   })
                 }
-                className="w-20 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="연도"
               />
               <input
@@ -382,7 +382,7 @@ const AdminScheduleManagement = ({
                     month: e.target.value,
                   })
                 }
-                className="w-20 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-12 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="월"
               />
               <select
@@ -393,7 +393,7 @@ const AdminScheduleManagement = ({
                     type: e.target.value,
                   })
                 }
-                className="w-26 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">전체 유형</option>
                 <option value="공휴일">공휴일</option>
@@ -413,8 +413,8 @@ const AdminScheduleManagement = ({
                     titleOrContent: e.target.value,
                   })
                 }
-                className="w-80 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="제목 또는 내용 검색"
+                className="flex-1 min-w-[100px] px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="제목 또는 내용"
               />
             </div>
           </div>
@@ -467,68 +467,90 @@ const AdminScheduleManagement = ({
                     {currentPageEvents.map((event) => (
                       <div
                         key={event.id}
-                        className="flex justify-between items-center p-3 bg-gray-50 rounded-lg mb-2"
+                        className="flex flex-col p-3 bg-gray-50 rounded-lg mb-2"
                       >
-                        <div className="flex-50">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span
-                              className={`text-xs font-medium rounded px-2 py-0.5 ${
-                                EVENT_TYPE_COLORS[event.type] ||
-                                'bg-gray-100 text-gray-800'
-                              }`}
+                        {/* 1행: 유형 + 제목 + 날짜 + 수정/삭제 */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`text-xs font-medium rounded px-1.5 py-0.5 flex-shrink-0 ${
+                              EVENT_TYPE_COLORS[event.type] ||
+                              'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {event.type}
+                          </span>
+                          <span className="font-bold text-indigo-700 text-sm flex-1 min-w-0 truncate">
+                            {event.title}
+                          </span>
+                          <span className="text-xs text-gray-500 flex-shrink-0">
+                            {event.date}
+                          </span>
+                          <div className="flex gap-1 flex-shrink-0">
+                            <button
+                              onClick={() =>
+                                handleEditEvent(event, handleEditHoliday)
+                              }
+                              className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
                             >
-                              {event.type}
-                            </span>
-                            <span className="font-bold text-indigo-700">
-                              {event.title}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {event.date}
-                            </span>
+                              수정
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(event)}
+                              className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                            >
+                              삭제
+                            </button>
                           </div>
-                          {event.description && (
-                            <div className="text-sm text-gray-500">
-                              {event.description}
-                            </div>
-                          )}
                         </div>
-                        <div className="flex space-x-2 ml-3">
-                          <button
-                            onClick={() =>
-                              handleEditEvent(event, handleEditHoliday)
-                            }
-                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
-                          >
-                            수정
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEvent(event)}
-                            className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                          >
-                            삭제
-                          </button>
-                        </div>
+                        {/* 2행: 내용 */}
+                        {event.description && (
+                          <div className="text-xs text-gray-500 mt-1 pl-0.5">
+                            {event.description}
+                          </div>
+                        )}
                       </div>
                     ))}
 
                     {/* 페이지네이션 */}
-                    {totalPages > 1 && (
-                      <div className="flex justify-center mt-4 gap-1">
-                        {Array.from({ length: totalPages }).map((_, i) => (
-                          <button
-                            key={i}
-                            className={`px-3 py-1 rounded ${
-                              scheduleCurrentPage === i + 1
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-gray-200 hover:bg-gray-300'
-                            }`}
-                            onClick={() => setScheduleCurrentPage(i + 1)}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    {totalPages > 1 && (() => {
+                      const groupSize = 10;
+                      const currentGroup = Math.floor((scheduleCurrentPage - 1) / groupSize);
+                      const startPage = currentGroup * groupSize + 1;
+                      const endPage = Math.min(startPage + groupSize - 1, totalPages);
+                      return (
+                        <div className="flex flex-wrap justify-center mt-4 gap-1 px-2">
+                          {startPage > 1 && (
+                            <button
+                              className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                              onClick={() => setScheduleCurrentPage(startPage - 1)}
+                            >
+                              &lt;
+                            </button>
+                          )}
+                          {Array.from({ length: endPage - startPage + 1 }).map((_, i) => (
+                            <button
+                              key={startPage + i}
+                              className={`px-3 py-1 rounded text-sm ${
+                                scheduleCurrentPage === startPage + i
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-200 hover:bg-gray-300'
+                              }`}
+                              onClick={() => setScheduleCurrentPage(startPage + i)}
+                            >
+                              {startPage + i}
+                            </button>
+                          ))}
+                          {endPage < totalPages && (
+                            <button
+                              className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                              onClick={() => setScheduleCurrentPage(endPage + 1)}
+                            >
+                              &gt;
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </>
                 );
               })()}

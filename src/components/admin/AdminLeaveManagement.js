@@ -111,9 +111,9 @@ const AdminLeaveManagement = ({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
-        <div className="flex items-center mb-3">
-          <h3 className="text-lg font-semibold text-gray-800 mr-16">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
+          <h3 className="text-lg font-semibold text-gray-800">
             연차 관리
           </h3>
 
@@ -144,95 +144,86 @@ const AdminLeaveManagement = ({
 
         {/* 직원 연차 탭 */}
         {leaveManagementTab === 'employee-leave' && (
-          <div className="flex flex-col flex-1 overflow-hidden">
-            {/* 제목, 검색 필터, 다운로드 버튼을 한 줄로 배치 */}
-            <div className="mb-4 flex gap-4 items-center">
-              {/* 제목 */}
-              <h4 className="text-md font-semibold text-gray-700 whitespace-nowrap">
-                직원별 연차 현황
-              </h4>
-
-              {/* 검색 필터 */}
-              <div className="flex-1 p-2 rounded-lg">
-                <div className="grid grid-cols-4 gap-6">
-                  <div></div>
-                  <div>
-                    <select
-                      value={leaveSearch.position || '전체'}
-                      onChange={(e) =>
-                        setLeaveSearch((prev) => ({
-                          ...prev,
-                          position: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="전체">전체 직급</option>
-                      {COMPANY_STANDARDS.POSITIONS.map((position) => (
-                        <option key={position} value={position}>
-                          {position}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <select
-                      value={leaveSearch.dept || '전체'}
-                      onChange={(e) =>
-                        setLeaveSearch((prev) => ({
-                          ...prev,
-                          dept: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="전체">전체 부서</option>
-                      {COMPANY_STANDARDS.DEPARTMENTS.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      value={leaveSearch.keyword || ''}
-                      onChange={(e) =>
-                        setLeaveSearch((prev) => ({
-                          ...prev,
-                          keyword: e.target.value,
-                        }))
-                      }
-                      placeholder="사번 또는 이름 검색"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
+          <div>
+            {/* 직원연차 헤더 */}
+            <div className="mb-4 flex flex-col gap-3">
+              {/* 1행: 제목 + 다운로드 버튼 */}
+              <div className="flex items-center justify-between">
+                <h4 className="text-md font-semibold text-gray-700">
+                  직원별 연차 현황
+                </h4>
+                <button
+                  onClick={() =>
+                    exportEmployeeLeaveStatusToXLSX(
+                      employees,
+                      calculateEmployeeAnnualLeave,
+                      leaveRequests
+                    )
+                  }
+                  className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center text-sm"
+                >
+                  <Download size={14} className="mr-1" />
+                  다운로드
+                </button>
               </div>
 
-              {/* 다운로드 버튼 */}
-              <button
-                onClick={() =>
-                  exportEmployeeLeaveStatusToXLSX(
-                    employees,
-                    calculateEmployeeAnnualLeave,
-                    leaveRequests
-                  )
-                }
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center whitespace-nowrap"
-              >
-                <Download size={16} className="mr-2" />
-                다운로드
-              </button>
+              {/* 2행: 검색 필터 */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                <select
+                  value={leaveSearch.position || '전체'}
+                  onChange={(e) =>
+                    setLeaveSearch((prev) => ({
+                      ...prev,
+                      position: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="전체">전체 직급</option>
+                  {COMPANY_STANDARDS.POSITIONS.map((position) => (
+                    <option key={position} value={position}>
+                      {position}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={leaveSearch.dept || '전체'}
+                  onChange={(e) =>
+                    setLeaveSearch((prev) => ({
+                      ...prev,
+                      dept: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="전체">전체 부서</option>
+                  {COMPANY_STANDARDS.DEPARTMENTS.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={leaveSearch.keyword || ''}
+                  onChange={(e) =>
+                    setLeaveSearch((prev) => ({
+                      ...prev,
+                      keyword: e.target.value,
+                    }))
+                  }
+                  placeholder="사번 또는 이름 검색"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 col-span-2 lg:col-span-1"
+                />
+              </div>
             </div>
 
             {/* 직원 연차 현황 테이블 */}
-            <div className="flex-1 overflow-y-auto overflow-x-auto">
-              <table className="w-full text-xs">
+            <div className="overflow-x-auto max-h-[85vh] overflow-y-auto">
+              <table className="text-xs" style={{ width: 'max-content', minWidth: '100%' }}>
                 <thead className="bg-gray-100 sticky top-0 z-10">
                   <tr>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       사번
                       <button
                         onClick={() => handleAnnualLeaveSort('employeeNumber')}
@@ -241,7 +232,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       이름
                       <button
                         onClick={() => handleAnnualLeaveSort('name')}
@@ -250,7 +241,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       직급
                       <button
                         onClick={() => handleAnnualLeaveSort('position')}
@@ -259,7 +250,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       부서
                       <button
                         onClick={() => handleAnnualLeaveSort('department')}
@@ -268,7 +259,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       입사일
                       <button
                         onClick={() => handleAnnualLeaveSort('hireDate')}
@@ -278,7 +269,7 @@ const AdminLeaveManagement = ({
                       </button>
                     </th>
                     {/* 퇴사일 컬럼 비표시 */}
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       근속년수
                       <button
                         onClick={() => handleAnnualLeaveSort('workPeriod')}
@@ -287,61 +278,55 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
-                      근무형태
-                      <button
-                        onClick={() => handleAnnualLeaveSort('workType')}
-                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        ▼
-                      </button>
+                    <th className="text-center py-1 px-2 leading-none">
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="flex flex-col items-center lg:flex-row">
+                          <span>근무</span><span>형태</span>
+                        </div>
+                        <button onClick={() => handleAnnualLeaveSort('workType')} className="text-xs text-gray-500 hover:text-gray-700">▼</button>
+                      </div>
                     </th>
-                    <th className="text-center py-1 px-2">
-                      계약형태
-                      <button
-                        onClick={() => handleAnnualLeaveSort('contractType')}
-                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        ▼
-                      </button>
+                    <th className="text-center py-1 px-2 leading-none">
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="flex flex-col items-center lg:flex-row">
+                          <span>계약</span><span>형태</span>
+                        </div>
+                        <button onClick={() => handleAnnualLeaveSort('contractType')} className="text-xs text-gray-500 hover:text-gray-700">▼</button>
+                      </div>
                     </th>
-                    <th className="text-center py-1 px-2">
-                      연차시작일
-                      <button
-                        onClick={() => handleAnnualLeaveSort('annualStart')}
-                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        ▼
-                      </button>
+                    <th className="text-center py-1 px-2 leading-none">
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="flex flex-col items-center lg:flex-row">
+                          <span>연차</span><span>시작일</span>
+                        </div>
+                        <button onClick={() => handleAnnualLeaveSort('annualStart')} className="text-xs text-gray-500 hover:text-gray-700">▼</button>
+                      </div>
                     </th>
-                    <th className="text-center py-1 px-2">
-                      연차종료일
-                      <button
-                        onClick={() => handleAnnualLeaveSort('annualEnd')}
-                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        ▼
-                      </button>
+                    <th className="text-center py-1 px-2 leading-none">
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="flex flex-col items-center lg:flex-row">
+                          <span>연차</span><span>종료일</span>
+                        </div>
+                        <button onClick={() => handleAnnualLeaveSort('annualEnd')} className="text-xs text-gray-500 hover:text-gray-700">▼</button>
+                      </div>
                     </th>
-                    <th className="text-center py-1 px-2">
-                      기본연차
-                      <button
-                        onClick={() => handleAnnualLeaveSort('baseAnnual')}
-                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        ▼
-                      </button>
+                    <th className="text-center py-1 px-2 leading-none">
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="flex flex-col items-center lg:flex-row">
+                          <span>기본</span><span>연차</span>
+                        </div>
+                        <button onClick={() => handleAnnualLeaveSort('baseAnnual')} className="text-xs text-gray-500 hover:text-gray-700">▼</button>
+                      </div>
                     </th>
-                    <th className="text-center py-1 px-2">
-                      이월연차
-                      <button
-                        onClick={() => handleAnnualLeaveSort('carryOverLeave')}
-                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        ▼
-                      </button>
+                    <th className="text-center py-1 px-2 leading-none">
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="flex flex-col items-center lg:flex-row">
+                          <span>이월</span><span>연차</span>
+                        </div>
+                        <button onClick={() => handleAnnualLeaveSort('carryOverLeave')} className="text-xs text-gray-500 hover:text-gray-700">▼</button>
+                      </div>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       총연차
                       <button
                         onClick={() => handleAnnualLeaveSort('totalAnnual')}
@@ -350,25 +335,23 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
-                      사용연차
-                      <button
-                        onClick={() => handleAnnualLeaveSort('usedAnnual')}
-                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        ▼
-                      </button>
+                    <th className="text-center py-1 px-2 leading-none">
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="flex flex-col items-center lg:flex-row">
+                          <span>사용</span><span>연차</span>
+                        </div>
+                        <button onClick={() => handleAnnualLeaveSort('usedAnnual')} className="text-xs text-gray-500 hover:text-gray-700">▼</button>
+                      </div>
                     </th>
-                    <th className="text-center py-1 px-2">
-                      잔여연차
-                      <button
-                        onClick={() => handleAnnualLeaveSort('remainAnnual')}
-                        className="ml-1 text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        ▼
-                      </button>
+                    <th className="text-center py-1 px-2 leading-none">
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="flex flex-col items-center lg:flex-row">
+                          <span>잔여</span><span>연차</span>
+                        </div>
+                        <button onClick={() => handleAnnualLeaveSort('remainAnnual')} className="text-xs text-gray-500 hover:text-gray-700">▼</button>
+                      </div>
                     </th>
-                    <th className="text-center py-1 px-2">관리</th>
+                    <th className="text-center py-1 px-2 whitespace-nowrap">관리</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -500,7 +483,7 @@ const AdminLeaveManagement = ({
                       const isEditing = editingAnnualLeave === emp.id;
                       return (
                         <tr key={emp.id} className="hover:bg-gray-50">
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <input
                                 type="text"
@@ -521,7 +504,7 @@ const AdminLeaveManagement = ({
                               emp.employeeNumber || emp.id
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <input
                                 type="text"
@@ -538,7 +521,7 @@ const AdminLeaveManagement = ({
                               emp.name
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <select
                                 value={
@@ -570,7 +553,7 @@ const AdminLeaveManagement = ({
                               emp.position || '사원'
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <select
                                 value={
@@ -596,7 +579,7 @@ const AdminLeaveManagement = ({
                               emp.department || '미분류'
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <input
                                 type="date"
@@ -619,10 +602,10 @@ const AdminLeaveManagement = ({
                             )}
                           </td>
                           {/* 퇴사일 셀 비표시 */}
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {annualData.years}년 {annualData.months}개월
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <select
                                 value={
@@ -645,7 +628,7 @@ const AdminLeaveManagement = ({
                               emp.workType || '주간'
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <select
                                 value={
@@ -669,13 +652,13 @@ const AdminLeaveManagement = ({
                               emp.contractType || '정규'
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {annualData.annualStart}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {annualData.annualEnd}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <input
                                 type="number"
@@ -705,7 +688,7 @@ const AdminLeaveManagement = ({
                               </span>
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <input
                                 type="number"
@@ -732,7 +715,7 @@ const AdminLeaveManagement = ({
                               </span>
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <input
                                 type="number"
@@ -760,7 +743,7 @@ const AdminLeaveManagement = ({
                               annualData.totalAnnual
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <input
                                 type="number"
@@ -799,7 +782,7 @@ const AdminLeaveManagement = ({
                               </span>
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <span className="font-medium text-blue-600">
                                 {editAnnualData.remainAnnual !== undefined
@@ -810,7 +793,7 @@ const AdminLeaveManagement = ({
                               annualData.remainAnnual
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
                               <>
                                 <button
@@ -940,117 +923,106 @@ const AdminLeaveManagement = ({
 
         {/* 연차 내역 탭 */}
         {leaveManagementTab === 'leave-history' && (
-          <div className="flex flex-col">
-            {/* 제목, 검색 필터, 다운로드 버튼을 한 줄로 배치 */}
-            <div className="mb-4 flex gap-8 items-center">
-              {/* 제목 */}
-              <h4 className="text-md font-semibold text-gray-700 whitespace-nowrap">
-                연차 신청 내역
-              </h4>
-
-              {/* 검색 필터 */}
-              <div className="flex-1 p-2 rounded-lg">
-                <div className="grid grid-cols-6 gap-3">
-                  <input
-                    type="text"
-                    placeholder="연도"
-                    value={leaveSearch.year}
-                    onChange={(e) =>
-                      setLeaveSearch((s) => ({ ...s, year: e.target.value }))
-                    }
-                    className="px-3 py-2 border rounded-lg"
-                  />
-                  <input
-                    type="text"
-                    placeholder="월"
-                    value={leaveSearch.month}
-                    onChange={(e) =>
-                      setLeaveSearch((s) => ({ ...s, month: e.target.value }))
-                    }
-                    className="px-3 py-2 border rounded-lg"
-                  />
-                  <input
-                    type="text"
-                    placeholder="일"
-                    value={leaveSearch.day}
-                    onChange={(e) =>
-                      setLeaveSearch((s) => ({ ...s, day: e.target.value }))
-                    }
-                    className="px-3 py-2 border rounded-lg"
-                  />
-
-                  <select
-                    value={leaveSearch.type}
-                    onChange={(e) =>
-                      setLeaveSearch((s) => ({ ...s, type: e.target.value }))
-                    }
-                    className="px-3 py-2 border rounded-lg"
-                  >
-                    <option value="전체">전체 유형</option>
-                    <option value="연차">연차</option>
-                    <option value="반차(오전)">반차(오전)</option>
-                    <option value="반차(오후)">반차(오후)</option>
-                    <option value="외출">외출</option>
-                    <option value="조퇴">조퇴</option>
-                    <option value="경조">경조</option>
-                    <option value="공가">공가</option>
-                    <option value="휴직">휴직</option>
-                    <option value="결근">결근</option>
-                    <option value="기타">기타</option>
-                  </select>
-
-                  <select
-                    value={leaveSearch.status}
-                    onChange={(e) =>
-                      setLeaveSearch((s) => ({
-                        ...s,
-                        status: e.target.value,
-                      }))
-                    }
-                    className="px-3 py-2 border rounded-lg"
-                  >
-                    <option value="전체">전체 상태</option>
-                    <option value="대기">대기</option>
-                    <option value="확인">확인</option>
-                    <option value="승인">승인</option>
-                    <option value="반려">반려</option>
-                    <option value="취소">취소</option>
-                  </select>
-
-                  <input
-                    type="text"
-                    placeholder="사번 또는 이름 검색"
-                    value={leaveSearch.keyword}
-                    onChange={(e) =>
-                      setLeaveSearch((s) => ({
-                        ...s,
-                        keyword: e.target.value,
-                      }))
-                    }
-                    className="px-3 py-2 border rounded-lg"
-                  />
-                </div>
+          <div>
+            {/* 연차내역 헤더 */}
+            <div className="mb-4 flex flex-col gap-3">
+              {/* 1행: 제목 + 다운로드 버튼 */}
+              <div className="flex items-center justify-between">
+                <h4 className="text-md font-semibold text-gray-700">
+                  연차 신청 내역
+                </h4>
+                <button
+                  onClick={() => {
+                    const filteredData = getSortedLeaveRequests(
+                      getFilteredLeaveRequests(leaveRequests)
+                    );
+                    exportLeaveHistoryToXLSX(filteredData, formatDateByLang);
+                  }}
+                  className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center text-sm"
+                >
+                  <Download size={14} className="mr-1" />
+                  다운로드
+                </button>
               </div>
 
-              {/* 다운로드 버튼 */}
-              <button
-                onClick={() => {
-                  const filteredData = getSortedLeaveRequests(
-                    getFilteredLeaveRequests(leaveRequests)
-                  );
-                  exportLeaveHistoryToXLSX(filteredData, formatDateByLang);
-                }}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center whitespace-nowrap"
-              >
-                <Download size={16} className="mr-2" />
-                다운로드
-              </button>
+              {/* 2행: 검색 필터 */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <input
+                  type="text"
+                  placeholder="연도"
+                  value={leaveSearch.year}
+                  onChange={(e) =>
+                    setLeaveSearch((s) => ({ ...s, year: e.target.value }))
+                  }
+                  className="px-3 py-2 border rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="월"
+                  value={leaveSearch.month}
+                  onChange={(e) =>
+                    setLeaveSearch((s) => ({ ...s, month: e.target.value }))
+                  }
+                  className="px-3 py-2 border rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="일"
+                  value={leaveSearch.day}
+                  onChange={(e) =>
+                    setLeaveSearch((s) => ({ ...s, day: e.target.value }))
+                  }
+                  className="px-3 py-2 border rounded-lg"
+                />
+                <select
+                  value={leaveSearch.type}
+                  onChange={(e) =>
+                    setLeaveSearch((s) => ({ ...s, type: e.target.value }))
+                  }
+                  className="px-3 py-2 border rounded-lg"
+                >
+                  <option value="전체">전체 유형</option>
+                  <option value="연차">연차</option>
+                  <option value="반차(오전)">반차(오전)</option>
+                  <option value="반차(오후)">반차(오후)</option>
+                  <option value="외출">외출</option>
+                  <option value="조퇴">조퇴</option>
+                  <option value="경조">경조</option>
+                  <option value="공가">공가</option>
+                  <option value="휴직">휴직</option>
+                  <option value="결근">결근</option>
+                  <option value="기타">기타</option>
+                </select>
+                <select
+                  value={leaveSearch.status}
+                  onChange={(e) =>
+                    setLeaveSearch((s) => ({ ...s, status: e.target.value }))
+                  }
+                  className="px-3 py-2 border rounded-lg"
+                >
+                  <option value="전체">전체 상태</option>
+                  <option value="대기">대기</option>
+                  <option value="확인">확인</option>
+                  <option value="승인">승인</option>
+                  <option value="반려">반려</option>
+                  <option value="취소">취소</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="사번 또는 이름 검색"
+                  value={leaveSearch.keyword}
+                  onChange={(e) =>
+                    setLeaveSearch((s) => ({ ...s, keyword: e.target.value }))
+                  }
+                  className="px-3 py-2 border rounded-lg"
+                />
+              </div>
             </div>
-            <div className="flex-1 overflow-x-auto overflow-y-auto">
-              <table className="w-full text-xs table-fixed">
-                <thead className="bg-gray-100">
+            <div className="overflow-x-auto max-h-[85vh] overflow-y-auto">
+              <table className="w-full text-xs" style={{ minWidth: '600px' }}>
+                <thead className="bg-gray-100 sticky top-0 z-10">
                   <tr>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       신청일
                       <button
                         onClick={() => handleLeaveSort('applyDate')}
@@ -1059,7 +1031,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       결재일
                       <button
                         onClick={() => handleLeaveSort('approvalDate')}
@@ -1068,7 +1040,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       사번
                       <button
                         onClick={() => handleLeaveSort('employeeId')}
@@ -1077,7 +1049,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       이름
                       <button
                         onClick={() => handleLeaveSort('name')}
@@ -1086,7 +1058,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       시작일
                       <button
                         onClick={() => handleLeaveSort('startDate')}
@@ -1095,7 +1067,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       종료일
                       <button
                         onClick={() => handleLeaveSort('endDate')}
@@ -1104,7 +1076,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       사용일수
                       <button
                         onClick={() => handleLeaveSort('leaveDays')}
@@ -1113,7 +1085,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       유형
                       <button
                         onClick={() => handleLeaveSort('type')}
@@ -1122,7 +1094,9 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2 w-[320px]">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">시작시간</th>
+                    <th className="text-center py-1 px-2 whitespace-nowrap">종료시간</th>
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       사유
                       <button
                         onClick={() => handleLeaveSort('reason')}
@@ -1131,7 +1105,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2 w-[200px]">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       비상연락망
                       <button
                         onClick={() => handleLeaveSort('contact')}
@@ -1140,7 +1114,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       비고
                       <button
                         onClick={() => handleLeaveSort('remark')}
@@ -1149,7 +1123,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
                       상태
                       <button
                         onClick={() => handleLeaveSort('status')}
@@ -1158,7 +1132,7 @@ const AdminLeaveManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">결제</th>
+                    <th className="text-center py-1 px-2 whitespace-nowrap">결제</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -1167,7 +1141,7 @@ const AdminLeaveManagement = ({
                       getFilteredLeaveRequests(leaveRequests)
                     );
                     return filteredLeaveRequests
-                      .slice((leaveHistoryPage - 1) * 15, leaveHistoryPage * 15)
+                      .slice((leaveHistoryPage - 1) * 17, leaveHistoryPage * 17)
                       .map((lr) => {
                         const isEditing = editingLeaveHistoryRow === lr.id;
                         return (
@@ -1293,7 +1267,31 @@ const AdminLeaveManagement = ({
                                 lr.type
                               )}
                             </td>
-                            <td className="text-center py-2 px-2 w-[320px] break-words whitespace-normal">
+                            <td className="text-center py-2 px-2 text-xs whitespace-nowrap">
+                              {lr.type === '외출' ? (() => {
+                                const f = (t) => {
+                                  if (!t) return '-';
+                                  const h = parseInt(t.split(':')[0], 10);
+                                  const p = h < 12 ? '오전' : '오후';
+                                  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                                  return `${p} ${h12}:${t.split(':')[1]}`;
+                                };
+                                return f(lr.startTime);
+                              })() : <span className="text-gray-300">-</span>}
+                            </td>
+                            <td className="text-center py-2 px-2 text-xs whitespace-nowrap">
+                              {(lr.type === '외출' || lr.type === '조퇴') ? (() => {
+                                const f = (t) => {
+                                  if (!t) return '-';
+                                  const h = parseInt(t.split(':')[0], 10);
+                                  const p = h < 12 ? '오전' : '오후';
+                                  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                                  return `${p} ${h12}:${t.split(':')[1]}`;
+                                };
+                                return f(lr.endTime);
+                              })() : <span className="text-gray-300">-</span>}
+                            </td>
+                            <td className="text-center py-2 px-2 break-words whitespace-normal">
                               {isEditing ? (
                                 <input
                                   type="text"
@@ -1311,10 +1309,10 @@ const AdminLeaveManagement = ({
                                   className="w-24 px-2 py-1 border rounded text-center"
                                 />
                               ) : (
-                                lr.reason || '개인사정'
+                                <div className="w-[15em] lg:w-[20em] break-words mx-auto text-center">{lr.reason || '개인사정'}</div>
                               )}
                             </td>
-                            <td className="text-center py-2 px-2 w-[200px]">
+                            <td className="text-center py-2 px-2 whitespace-nowrap">
                               {isEditing ? (
                                 <input
                                   type="text"
@@ -1335,7 +1333,7 @@ const AdminLeaveManagement = ({
                                 lr.contact || ''
                               )}
                             </td>
-                            <td className="text-center py-2 px-2">
+                            <td className="text-center py-2 px-2 whitespace-nowrap">
                               {isEditing ? (
                                 <input
                                   type="text"
@@ -1353,15 +1351,12 @@ const AdminLeaveManagement = ({
                                   className="w-32 px-2 py-1 border rounded text-center"
                                 />
                               ) : (
-                                <span
-                                  className="truncate max-w-[150px]"
-                                  title={lr.remark || '-'}
-                                >
+                                <span title={lr.remark || '-'}>
                                   {lr.remark || '-'}
                                 </span>
                               )}
                             </td>
-                            <td className="text-center py-2 px-2">
+                            <td className="text-center py-2 px-2 whitespace-nowrap">
                               {isEditing ? (
                                 <select
                                   value={
@@ -1472,25 +1467,45 @@ const AdminLeaveManagement = ({
               const filteredCount = getSortedLeaveRequests(
                 getFilteredLeaveRequests(leaveRequests)
               ).length;
-              if (filteredCount <= 15) return null;
+              if (filteredCount <= 17) return null;
+
+              const totalPages = Math.ceil(filteredCount / 17);
+              const groupSize = 10;
+              const currentGroup = Math.floor((leaveHistoryPage - 1) / groupSize);
+              const startPage = currentGroup * groupSize + 1;
+              const endPage = Math.min(startPage + groupSize - 1, totalPages);
 
               return (
-                <div className="flex justify-center mt-4 gap-1">
-                  {Array.from({
-                    length: Math.ceil(filteredCount / 15),
-                  }).map((_, i) => (
+                <div className="flex flex-wrap justify-center mt-4 gap-1 px-2">
+                  {startPage > 1 && (
                     <button
-                      key={i}
-                      className={`px-3 py-1 rounded ${
-                        leaveHistoryPage === i + 1
+                      className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                      onClick={() => setLeaveHistoryPage(startPage - 1)}
+                    >
+                      &lt;
+                    </button>
+                  )}
+                  {Array.from({ length: endPage - startPage + 1 }).map((_, i) => (
+                    <button
+                      key={startPage + i}
+                      className={`px-3 py-1 rounded text-sm ${
+                        leaveHistoryPage === startPage + i
                           ? 'bg-blue-500 text-white'
                           : 'bg-gray-200 hover:bg-gray-300'
                       }`}
-                      onClick={() => setLeaveHistoryPage(i + 1)}
+                      onClick={() => setLeaveHistoryPage(startPage + i)}
                     >
-                      {i + 1}
+                      {startPage + i}
                     </button>
                   ))}
+                  {endPage < totalPages && (
+                    <button
+                      className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                      onClick={() => setLeaveHistoryPage(endPage + 1)}
+                    >
+                      &gt;
+                    </button>
+                  )}
                 </div>
               );
             })()}

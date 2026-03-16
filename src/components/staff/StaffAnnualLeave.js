@@ -2,6 +2,128 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
 import { LEAVE_TYPES, LEAVE_PAGE_SIZE } from '../common/common_staff_leave';
 
+// ============================================================
+// 시간 셀렉트 피커 (12시간제, 오전/오후 언어 지원)
+// ============================================================
+const parseTime12h = (val) => {
+  if (!val) return { period: 'AM', hour: 9, minute: 0 };
+  const [h, m] = val.split(':').map(Number);
+  return {
+    period: h < 12 ? 'AM' : 'PM',
+    hour: h === 0 ? 12 : h > 12 ? h - 12 : h,
+    minute: isNaN(m) ? 0 : Math.round(m / 5) * 5,
+  };
+};
+
+const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
+const MINUTE_OPTIONS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+const fmt12h = (t) => {
+  if (!t) return null;
+  const h = parseInt(t.split(':')[0], 10);
+  const p = h < 12 ? '오전' : '오후';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${p} ${h12}:${t.split(':')[1]}`;
+};
+
+const TimePickerSelect = ({ name, value, onChange, disabled, getText, label }) => {
+  const [open, setOpen] = useState(false);
+  const init = parseTime12h(value);
+  const [localPeriod, setLocalPeriod] = useState(init.period);
+  const [localHour, setLocalHour] = useState(init.hour);
+  const [localMinute, setLocalMinute] = useState(init.minute);
+
+  useEffect(() => {
+    if (value) {
+      const p = parseTime12h(value);
+      setLocalPeriod(p.period);
+      setLocalHour(p.hour);
+      setLocalMinute(p.minute);
+    } else {
+      setLocalPeriod('AM');
+      setLocalHour(9);
+      setLocalMinute(0);
+    }
+  }, [value]);
+
+  const handleConfirm = () => {
+    let h24 = localHour;
+    if (localPeriod === 'AM' && localHour === 12) h24 = 0;
+    else if (localPeriod === 'PM' && localHour !== 12) h24 = localHour + 12;
+    onChange({
+      target: { name, value: `${String(h24).padStart(2, '0')}:${String(localMinute).padStart(2, '0')}` },
+    });
+    setOpen(false);
+  };
+
+  const formatDisplay = () => {
+    if (!value) return null;
+    const p = parseTime12h(value);
+    const pl = p.period === 'AM' ? getText('오전', 'AM') : getText('오후', 'PM');
+    return `${pl} ${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`;
+  };
+
+  const display = formatDisplay();
+  const selectClass = 'border rounded px-2 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-400';
+
+  if (disabled) {
+    return (
+      <div className="flex-1 border rounded px-2 py-1 bg-gray-100 text-gray-400 text-xs text-center min-w-[90px]">
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={`flex-1 border rounded px-2 py-1 text-xs text-center cursor-pointer hover:bg-gray-50 min-w-[90px] ${!display ? 'text-gray-400' : 'text-gray-800'}`}
+      >
+        {display || label}
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl p-5 shadow-2xl flex flex-col gap-4 min-w-[240px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-bold text-gray-700 text-center">{label}</p>
+            <div className="flex items-center gap-2 justify-center">
+              <select value={localPeriod} onChange={(e) => setLocalPeriod(e.target.value)} className={selectClass}>
+                <option value="AM">{getText('오전', 'AM')}</option>
+                <option value="PM">{getText('오후', 'PM')}</option>
+              </select>
+              <select value={localHour} onChange={(e) => setLocalHour(Number(e.target.value))} className={selectClass}>
+                {HOUR_OPTIONS.map((h) => (
+                  <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
+                ))}
+              </select>
+              <span className="text-gray-500 text-lg font-bold">:</span>
+              <select value={localMinute} onChange={(e) => setLocalMinute(Number(e.target.value))} className={selectClass}>
+                {MINUTE_OPTIONS.map((m) => (
+                  <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={handleConfirm}
+              className="bg-blue-500 text-white text-sm rounded-lg py-2 px-6 font-bold w-full"
+            >
+              {getText('확인', 'OK')}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 /**
  * STAFF ⑤ 연차 신청/내역 컴포넌트
  * 직원 모드에서 연차 신청 및 내역을 관리하는 컴포넌트
@@ -307,7 +429,7 @@ const StaffAnnualLeave = ({
                     className="absolute left-2 top-1/2 text-gray-400 text-xs pointer-events-none"
                     style={{ transform: 'translateY(-50%)', zIndex: 1 }}
                   >
-                    {getDatePlaceholder()}
+                    {getDatePlaceholder(selectedLanguage)}
                   </span>
                 )}
               </div>
@@ -334,7 +456,7 @@ const StaffAnnualLeave = ({
                     className="absolute left-2 top-1/2 text-gray-400 text-xs pointer-events-none"
                     style={{ transform: 'translateY(-50%)', zIndex: 1 }}
                   >
-                    {getDatePlaceholder()}
+                    {getDatePlaceholder(selectedLanguage)}
                   </span>
                 )}
               </div>
@@ -353,23 +475,22 @@ const StaffAnnualLeave = ({
             </div>
             {(leaveForm.type === '외출' || leaveForm.type === '조퇴') && (
               <div className="flex flex-wrap gap-2 items-center">
-                <input
-                  type="time"
+                <TimePickerSelect
                   name="startTime"
                   value={leaveForm.startTime || ''}
                   onChange={handleLeaveFormChange}
                   disabled={leaveForm.type === '조퇴'}
-                  className={`${commonClass} border rounded flex-1 min-w-[100px] ${leaveForm.type === '조퇴' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
-                  placeholder="시작 시간"
+                  getText={getText}
+                  label={getText('시작 시간', 'Start Time')}
                 />
                 <span className="flex items-center">~</span>
-                <input
-                  type="time"
+                <TimePickerSelect
                   name="endTime"
                   value={leaveForm.endTime || ''}
                   onChange={handleLeaveFormChange}
-                  className={`${commonClass} border rounded flex-1 min-w-[100px]`}
-                  placeholder="끝 시간"
+                  disabled={false}
+                  getText={getText}
+                  label={getText('종료 시간', 'End Time')}
                 />
               </div>
             )}
@@ -472,6 +593,12 @@ const StaffAnnualLeave = ({
                         {getText('유형', 'Type')}
                       </th>
                       <th className="text-center py-1 px-2 whitespace-nowrap">
+                        {getText('시작시간', 'Start Time')}
+                      </th>
+                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                        {getText('종료시간', 'End Time')}
+                      </th>
+                      <th className="text-center py-1 px-2 whitespace-nowrap">
                         {getText('사유', 'Reason')}
                       </th>
                       <th className="text-center py-1 px-2 whitespace-nowrap">
@@ -505,6 +632,12 @@ const StaffAnnualLeave = ({
                         </td>
                         <td className="text-center py-1 px-2 whitespace-nowrap">
                           {getLeaveTypeText(leaveFormPreview.type)}
+                        </td>
+                        <td className="text-center py-1 px-2 whitespace-nowrap text-xs">
+                          {leaveFormPreview.type === '외출' ? (fmt12h(leaveFormPreview.startTime) || <span className="text-gray-300">-</span>) : <span className="text-gray-300">-</span>}
+                        </td>
+                        <td className="text-center py-1 px-2 whitespace-nowrap text-xs">
+                          {(leaveFormPreview.type === '외출' || leaveFormPreview.type === '조퇴') ? (fmt12h(leaveFormPreview.endTime) || <span className="text-gray-300">-</span>) : <span className="text-gray-300">-</span>}
                         </td>
                         <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>
                           {leaveFormPreview.reason}
@@ -542,6 +675,12 @@ const StaffAnnualLeave = ({
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             {getLeaveTypeText(lr.type)}
                           </td>
+                          <td className="text-center py-1 px-2 whitespace-nowrap text-xs">
+                            {lr.type === '외출' ? (fmt12h(lr.startTime) || <span className="text-gray-300">-</span>) : <span className="text-gray-300">-</span>}
+                          </td>
+                          <td className="text-center py-1 px-2 whitespace-nowrap text-xs">
+                            {(lr.type === '외출' || lr.type === '조퇴') ? (fmt12h(lr.endTime) || <span className="text-gray-300">-</span>) : <span className="text-gray-300">-</span>}
+                          </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>
                             {lr.reason}
                           </td>
@@ -556,6 +695,8 @@ const StaffAnnualLeave = ({
                               className={`px-2 py-0.5 rounded-full text-xs ${
                                 lr.status === '승인'
                                   ? 'bg-blue-100 text-blue-800'
+                                  : lr.status === '확인'
+                                  ? 'bg-green-100 text-green-800'
                                   : lr.status === '대기'
                                   ? 'bg-yellow-100 text-yellow-800'
                                   : lr.status === '취소'
@@ -592,7 +733,7 @@ const StaffAnnualLeave = ({
                     {leaveRequests.filter((lr) => lr.employeeId === currentUser.id).length === 0 && !leaveFormPreview && (
                       <tr>
                         <td
-                          colSpan={10}
+                          colSpan={12}
                           className="text-center text-gray-400 py-8"
                         >
                           {getText(

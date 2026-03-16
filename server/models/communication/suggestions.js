@@ -9,7 +9,7 @@ const suggestionSchema = new mongoose.Schema(
     employeeId: String,
     name: String, // 직원명 (비정규화)
     department: String, // 부서명 (비정규화)
-    type: { type: String, enum: ['구매', '기타'], default: '기타' },
+    type: { type: String, enum: ['구매', '대표이사', '관리팀', '기타'], default: '기타' },
     title: String,
     content: String,
     status: {

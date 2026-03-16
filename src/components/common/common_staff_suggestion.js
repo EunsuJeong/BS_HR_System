@@ -70,7 +70,7 @@ export const useStaffSuggestion = (dependencies = {}) => {
         type: suggestionInput,
         title: finalTitle,
         content: applyContent,
-        status: ['대표', '임원', '관리'].includes(currentUser.department) ? '확인' : '대기',
+        status: suggestionInput === '대표이사' || ['대표', '임원', '관리'].includes(currentUser.department) ? '확인' : '대기',
       });
 
 

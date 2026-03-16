@@ -437,8 +437,8 @@ export const useNoticeManagement = (dependencies = {}) => {
         author: updatedNotice.author,
         attachments: updatedNotice.attachments || [],
         files: updatedNotice.attachments || [], // files 필드도 추가
-        date: updatedNotice.updatedAt
-          ? new Date(updatedNotice.updatedAt).toISOString().slice(0, 10)
+        date: updatedNotice.createdAt
+          ? new Date(updatedNotice.createdAt).toISOString().slice(0, 10)
           : '',
         createdAt: updatedNotice.createdAt,
         updatedAt: updatedNotice.updatedAt,

@@ -69,10 +69,10 @@ const AdminNotificationManagement = ({
   employees,
 }) => {
   return (
-    <div className="flex gap-6 w-full">
+    <div className="flex flex-col lg:flex-row gap-6 w-full">
       {/* 좌측: 통합 알림 관리 */}
-      <div className="w-1/2 flex flex-col">
-        <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
+      <div className="w-full lg:w-1/2 flex flex-col">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 flex flex-col lg:h-[870px]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
               알림 관리
@@ -120,7 +120,7 @@ const AdminNotificationManagement = ({
               {get관리자알림목록().map((notification) => (
                 <div
                   key={`${notification.알림유형}-${notification.id}`}
-                  className="border border-gray-200 rounded-lg p-4 bg-gray-50 h-22 flex flex-col"
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col lg:h-22"
                 >
                   <div className="flex justify-between items-start h-full">
                     <div className="flex-1 pr-4 min-h-0 flex flex-col">
@@ -152,7 +152,7 @@ const AdminNotificationManagement = ({
                             : ''}
                         </div>
                       </div>
-                      <div className="flex-1 min-h-0 overflow-y-auto">
+                      <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
                         <p className="text-xs text-gray-600">
                           {notification.content}
                         </p>
@@ -187,13 +187,13 @@ const AdminNotificationManagement = ({
       </div>
       {/* 우측: 알림 로그 - notification-management 메뉴에서만 표시, 제한 관리자는 비표시 */}
       {activeTab === 'notification-management' && !currentUser?.allowedDepartments?.length && (
-        <div className="w-1/2 flex flex-col">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+        <div className="w-full lg:w-1/2 flex flex-col">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 flex flex-col lg:h-[870px]">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-[20px] mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 whitespace-nowrap">
                 알림 로그
               </h3>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap gap-3 lg:flex-1 min-w-0">
                 <input
                   type="text"
                   value={notificationLogSearch.year}
@@ -203,7 +203,7 @@ const AdminNotificationManagement = ({
                       year: e.target.value,
                     })
                   }
-                  className="w-20 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="년도"
                 />
                 <input
@@ -215,7 +215,7 @@ const AdminNotificationManagement = ({
                       month: e.target.value,
                     })
                   }
-                  className="w-20 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-12 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="월"
                 />
                 <select
@@ -226,7 +226,7 @@ const AdminNotificationManagement = ({
                       type: e.target.value,
                     })
                   }
-                  className="w-26 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="">전체</option>
                   <option value="정기">정기</option>
@@ -241,7 +241,7 @@ const AdminNotificationManagement = ({
                       recipient: e.target.value,
                     })
                   }
-                  className="w-24 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="수신자"
                 />
                 <input
@@ -253,8 +253,8 @@ const AdminNotificationManagement = ({
                       titleOrContent: e.target.value,
                     })
                   }
-                  className="w-72 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="제목 또는 내용 검색"
+                  className="flex-1 min-w-[120px] px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="제목 또는 내용"
                 />
               </div>
             </div>
@@ -277,44 +277,28 @@ const AdminNotificationManagement = ({
                   return displayLogs.map((log) => (
                     <div
                       key={log.id}
-                      className="border-l-4 border-indigo-400 bg-indigo-50 p-4 rounded-r-lg h-20 flex flex-col"
+                      className="border-l-4 border-indigo-400 bg-indigo-50 p-3 rounded-r-lg"
                     >
-                      <div className="flex justify-between items-start mb-2 flex-shrink-0">
+                      <div className="flex items-start gap-2 mb-1">
                         <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start mb-1">
-                            <h4 className="text-sm font-medium text-gray-800 truncate flex-1">
-                              {log.title}
-                            </h4>
-                            <div className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                              생성일: {formatCreatedAt(log.createdAt)} | 수신자(
-                              {calculateRecipientCount(log)}명):{' '}
-                              {typeof log.recipients === 'string'
-                                ? log.recipients
-                                : log.recipients?.value || '알 수 없음'}{' '}
-                              {log.type === '정기'
-                                ? `| 반복유형: ${
-                                    log.repeatType ||
-                                    log.repeatCycle ||
-                                    '설정없음'
-                                  }`
-                                : ''}
-                            </div>
+                          <div className="flex flex-wrap items-start gap-1 mb-1">
+                            <span
+                              className={`px-2 py-0.5 rounded text-xs flex-shrink-0 ${
+                                log.type === '정기'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-green-100 text-green-800'
+                              }`}
+                            >
+                              {log.type}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              생성일: {formatCreatedAt(log.createdAt)} | 수신자({calculateRecipientCount(log)}명)
+                            </span>
                           </div>
-                          <div className="flex-1 min-h-0 overflow-y-auto">
-                            <p className="text-xs text-gray-600">
-                              {log.content}
-                            </p>
-                          </div>
+                          <p className="text-xs text-gray-600 break-words">
+                            {log.content}
+                          </p>
                         </div>
-                        <span
-                          className={`px-2 py-1 rounded text-xs flex-shrink-0 ml-2 self-start ${
-                            log.type === '정기'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}
-                        >
-                          {log.type}
-                        </span>
                       </div>
                     </div>
                   ));

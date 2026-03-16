@@ -267,26 +267,24 @@ const AdminDashboard = ({
         <div className="space-y-4">
           {/* 주간 출근현황 */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold text-blue-800">
-                  {dashboardDateFilter === 'today'
-                    ? getTodayDateWithDay()
-                    : new Date(dashboardSelectedDate).toLocaleDateString(
-                        'ko-KR',
-                        {
-                          month: 'long',
-                          day: 'numeric',
-                          weekday: 'short',
-                        }
-                      )}{' '}
-                  주간 출근현황 (08:30-17:30)
-                </h3>
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-3 gap-2">
+              <h3 className="text-lg font-semibold text-blue-800">
+                {dashboardDateFilter === 'today'
+                  ? getTodayDateWithDay()
+                  : new Date(dashboardSelectedDate).toLocaleDateString(
+                      'ko-KR',
+                      {
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'short',
+                      }
+                    )}{' '}
+                주간 출근현황 (08:30-17:30)
+              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
                   총 {dashboardStats.totalDayShift}명
                 </span>
-              </div>
-              <div className="flex items-center gap-2">
                 <button
                   onClick={refreshDashboardData}
                   className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1"
@@ -370,31 +368,29 @@ const AdminDashboard = ({
 
           {/* 야간 출근현황 */}
           <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold text-purple-800">
-                  {dashboardDateFilter === 'today'
-                    ? `${getYesterdayDateWithDay()} 출근 → ${getTodayDateWithDay()} 야간 근무현황 (19:00-04:00)`
-                    : (() => {
-                        const selectedDate = new Date(dashboardSelectedDate);
-                        const prevDate = new Date(selectedDate);
-                        prevDate.setDate(selectedDate.getDate() - 1);
-                        return `${prevDate.toLocaleDateString('ko-KR', {
-                          month: 'long',
-                          day: 'numeric',
-                          weekday: 'short',
-                        })} 출근 → ${selectedDate.toLocaleDateString('ko-KR', {
-                          month: 'long',
-                          day: 'numeric',
-                          weekday: 'short',
-                        })} 야간 근무현황 (19:00-04:00)`;
-                      })()}
-                </h3>
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-3 gap-2">
+              <h3 className="text-lg font-semibold text-purple-800">
+                {dashboardDateFilter === 'today'
+                  ? `${getYesterdayDateWithDay()} 출근 → ${getTodayDateWithDay()} 야간 근무현황 (19:00-04:00)`
+                  : (() => {
+                      const selectedDate = new Date(dashboardSelectedDate);
+                      const prevDate = new Date(selectedDate);
+                      prevDate.setDate(selectedDate.getDate() - 1);
+                      return `${prevDate.toLocaleDateString('ko-KR', {
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'short',
+                      })} 출근 → ${selectedDate.toLocaleDateString('ko-KR', {
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'short',
+                      })} 야간 근무현황 (19:00-04:00)`;
+                    })()}
+              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
                   총 {dashboardStats.totalNightShift}명
                 </span>
-              </div>
-              <div className="flex items-center gap-2">
                 <select
                   value={dashboardDateFilter}
                   onChange={(e) => setDashboardDateFilter(e.target.value)}
@@ -740,54 +736,56 @@ const AdminDashboard = ({
       </div>
 
       {/* 하단: AI 추천사항 - 제한 관리자는 비표시 */}
-      {!currentUser?.allowedDepartments?.length && <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <Settings className="w-6 h-6 text-purple-600 mr-3" />
-            <h3 className="text-lg font-semibold text-purple-800">
-              AI 추천사항
-            </h3>
-            <div className="flex items-center ml-4 space-x-3 text-xs">
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-red-500 rounded-full mr-1"></div>
-                <span className="text-gray-600">위험</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
-                <span className="text-gray-600">주의</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-1"></div>
-                <span className="text-gray-600">추천</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                <span className="text-gray-600">칭찬</span>
-              </div>
+      {!currentUser?.allowedDepartments?.length && <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 md:p-6 border border-purple-200">
+        <div className="mb-4">
+          {/* 1행: 제목 + 버튼 */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-purple-600 flex-shrink-0" />
+              <h3 className="text-base font-semibold text-purple-800">AI 추천사항</h3>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={generateAiRecommendations}
+                disabled={isAnalyzing}
+                className="flex items-center gap-1 px-2 py-1 bg-purple-100 hover:bg-purple-200 disabled:bg-gray-100 text-purple-800 text-xs rounded-lg"
+              >
+                <span>{isAnalyzing ? '분석 중...' : '🔄 다시 분석'}</span>
+              </button>
+              <button
+                onClick={() => setShowAiHistoryPopup(true)}
+                className="flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded-lg text-xs text-blue-800"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>기록</span>
+              </button>
+              <button
+                onClick={() => setShowPromptSettings(true)}
+                className="flex items-center gap-1 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-lg text-xs text-purple-800"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>설정</span>
+              </button>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={generateAiRecommendations}
-              disabled={isAnalyzing}
-              className="flex items-center space-x-2 px-3 py-2 bg-purple-100 hover:bg-purple-200 disabled:bg-gray-100 text-purple-800 text-sm rounded-lg"
-            >
-              <span>{isAnalyzing ? '분석 중...' : '🔄 다시 분석'}</span>
-            </button>
-            <button
-              onClick={() => setShowAiHistoryPopup(true)}
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg text-sm text-blue-800"
-            >
-              <FileText className="w-4 h-4" />
-              <span>기록</span>
-            </button>
-            <button
-              onClick={() => setShowPromptSettings(true)}
-              className="flex items-center space-x-2 px-3 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-sm text-purple-800"
-            >
-              <Settings className="w-4 h-4" />
-              <span>설정</span>
-            </button>
+          {/* 2행: 범례 */}
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="text-gray-600">위험</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+              <span className="text-gray-600">주의</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-gray-600">추천</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-gray-600">칭찬</span>
+            </div>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -838,8 +836,8 @@ const AdminDashboard = ({
       {showEmployeeListPopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
+              <h3 className="text-lg font-semibold flex items-center flex-wrap gap-1">
                 {selectedStatusDate && (
                   <span className="text-gray-600">
                     {formatDateWithDay(selectedStatusDate)}
@@ -853,10 +851,10 @@ const AdminDashboard = ({
                 </span>
                 ]
               </h3>
-              <span className="text-sm text-gray-600 mr-2">
-                총 인원수: <b>{selectedStatusEmployees.length}</b>명
-              </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0">
+                <span className="text-sm text-gray-600">
+                  총 인원수: <b>{selectedStatusEmployees.length}</b>명
+                </span>
                 <button
                   onClick={handleDownloadAttendanceList}
                   className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 flex items-center gap-1"
@@ -865,7 +863,7 @@ const AdminDashboard = ({
                 </button>
                 <button
                   onClick={() => setShowEmployeeListPopup(false)}
-                  className="text-gray-500 hover:text-gray-100"
+                  className="text-gray-500 hover:text-gray-700"
                 >
                   ✕
                 </button>
@@ -3848,12 +3846,13 @@ const AdminDashboard = ({
 
             {/* 안전사고 목록 */}
             <div className="mt-6 border-t pt-6">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col gap-3 mb-4">
+                {/* 1행: 제목 */}
                 <h4 className="text-base font-semibold text-gray-800">
                   등록된 안전사고 목록
                 </h4>
-                {/* 검색 필드 */}
-                <div className="flex gap-2 items-center">
+                {/* 2행: 검색 필터 */}
+                <div className="flex flex-wrap gap-2 items-center">
                   <input
                     type="number"
                     placeholder="연도"
@@ -3864,7 +3863,7 @@ const AdminDashboard = ({
                         year: e.target.value,
                       })
                     }
-                    className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                   <input
                     type="number"
@@ -3876,7 +3875,7 @@ const AdminDashboard = ({
                         month: e.target.value,
                       })
                     }
-                    className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-16 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                   <select
                     value={safetyAccidentSearch.severity}
@@ -3886,7 +3885,7 @@ const AdminDashboard = ({
                         severity: e.target.value,
                       })
                     }
-                    className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="">전체</option>
                     <option value="경미">경미</option>
@@ -3903,7 +3902,7 @@ const AdminDashboard = ({
                         content: e.target.value,
                       })
                     }
-                    className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="flex-1 min-w-[100px] px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                   <button
                     onClick={() =>
@@ -3914,7 +3913,7 @@ const AdminDashboard = ({
                         content: '',
                       })
                     }
-                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                    className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
                   >
                     초기화
                   </button>
@@ -3925,15 +3924,15 @@ const AdminDashboard = ({
                   등록된 안전사고가 없습니다.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100">
+                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+                  <table className="w-full text-sm" style={{ minWidth: '480px' }}>
+                    <thead className="bg-gray-100 sticky top-0 z-10">
                       <tr className="bg-gray-100">
-                        <th className="text-center py-1 px-2">날짜</th>
-                        <th className="text-center py-1 px-2">심각도</th>
-                        <th className="text-center py-1 px-2">사고 내용</th>
-                        <th className="text-center py-1 px-2">등록일시</th>
-                        <th className="text-center py-1 px-2">관리</th>
+                        <th className="text-center py-2 px-2 whitespace-nowrap">날짜</th>
+                        <th className="text-center py-2 px-2 whitespace-nowrap">심각도</th>
+                        <th className="text-center py-2 px-2 whitespace-nowrap">사고 내용</th>
+                        <th className="text-center py-2 px-2 whitespace-nowrap">등록일시</th>
+                        <th className="text-center py-2 px-2 whitespace-nowrap">관리</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -4216,23 +4215,43 @@ const AdminDashboard = ({
 
                     if (filteredCount <= 15) return null;
 
+                    const totalPages = Math.ceil(filteredCount / 15);
+                    const groupSize = 10;
+                    const currentGroup = Math.floor((safetyAccidentPage - 1) / groupSize);
+                    const startPage = currentGroup * groupSize + 1;
+                    const endPage = Math.min(startPage + groupSize - 1, totalPages);
+
                     return (
-                      <div className="flex justify-center mt-4 gap-1">
-                        {Array.from({
-                          length: Math.ceil(filteredCount / 15),
-                        }).map((_, i) => (
+                      <div className="flex flex-wrap justify-center mt-4 gap-1 px-2">
+                        {startPage > 1 && (
                           <button
-                            key={i}
-                            className={`px-3 py-1 rounded ${
-                              safetyAccidentPage === i + 1
+                            className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                            onClick={() => setSafetyAccidentPage(startPage - 1)}
+                          >
+                            &lt;
+                          </button>
+                        )}
+                        {Array.from({ length: endPage - startPage + 1 }).map((_, i) => (
+                          <button
+                            key={startPage + i}
+                            className={`px-3 py-1 rounded text-sm ${
+                              safetyAccidentPage === startPage + i
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-gray-200 hover:bg-gray-300'
                             }`}
-                            onClick={() => setSafetyAccidentPage(i + 1)}
+                            onClick={() => setSafetyAccidentPage(startPage + i)}
                           >
-                            {i + 1}
+                            {startPage + i}
                           </button>
                         ))}
+                        {endPage < totalPages && (
+                          <button
+                            className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                            onClick={() => setSafetyAccidentPage(endPage + 1)}
+                          >
+                            &gt;
+                          </button>
+                        )}
                       </div>
                     );
                   })()}

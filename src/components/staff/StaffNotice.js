@@ -81,11 +81,15 @@ const StaffNotice = ({
       viewedNoticesRef.current.add(noticeId);
 
       // 로컬 state 업데이트 (즉시 UI 반영)
-      if (setNotices && result?.viewCount !== undefined) {
+      if (setNotices) {
         setNotices((prev) =>
           prev.map((n) =>
             n.id === noticeId || n._id === noticeId
-              ? { ...n, viewCount: result.viewCount }
+              ? {
+                  ...n,
+                  viewCount: result?.viewCount ?? n.viewCount,
+                  viewedBy: Array.from(new Set([...(n.viewedBy || []), employeeId])),
+                }
               : n
           )
         );

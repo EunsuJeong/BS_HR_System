@@ -131,64 +131,72 @@ const AdminAttendanceManagement = ({
 
   return (
     <div className="space-y-3 w-full h-full">
-      <div
-        className="bg-white border border-gray-200 rounded-xl p-6 max-w-full"
-        style={{ maxWidth: '85.5vw' }}
-      >
+      <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 max-w-full">
         {/* 상단 헤더 및 네비게이션 */}
-        <div className="w-full overflow-x-auto">
-          <div className="flex flex-nowrap gap-6 items-center mb-1 min-w-[1200px]">
-            <h3 className="text-lg font-semibold text-gray-800 whitespace-nowrap">
-              근태 관리
-            </h3>
+        <div className="w-full">
+          <div className="flex flex-col gap-3 mb-3">
+            {/* 1행: 제목 + 업로드/다운로드 버튼 */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800">근태 관리</h3>
+              <div className="flex flex-wrap gap-2">
+                {/* 편집 버튼 비활성화 (2024-01-16) */}
+                <label className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer flex items-center text-sm">
+                  <Upload size={14} className="mr-1" />
+                  업로드
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files[0]) {
+                        uploadAttendanceXLSX(e.target.files[0]);
+                        e.target.value = '';
+                      }
+                    }}
+                    accept=".xlsx,.xls"
+                  />
+                </label>
+                <button
+                  onClick={exportAttendanceXLSX}
+                  className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center text-sm"
+                >
+                  <Download size={14} className="mr-1" />
+                  다운로드
+                </button>
+              </div>
+            </div>
 
-            <div className="flex-1"></div>
-
-            {/* 검색 필터 */}
-            <div className="flex gap-4">
+            {/* 2행: 검색 필터 */}
+            <div className="flex flex-wrap gap-3">
               <select
                 value={attendanceSearchFilter.department}
                 onChange={(e) =>
-                  setAttendanceSearchFilter((f) => ({
-                    ...f,
-                    department: e.target.value,
-                  }))
+                  setAttendanceSearchFilter((f) => ({ ...f, department: e.target.value }))
                 }
-                className="px-3 py-2 border rounded-lg text-sm w-40"
+                className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
               >
                 <option value="전체">전체 부서</option>
                 {COMPANY_STANDARDS.DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
+                  <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>
               <select
                 value={attendanceSearchFilter.position}
                 onChange={(e) =>
-                  setAttendanceSearchFilter((f) => ({
-                    ...f,
-                    position: e.target.value,
-                  }))
+                  setAttendanceSearchFilter((f) => ({ ...f, position: e.target.value }))
                 }
-                className="px-3 py-2 border rounded-lg text-sm w-40"
+                className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
               >
                 <option value="전체">전체 직급</option>
                 {COMPANY_STANDARDS.POSITIONS.map((position) => (
-                  <option key={position} value={position}>
-                    {position}
-                  </option>
+                  <option key={position} value={position}>{position}</option>
                 ))}
               </select>
               <select
                 value={attendanceSearchFilter.workType || '전체'}
                 onChange={(e) =>
-                  setAttendanceSearchFilter((f) => ({
-                    ...f,
-                    workType: e.target.value,
-                  }))
+                  setAttendanceSearchFilter((f) => ({ ...f, workType: e.target.value }))
                 }
-                className="px-3 py-2 border rounded-lg text-sm w-40"
+                className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
               >
                 <option value="전체">전체 근무형태</option>
                 <option value="주간">주간</option>
@@ -198,78 +206,31 @@ const AdminAttendanceManagement = ({
               <select
                 value={attendanceSearchFilter.payType || '전체'}
                 onChange={(e) =>
-                  setAttendanceSearchFilter((f) => ({
-                    ...f,
-                    payType: e.target.value,
-                  }))
+                  setAttendanceSearchFilter((f) => ({ ...f, payType: e.target.value }))
                 }
-                className="px-3 py-2 border rounded-lg text-sm w-40"
+                className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
               >
                 <option value="전체">전체 급여형태</option>
                 {COMPANY_STANDARDS.PAY_TYPES.map((payType) => (
-                  <option key={payType} value={payType}>
-                    {payType}
-                  </option>
+                  <option key={payType} value={payType}>{payType}</option>
                 ))}
               </select>
               <input
                 type="text"
-                placeholder="이름 검색 (쉼표 또는 띄어쓰기로 다중 검색 가능)"
+                placeholder="이름 검색"
                 value={attendanceSearchFilter.name}
                 onChange={(e) =>
-                  setAttendanceSearchFilter((f) => ({
-                    ...f,
-                    name: e.target.value,
-                  }))
+                  setAttendanceSearchFilter((f) => ({ ...f, name: e.target.value }))
                 }
-                className="px-3 py-2 border rounded-lg text-sm w-80"
+                className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[120px]"
               />
-            </div>
-
-            <div className="flex space-x-2">
-              {/* 편집 버튼 비활성화 (2024-01-16)
-              <button
-                onClick={toggleEditingMode}
-                className={`px-4 py-2 rounded-lg flex items-center whitespace-nowrap ${
-                  isEditingAttendance
-                    ? 'bg-orange-500 text-white hover:bg-orange-600'
-                    : 'bg-indigo-500 text-white hover:bg-indigo-600'
-                }`}
-              >
-                <Edit size={16} className="mr-2" />
-                {isEditingAttendance ? '편집완료' : '편집'}
-              </button>
-              */}
-              <label className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer flex items-center whitespace-nowrap">
-                <Upload size={16} className="mr-2" />
-                업로드
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files[0]) {
-                      uploadAttendanceXLSX(e.target.files[0]);
-                      // 같은 파일을 다시 업로드할 수 있도록 값 초기화
-                      e.target.value = '';
-                    }
-                  }}
-                  accept=".xlsx,.xls"
-                />
-              </label>
-              <button
-                onClick={exportAttendanceXLSX}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center whitespace-nowrap"
-              >
-                <Download size={16} className="mr-2" />
-                다운로드
-              </button>
             </div>
           </div>
         </div>
 
-        {/* 테이블 하단 통계 */}
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg overflow-x-auto">
-          <div className="grid grid-cols-6 gap-4 text-sm min-w-[800px]">
+        {/* 테이블 하단 통계 - 모바일: 2열, 데스크탑: 6열 */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
             <div className="text-center">
               <div className="font-medium text-gray-600">필터 대상 직원</div>
               <div className="text-lg font-bold text-blue-600">
@@ -314,9 +275,10 @@ const AdminAttendanceManagement = ({
       </div>
 
       {/* 근태 테이블 카드 */}
+      <div className="overflow-x-auto overflow-y-auto max-h-[70vh] lg:max-h-none lg:h-[900px] w-full">
       <div
         className="bg-white border border-gray-200 rounded-lg p-3"
-        style={{ width: '85.5vw' }}
+        style={{ minWidth: '900px' }}
       >
         {/* 근태 테이블 - 실제 엑셀 구조 100% 일치 */}
         <style>
@@ -1113,6 +1075,7 @@ const AdminAttendanceManagement = ({
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   );

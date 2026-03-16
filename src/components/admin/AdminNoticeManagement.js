@@ -226,17 +226,17 @@ const AdminNoticeManagement = ({
     };
   }, [isResizing, selectedImage, resizeStart, currentHandle]);
   return (
-    <div className="flex gap-6 w-full h-[calc(102vh-70px)">
+    <div className="flex flex-col lg:flex-row gap-6 w-full">
       {/* 좌측: 공지글 목록 및 검색 */}
-      <div className="w-1/2 h-full flex flex-col">
-        <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
-          <div className="mb-8 flex gap-14 items-center">
+      <div className="w-full lg:w-1/2 flex flex-col">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 flex flex-col min-h-[400px] lg:h-[870px]">
+          <div className="mb-4 flex flex-col lg:flex-row lg:items-center gap-[20px]">
             <h3 className="text-lg font-semibold text-gray-800 whitespace-nowrap">
               공지사항 목록
             </h3>
 
             {/* 검색 필터 */}
-            <div className="flex-1 flex gap-3 mr-4 rounded-lg">
+            <div className="flex flex-wrap gap-3 lg:flex-1 min-w-0">
               <input
                 type="text"
                 placeholder="연도"
@@ -244,7 +244,7 @@ const AdminNoticeManagement = ({
                 onChange={(e) =>
                   setNoticeSearch((s) => ({ ...s, year: e.target.value }))
                 }
-                className="px-3 py-1 border rounded-lg text-sm w-20"
+                className="px-2 py-1 border rounded-lg text-sm w-20"
               />
               <input
                 type="text"
@@ -253,7 +253,7 @@ const AdminNoticeManagement = ({
                 onChange={(e) =>
                   setNoticeSearch((s) => ({ ...s, month: e.target.value }))
                 }
-                className="px-3 py-1 border rounded-lg text-sm w-16"
+                className="px-2 py-1 border rounded-lg text-sm w-14"
               />
               <input
                 type="text"
@@ -262,7 +262,7 @@ const AdminNoticeManagement = ({
                 onChange={(e) =>
                   setNoticeSearch((s) => ({ ...s, day: e.target.value }))
                 }
-                className="px-3 py-1 border rounded-lg text-sm w-16"
+                className="px-2 py-1 border rounded-lg text-sm w-14"
               />
               <input
                 type="text"
@@ -274,26 +274,20 @@ const AdminNoticeManagement = ({
                     keyword: e.target.value,
                   }))
                 }
-                className="px-3 py-1 border rounded-lg text-sm flex-1"
+                className="px-2 py-1 border rounded-lg text-sm flex-1 min-w-[120px]"
               />
             </div>
           </div>
 
           {/* 공지 리스트 */}
-          <div className="flex-1 overflow-y-auto">
-            <table className="w-full text-sm table-fixed">
-              <colgroup>
-                <col style={{ width: '150px' }} />
-                <col style={{ width: '80px' }} />
-                <col />
-                <col style={{ width: '150px' }} />
-              </colgroup>
-              <thead className="bg-gray-100">
+          <div className="flex-1 overflow-y-auto overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100 sticky top-0">
                 <tr>
-                  <th className="text-center py-2 px-1">날 짜</th>
-                  <th className="text-center py-2 px-1">조회수</th>
+                  <th className="text-center py-2 px-2 whitespace-nowrap w-12 lg:w-24">날짜</th>
+                  <th className="text-center py-2 px-1 whitespace-nowrap w-14">조회</th>
                   <th className="text-center py-2 px-1">제 목</th>
-                  <th className="text-center py-2 px-1">관 리</th>
+                  <th className="text-center py-2 px-1 whitespace-nowrap w-24">관 리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -310,10 +304,18 @@ const AdminNoticeManagement = ({
                     .map((n) => (
                       <tr key={n.id || n._id} className="hover:bg-gray-50">
                         <td className="text-center py-2 px-1 text-gray-600">
-                          {n.date ||
-                            (n.createdAt
-                              ? new Date(n.createdAt).toISOString().slice(0, 10)
-                              : '')}
+                          {(() => {
+                            const dateStr = n.date || (n.createdAt ? new Date(n.createdAt).toISOString().slice(0, 10) : '');
+                            if (!dateStr) return '';
+                            const parts = dateStr.split('-');
+                            if (parts.length !== 3) return dateStr;
+                            return (
+                              <span className="flex flex-col items-center lg:flex-row lg:justify-center">
+                                <span>{parts[0]}-</span>
+                                <span>{parts[1]}-{parts[2]}</span>
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="text-center py-2 px-1 text-gray-400 text-xs">
                           👁 {n.viewCount || 0}
@@ -322,8 +324,8 @@ const AdminNoticeManagement = ({
                           className="text-left py-2 px-1 cursor-pointer hover:text-blue-600 hover:underline font-medium"
                           onClick={() => loadNoticeForEdit(n)}
                         >
-                          <div className="flex items-center overflow-hidden">
-                            <span className="truncate">{n.title}</span>
+                          <div className="flex items-center lg:overflow-hidden">
+                            <span className="lg:truncate">{n.title}</span>
                             {n.isScheduled && !n.isPublished && (
                               <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full flex-shrink-0">
                                 예약
@@ -331,7 +333,7 @@ const AdminNoticeManagement = ({
                             )}
                           </div>
                         </td>
-                        <td className="text-center py-2 px-1">
+                        <td className="text-center py-2 px-1 whitespace-nowrap">
                           <button
                             className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-2 hover:bg-blue-200"
                             onClick={() => loadNoticeForEdit(n)}
@@ -357,23 +359,43 @@ const AdminNoticeManagement = ({
             const filteredCount = getFilteredNotices(notices).length;
             if (filteredCount <= 16) return null;
 
+            const totalPages = Math.ceil(filteredCount / 16);
+            const groupSize = 10;
+            const currentGroup = Math.floor((adminNoticePage - 1) / groupSize);
+            const startPage = currentGroup * groupSize + 1;
+            const endPage = Math.min(startPage + groupSize - 1, totalPages);
+
             return (
-              <div className="flex justify-center mt-4 gap-1">
-                {Array.from({
-                  length: Math.ceil(filteredCount / 16),
-                }).map((_, i) => (
+              <div className="flex flex-wrap justify-center mt-4 gap-1 px-2">
+                {startPage > 1 && (
                   <button
-                    key={i}
-                    className={`px-3 py-1 rounded ${
-                      adminNoticePage === i + 1
+                    className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                    onClick={() => setAdminNoticePage(startPage - 1)}
+                  >
+                    &lt;
+                  </button>
+                )}
+                {Array.from({ length: endPage - startPage + 1 }).map((_, i) => (
+                  <button
+                    key={startPage + i}
+                    className={`px-3 py-1 rounded text-sm ${
+                      adminNoticePage === startPage + i
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-200 hover:bg-gray-300'
                     }`}
-                    onClick={() => setAdminNoticePage(i + 1)}
+                    onClick={() => setAdminNoticePage(startPage + i)}
                   >
-                    {i + 1}
+                    {startPage + i}
                   </button>
                 ))}
+                {endPage < totalPages && (
+                  <button
+                    className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                    onClick={() => setAdminNoticePage(endPage + 1)}
+                  >
+                    &gt;
+                  </button>
+                )}
               </div>
             );
           })()}
@@ -381,8 +403,8 @@ const AdminNoticeManagement = ({
       </div>
 
       {/* 우측: 작성/수정 폼 */}
-      <div className="w-1/2 h-full flex flex-col">
-        <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
+      <div className="w-full lg:w-1/2 flex flex-col">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 flex flex-col min-h-[400px] lg:h-[870px]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center">
               {editingNoticeId ? '공지사항 수정' : '공지사항 작성'}
@@ -666,8 +688,8 @@ const AdminNoticeManagement = ({
                   ref={contentEditableRef}
                   contentEditable
                   data-placeholder="공지사항 내용을 입력하세요 (이미지 붙여넣기 가능)"
-                  className="w-full h-full max-h-full px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none overflow-y-auto"
-                  style={{ fontSize: '12px' }}
+                  className="admin-notice-editor w-full h-full max-h-full px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none overflow-y-auto"
+                  style={{ fontSize: '16px' }}
                   onFocus={() => {
                     isUserEditingRef.current = true;
                   }}
@@ -696,14 +718,14 @@ const AdminNoticeManagement = ({
                 />
               </div>
               <style>{`
-                [contenteditable][data-placeholder]:empty:before {
+                .admin-notice-editor[data-placeholder]:empty:before {
                   content: attr(data-placeholder);
                   color: #9ca3af;
                   pointer-events: none;
                 }
-                [contenteditable] { font-size: 12px; }
-                [contenteditable] * { font-size: 12px !important; }
-                [contenteditable] img {
+                .admin-notice-editor { font-size: 16px; }
+                .admin-notice-editor * { font-size: 16px !important; }
+                .admin-notice-editor img {
                   max-width: 100%;
                   height: auto;
                   display: block;
@@ -713,10 +735,10 @@ const AdminNoticeManagement = ({
                   transition: opacity 0.2s ease;
                   user-select: none;
                 }
-                [contenteditable] img:hover {
+                .admin-notice-editor img:hover {
                   opacity: 0.9;
                 }
-                [contenteditable] img.selected-for-resize {
+                .admin-notice-editor img.selected-for-resize {
                   opacity: 1;
                 }
                 .resize-handles-container {

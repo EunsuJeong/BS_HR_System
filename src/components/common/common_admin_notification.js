@@ -491,7 +491,7 @@ export const useEmployeeNotifications = ({
             .filter((notice) => notice.viewedBy?.includes(currentUser.id))
             .map((notice) => notice.id || notice._id)
         );
-        setReadAnnouncements(readNoticeIds);
+        setReadAnnouncements((prev) => new Set([...prev, ...readNoticeIds]));
 
         // 알림: readBy 필드 확인
         const readNotificationIds = new Set(

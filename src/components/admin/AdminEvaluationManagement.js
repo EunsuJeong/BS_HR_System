@@ -38,11 +38,28 @@ const AdminEvaluationManagement = ({
   ]);
   return (
     <div className="space-y-6 w-full h-full">
-      <div className="bg-white border border-gray-200 rounded-xl p-6 h-[870px] flex flex-col">
-        <div className="flex flex-nowrap gap-6 items-center mb-6">
-          <h3 className="text-lg font-semibold text-gray-800">평가 관리</h3>
-          <div className="flex-1"></div>
-          <div className="flex gap-2">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6">
+        {/* 헤더 */}
+        <div className="flex flex-col gap-3 mb-4">
+          {/* 1행: 제목 + 다운로드 버튼 */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-800">평가 관리</h3>
+            <button
+              onClick={() => {
+                const filteredData = getFilteredEvaluation(
+                  getEvaluationWithPosition(evaluationData)
+                );
+                exportEvaluationToXLSX(filteredData);
+              }}
+              className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center text-sm"
+            >
+              <Download size={14} className="mr-1" />
+              다운로드
+            </button>
+          </div>
+
+          {/* 2행: 검색 필터 */}
+          <div className="flex flex-wrap gap-3">
             <input
               type="text"
               placeholder="연도"
@@ -50,7 +67,7 @@ const AdminEvaluationManagement = ({
               onChange={(e) =>
                 setEvaluationSearch((s) => ({ ...s, year: e.target.value }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-32"
+              className="px-2 py-1.5 border rounded-lg text-sm w-20"
             />
             <select
               value={evaluationSearch.department}
@@ -60,7 +77,7 @@ const AdminEvaluationManagement = ({
                   department: e.target.value,
                 }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-32"
+              className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
             >
               <option value="전체">전체 부서</option>
               {COMPANY_STANDARDS.DEPARTMENTS.map((dept) => (
@@ -77,7 +94,7 @@ const AdminEvaluationManagement = ({
                   grade: e.target.value,
                 }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-32"
+              className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
             >
               <option value="전체">전체 등급</option>
               <option value="S">S등급</option>
@@ -87,7 +104,7 @@ const AdminEvaluationManagement = ({
             </select>
             <input
               type="text"
-              placeholder="사번/이름 검색 (쉼표/띄어쓰기로 다중 검색 가능)"
+              placeholder="사번/이름 검색"
               value={evaluationSearch.keyword}
               onChange={(e) =>
                 setEvaluationSearch((s) => ({
@@ -95,31 +112,15 @@ const AdminEvaluationManagement = ({
                   keyword: e.target.value,
                 }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-80"
+              className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[140px]"
             />
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => {
-                const filteredData = getFilteredEvaluation(
-                  getEvaluationWithPosition(evaluationData)
-                );
-                exportEvaluationToXLSX(filteredData);
-              }}
-              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center"
-            >
-              <Download size={16} className="mr-2" />
-              다운로드
-            </button>
           </div>
         </div>
 
         {/* 성과 입력 폼 */}
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex gap-2.5 items-center">
-            <span className="text-xs font-semibold text-blue-800 whitespace-nowrap mr-1">
-              성과 평가 등록:
-            </span>
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-xs font-semibold text-blue-800 mb-2">성과 평가 등록</p>
+          <div className="flex flex-wrap gap-2">
             <input
               type="number"
               placeholder="연도"
@@ -130,13 +131,13 @@ const AdminEvaluationManagement = ({
                   year: parseInt(e.target.value) || new Date().getFullYear(),
                 }))
               }
-              className="text-center border px-1.5 py-2 text-xs w-28 rounded"
+              className="text-center border px-1.5 py-1.5 text-xs w-20 rounded"
             />
             <input
               type="text"
               placeholder="사번"
               value={evaluationForm.employeeId}
-              className="text-center border px-1.5 py-2 text-xs w-28 bg-gray-100 rounded"
+              className="text-center border px-1.5 py-1.5 text-xs w-24 bg-gray-100 rounded"
               readOnly
             />
             <div className="relative">
@@ -171,7 +172,7 @@ const AdminEvaluationManagement = ({
                   }));
                 }}
                 list="employee-names"
-                className="text-center border px-1.5 py-2 text-xs w-30 rounded"
+                className="text-center border px-1.5 py-1.5 text-xs w-24 rounded"
                 required
               />
               <datalist id="employee-names">
@@ -186,14 +187,14 @@ const AdminEvaluationManagement = ({
               type="text"
               placeholder="직급"
               value={evaluationForm.position}
-              className="text-center border px-1.5 py-2 text-xs w-24 bg-gray-100 rounded"
+              className="text-center border px-1.5 py-1.5 text-xs w-20 bg-gray-100 rounded"
               readOnly
             />
             <input
               type="text"
               placeholder="부서"
               value={evaluationForm.department}
-              className="text-center border px-1.5 py-2 text-xs w-28 bg-gray-100 rounded"
+              className="text-center border px-1.5 py-1.5 text-xs w-24 bg-gray-100 rounded"
               readOnly
             />
             <select
@@ -204,7 +205,7 @@ const AdminEvaluationManagement = ({
                   grade: e.target.value,
                 }))
               }
-              className="text-center border px-1.5 py-2 text-xs w-20 rounded"
+              className="text-center border px-1.5 py-1.5 text-xs w-16 rounded"
             >
               <option value="S">S</option>
               <option value="A">A</option>
@@ -221,7 +222,7 @@ const AdminEvaluationManagement = ({
                   content: e.target.value,
                 }))
               }
-              className="border px-2 py-2 text-xs flex-1 rounded"
+              className="border px-2 py-1.5 text-xs flex-1 min-w-[140px] rounded"
             />
             <select
               value={evaluationForm.status}
@@ -231,14 +232,14 @@ const AdminEvaluationManagement = ({
                   status: e.target.value,
                 }))
               }
-              className="text-center border px-1.5 py-2 text-xs w-20 rounded"
+              className="text-center border px-1.5 py-1.5 text-xs w-16 rounded"
             >
               <option value="예정">예정</option>
               <option value="완료">완료</option>
             </select>
             <button
               onClick={handleEvaluationSubmit}
-              className="px-10 py-2 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 whitespace-nowrap"
+              className="px-4 py-1.5 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 whitespace-nowrap"
             >
               등록
             </button>
@@ -247,11 +248,11 @@ const AdminEvaluationManagement = ({
 
         {evaluationTab === 'employee' ? (
           <>
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-100">
+            <div className="overflow-x-auto max-h-[85vh] overflow-y-auto">
+              <table className="w-full text-xs" style={{ minWidth: '600px' }}>
+                <thead className="bg-gray-100 sticky top-0 z-10">
                   <tr>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-2 px-2 whitespace-nowrap">
                       연도
                       <button
                         onClick={() => handleEvaluationSort('year')}
@@ -260,7 +261,7 @@ const AdminEvaluationManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-2 px-2 whitespace-nowrap">
                       사번
                       <button
                         onClick={() => handleEvaluationSort('employeeId')}
@@ -269,7 +270,7 @@ const AdminEvaluationManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-2 px-2 whitespace-nowrap">
                       이름
                       <button
                         onClick={() => handleEvaluationSort('name')}
@@ -278,7 +279,7 @@ const AdminEvaluationManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-2 px-2 whitespace-nowrap">
                       직급
                       <button
                         onClick={() => handleEvaluationSort('position')}
@@ -287,7 +288,7 @@ const AdminEvaluationManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-2 px-2 whitespace-nowrap">
                       부서
                       <button
                         onClick={() => handleEvaluationSort('department')}
@@ -296,7 +297,7 @@ const AdminEvaluationManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-2 px-2 whitespace-nowrap">
                       등급
                       <button
                         onClick={() => handleEvaluationSort('grade')}
@@ -305,7 +306,7 @@ const AdminEvaluationManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-2 px-2 whitespace-nowrap">
                       내용
                       <button
                         onClick={() => handleEvaluationSort('content')}
@@ -314,7 +315,7 @@ const AdminEvaluationManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">
+                    <th className="text-center py-2 px-2 whitespace-nowrap">
                       상태
                       <button
                         onClick={() => handleEvaluationSort('status')}
@@ -323,7 +324,7 @@ const AdminEvaluationManagement = ({
                         ▼
                       </button>
                     </th>
-                    <th className="text-center py-1 px-2">관리</th>
+                    <th className="text-center py-2 px-2 whitespace-nowrap">관리</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -340,7 +341,7 @@ const AdminEvaluationManagement = ({
                           key={p._id || `${p.year}-${p.employeeId}`}
                           className="hover:bg-gray-50"
                         >
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-2 px-2">
                             {isEditing ? (
                               <input
                                 type="number"
@@ -357,17 +358,17 @@ const AdminEvaluationManagement = ({
                               p.year
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-2 px-2">
                             {p.employeeId}
                           </td>
-                          <td className="text-center py-1 px-2">{p.name}</td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-2 px-2">{p.name}</td>
+                          <td className="text-center py-2 px-2">
                             {p.position}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-2 px-2">
                             {p.department}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-2 px-2">
                             {isEditing ? (
                               <select
                                 value={editingEvaluationData.grade || 'A'}
@@ -398,7 +399,7 @@ const AdminEvaluationManagement = ({
                               </span>
                             )}
                           </td>
-                          <td className="text-center py-1 px-2 max-w-xs">
+                          <td className="text-center py-2 px-2 max-w-xs">
                             {isEditing ? (
                               <input
                                 type="text"
@@ -417,7 +418,7 @@ const AdminEvaluationManagement = ({
                               </span>
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-2 px-2">
                             {isEditing ? (
                               <select
                                 value={editingEvaluationData.status || '확정'}
@@ -443,7 +444,7 @@ const AdminEvaluationManagement = ({
                               </span>
                             )}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-2 px-2">
                             {isEditing ? (
                               <button
                                 onClick={() => handleEvaluationSave(p)}
@@ -482,23 +483,43 @@ const AdminEvaluationManagement = ({
               ).length;
               if (filteredCount <= 14) return null;
 
+              const totalPages = Math.ceil(filteredCount / 14);
+              const groupSize = 10;
+              const currentGroup = Math.floor((evaluationPage - 1) / groupSize);
+              const startPage = currentGroup * groupSize + 1;
+              const endPage = Math.min(startPage + groupSize - 1, totalPages);
+
               return (
-                <div className="flex justify-center mt-4 gap-1">
-                  {Array.from({
-                    length: Math.ceil(filteredCount / 14),
-                  }).map((_, i) => (
+                <div className="flex flex-wrap justify-center mt-4 gap-1 px-2">
+                  {startPage > 1 && (
                     <button
-                      key={i}
-                      className={`px-3 py-1 rounded ${
-                        evaluationPage === i + 1
+                      className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                      onClick={() => setEvaluationPage(startPage - 1)}
+                    >
+                      &lt;
+                    </button>
+                  )}
+                  {Array.from({ length: endPage - startPage + 1 }).map((_, i) => (
+                    <button
+                      key={startPage + i}
+                      className={`px-3 py-1 rounded text-sm ${
+                        evaluationPage === startPage + i
                           ? 'bg-blue-500 text-white'
                           : 'bg-gray-200 hover:bg-gray-300'
                       }`}
-                      onClick={() => setEvaluationPage(i + 1)}
+                      onClick={() => setEvaluationPage(startPage + i)}
                     >
-                      {i + 1}
+                      {startPage + i}
                     </button>
                   ))}
+                  {endPage < totalPages && (
+                    <button
+                      className="px-3 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300"
+                      onClick={() => setEvaluationPage(endPage + 1)}
+                    >
+                      &gt;
+                    </button>
+                  )}
                 </div>
               );
             })()}

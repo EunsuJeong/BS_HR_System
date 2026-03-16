@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 // 스케줄러
 const { startBackupScheduler } = require('./utils/backupScheduler');
 const { startDataRetentionScheduler } = require('./utils/dataRetentionScheduler');
-const { startAnnualLeaveExpiryScheduler } = require('./utils/annualLeaveScheduler');
+const { startAnnualLeaveScheduler } = require('./utils/annualLeaveScheduler');
 const { startSelfPingScheduler } = require('./utils/selfPing');
 
 const app = express();
@@ -498,7 +498,7 @@ server.listen(PORT, () => {
   console.log('\n⏰ 스케줄러 초기화 중...');
   startBackupScheduler(); // 자동 백업 비활성화됨 (GitHub Actions 사용)
   startDataRetentionScheduler();
-  startAnnualLeaveExpiryScheduler();
+  startAnnualLeaveScheduler(io);
   startSelfPingScheduler(); // Railway sleep 방지 (매일 오전 5시)
   console.log('✅ 모든 스케줄러 시작 완료\n');
 });

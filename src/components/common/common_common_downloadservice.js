@@ -38,7 +38,7 @@ export const exportOrganizationToXLSX = (employeeData, getWorkPeriodText) => {
     직책: emp.role || '팀원',
     근무형태: emp.workType || '주간',
     급여형태: emp.payType || '',
-    계약유형: emp.contractType || '정규',
+    계약형태: emp.contractType || '정규',
     입사일: emp.joinDate,
     퇴사일: emp.leaveDate || '',
     근속년수: getWorkPeriodText(emp.joinDate),

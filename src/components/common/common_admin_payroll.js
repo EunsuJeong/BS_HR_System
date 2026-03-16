@@ -818,7 +818,9 @@ export const usePayrollManagement = (dependencies = {}) => {
             const 시급 = parseNumber(row[7]);
 
             const registeredEmployee = employees.find(
-              (emp) => emp.name === 성명
+              (emp) => emp.id === 사번 && emp.name === 성명
+            ) || employees.find(
+              (emp) => emp.name === 성명 && emp.status !== '퇴사'
             );
             if (!registeredEmployee) {
               devLog(
@@ -896,6 +898,8 @@ export const usePayrollManagement = (dependencies = {}) => {
             const rowData = {
               지급년도: targetYear,
               지급월: targetMonth,
+              employeeId: registeredEmployee.id,
+              사번: registeredEmployee.id,
               성명: registeredEmployee.name,
               부서: registeredEmployee.department || '미지정',
               세부부서: registeredEmployee.subDepartment || '',
@@ -1164,12 +1168,8 @@ export const usePayrollManagement = (dependencies = {}) => {
           try {
             // 데이터 변환: 한글 키 → 영문 키
             const dbRecords = newData.map((item) => {
-              // employeeId 찾기
-              const targetEmployee = employees.find(
-                (emp) => emp.name === item.성명
-              );
-              const employeeId =
-                targetEmployee?.id || targetEmployee?.employeeId || item.성명;
+              // employeeId: 파싱 단계에서 이미 정확히 저장된 값 사용
+              const employeeId = item.employeeId || item.사번 || item.성명;
 
               return {
                 employeeId: employeeId,

@@ -60,12 +60,12 @@ const AdminAIChatbot = ({
 
   return (
     <div className="space-y-2">
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6">
         {/* 헤더 및 상태 표시 */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-800">AI 챗봇</h2>
-            <div className="flex items-center gap-4 mt-2">
+            <h2 className="text-xl font-semibold text-gray-800">AI 챗봇</h2>
+            <div className="flex flex-wrap items-center gap-3 mt-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">활성 모델:</span>
                 <span
@@ -115,14 +115,14 @@ const AdminAIChatbot = ({
           <div className="flex gap-2">
             <button
               onClick={handleShowHistory}
-              className="flex items-center gap-2 px-3 py-2 bg-green-100 hover:bg-green-200 rounded-lg text-sm text-green-700"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 hover:bg-green-200 rounded-lg text-sm text-green-700"
             >
               <History className="w-4 h-4" />
               <span>기록</span>
             </button>
             <button
               onClick={() => setActiveTab('system')}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
             >
               <Settings className="w-4 h-4" />
               <span>설정</span>
@@ -172,11 +172,11 @@ const AdminAIChatbot = ({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col h-[75vh]">
+          <div className="flex flex-col">
             {/* 채팅 메시지 영역 */}
             <div
               ref={chatContainerRef}
-              className="flex-1 overflow-y-auto border border-gray-200 rounded-lg p-4 mb-3 bg-gray-50 space-y-4 max-h-[67vh] scroll-smooth"
+              className="overflow-y-auto border border-gray-200 rounded-lg p-3 md:p-4 mb-3 bg-gray-50 space-y-4 max-h-[60vh] scroll-smooth"
             >
               {!chatMessages || chatMessages.length === 0 ? (
                 <div className="text-center py-8">
@@ -188,12 +188,12 @@ const AdminAIChatbot = ({
                   <h3 className="text-lg font-medium text-gray-800 mb-2">
                     AI 비서와 대화하세요
                   </h3>
-                  <p className="text-gray-500 mb-4">
+                  <p className="text-gray-500 mb-4 text-sm">
                     회사 업무와 관련된 모든 질문을 자유롭게 물어보세요.
                   </p>
                   <div className="max-w-lg mx-auto">
-                    <div className="bg-white rounded-lg p-4 border">
-                      <h4 className="font-medium text-gray-800 mb-2">
+                    <div className="bg-white rounded-lg p-3 border text-left">
+                      <h4 className="font-medium text-gray-800 mb-2 text-sm">
                         예시 질문:
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
@@ -226,7 +226,7 @@ const AdminAIChatbot = ({
                     }`}
                   >
                     <div
-                      className={`max-w-3xl px-4 py-3 rounded-lg ${
+                      className={`max-w-[85%] md:max-w-3xl px-3 py-2 md:px-4 md:py-3 rounded-lg ${
                         message.type === 'user'
                           ? 'bg-blue-500 text-white'
                           : message.type === 'error'
@@ -240,12 +240,12 @@ const AdminAIChatbot = ({
                         {message.message || message.content}
                       </div>
 
-                      {/* 다운로드 버튼 (권한이 있고 downloadData가 있을 때만 표시) */}
+                      {/* 다운로드 버튼 */}
                       {message.downloadData &&
                         message.downloadFilename &&
                         chatbotPermissions?.download && (
                           <div className="mt-3 space-y-2">
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               <button
                                 onClick={() =>
                                   generateDownloadFile(
@@ -318,61 +318,55 @@ const AdminAIChatbot = ({
             </div>
 
             {/* 입력 영역 */}
-            <div className="border-t pt-4">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-sm text-gray-600">현재 권한:</span>
-                <div className="flex gap-2">
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      chatbotPermissions?.read
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {chatbotPermissions?.read ? '읽기 가능' : '읽기 차단'}
-                  </span>
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      chatbotPermissions?.modify
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {chatbotPermissions?.modify ? '수정 가능' : '수정 차단'}
-                  </span>
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      chatbotPermissions?.download
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {chatbotPermissions?.download
-                      ? '다운로드 가능'
-                      : '다운로드 차단'}
-                  </span>
-                </div>
+            <div className="border-t pt-3">
+              <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                <span className="text-xs text-gray-600">권한:</span>
+                <span
+                  className={`px-2 py-0.5 text-xs rounded-full ${
+                    chatbotPermissions?.read
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {chatbotPermissions?.read ? '읽기 가능' : '읽기 차단'}
+                </span>
+                <span
+                  className={`px-2 py-0.5 text-xs rounded-full ${
+                    chatbotPermissions?.modify
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {chatbotPermissions?.modify ? '수정 가능' : '수정 차단'}
+                </span>
+                <span
+                  className={`px-2 py-0.5 text-xs rounded-full ${
+                    chatbotPermissions?.download
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {chatbotPermissions?.download ? '다운로드 가능' : '다운로드 차단'}
+                </span>
               </div>
 
               <div className="flex gap-2">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={chatInput || ''}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && chatInput && typeof chatInput === 'string' && chatInput.trim()) {
-                        handleSendMessage();
-                      }
-                    }}
-                    placeholder="AI 비서에게 질문하세요... (예: 오늘 출근 현황은? 또는 최신 노동법은?)"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={chatInput || ''}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && chatInput && typeof chatInput === 'string' && chatInput.trim()) {
+                      handleSendMessage();
+                    }
+                  }}
+                  placeholder="AI 비서에게 질문하세요..."
+                  className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
                 <button
                   onClick={handleSendMessage}
                   disabled={!chatInput || typeof chatInput !== 'string' || !chatInput.trim()}
-                  className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  className="px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 text-sm"
                 >
                   {false ? (
                     <>
@@ -394,26 +388,26 @@ const AdminAIChatbot = ({
 
       {/* 기록 모달 */}
       {showHistoryModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
             {/* 모달 헤더 */}
-            <div className="flex items-center justify-between p-6 border-b">
-              <div className="flex items-center gap-3">
-                <History className="w-6 h-6 text-green-600" />
-                <h2 className="text-xl font-semibold text-gray-800">
+            <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-green-600" />
+                <h2 className="text-base font-semibold text-gray-800">
                   AI 챗봇 대화 기록
                 </h2>
               </div>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
+                className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
               >
                 ×
               </button>
             </div>
 
             {/* 모달 내용 */}
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="p-4 overflow-y-auto flex-1">
               {isLoadingHistory ? (
                 <div className="text-center py-12">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
@@ -425,20 +419,20 @@ const AdminAIChatbot = ({
                   <p className="text-gray-500">저장된 대화 기록이 없습니다.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {chatHistory.map((log, index) => (
                     <div
                       key={log._id || index}
-                      className={`p-4 rounded-lg border ${
+                      className={`p-3 rounded-lg border ${
                         log.success
                           ? 'bg-white border-gray-200'
                           : 'bg-red-50 border-red-200'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <span
-                            className={`px-2 py-1 text-xs rounded-full ${
+                            className={`px-2 py-0.5 text-xs rounded-full ${
                               log.success
                                 ? 'bg-green-100 text-green-700'
                                 : 'bg-red-100 text-red-700'
@@ -447,12 +441,12 @@ const AdminAIChatbot = ({
                             {log.success ? '✓ 성공' : '✗ 실패'}
                           </span>
                           {log.provider && (
-                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                            <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
                               {log.provider.toUpperCase()}
                             </span>
                           )}
                           {log.model && (
-                            <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full">
+                            <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
                               {log.model}
                             </span>
                           )}
@@ -468,7 +462,7 @@ const AdminAIChatbot = ({
                           <div className="text-xs text-gray-600 font-medium mb-1">
                             질문:
                           </div>
-                          <div className="bg-gray-50 p-3 rounded text-sm">
+                          <div className="bg-gray-50 p-2 rounded text-sm">
                             {log.prompt}
                           </div>
                         </div>
@@ -480,7 +474,7 @@ const AdminAIChatbot = ({
                           <div className="text-xs text-gray-600 font-medium mb-1">
                             답변:
                           </div>
-                          <div className="bg-blue-50 p-3 rounded text-sm whitespace-pre-wrap">
+                          <div className="bg-blue-50 p-2 rounded text-sm whitespace-pre-wrap">
                             {log.response.substring(0, 500)}
                             {log.response.length > 500 && '...'}
                           </div>
@@ -493,7 +487,7 @@ const AdminAIChatbot = ({
                           <div className="text-xs text-red-600 font-medium mb-1">
                             오류:
                           </div>
-                          <div className="bg-red-50 p-3 rounded text-sm text-red-700">
+                          <div className="bg-red-50 p-2 rounded text-sm text-red-700">
                             {log.errorMessage}
                           </div>
                         </div>
@@ -505,10 +499,10 @@ const AdminAIChatbot = ({
             </div>
 
             {/* 모달 푸터 */}
-            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+            <div className="flex justify-end gap-3 p-4 border-t bg-gray-50 flex-shrink-0">
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
               >
                 닫기
               </button>

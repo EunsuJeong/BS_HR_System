@@ -86,59 +86,79 @@ const AdminPayrollManagement = ({
   return (
     <div className="space-y-3">
       {/* 필터 및 통계 카드 */}
-      <div
-        className="bg-white border border-gray-200 rounded-xl p-6 max-w-full"
-        style={{ maxWidth: '85.5vw' }}
-      >
+      <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 max-w-full">
         {/* 상단 헤더 */}
-        <div className="w-full overflow-x-auto">
-          <div className="flex flex-nowrap gap-6 items-center mb-1">
-            <h3 className="text-lg font-semibold text-gray-800">급여 관리</h3>
-            <div className="flex-1"></div>
-            <div className="flex gap-2">
+        <div className="w-full">
+          <div className="flex flex-col gap-3 mb-3">
+            {/* 1행: 제목 + 버튼 (데스크탑: 한 줄, 모바일: 세로) */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <h3 className="text-lg font-semibold text-gray-800">급여 관리</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setShowResetModal(true)}
+                  className="px-3 py-2 bg-red-400 text-white rounded-lg hover:bg-red-600 flex items-center text-sm"
+                >
+                  <RefreshCw size={14} className="mr-1" />
+                  초기화
+                </button>
+                <label className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer flex items-center text-sm">
+                  <Upload size={14} className="mr-1" />
+                  업로드
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        handlePayrollFileUpload(file);
+                        e.target.value = '';
+                      }
+                    }}
+                    accept=".xlsx,.xls,.csv"
+                  />
+                </label>
+                <button
+                  onClick={exportPayrollXLSX}
+                  className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center text-sm"
+                >
+                  <Download size={14} className="mr-1" />
+                  다운로드
+                </button>
+              </div>
+            </div>
+
+            {/* 2행: 검색 필터 */}
+            <div className="flex flex-wrap gap-3">
               <select
                 value={payrollSearchFilter.department || '전체 부서'}
                 onChange={(e) =>
-                  setPayrollSearchFilter({
-                    ...payrollSearchFilter,
-                    department: e.target.value,
-                  })
+                  setPayrollSearchFilter({ ...payrollSearchFilter, department: e.target.value })
                 }
-                className="px-3 py-2 border rounded-lg text-sm w-40"
+                className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
               >
                 <option value="전체 부서">전체 부서</option>
                 {COMPANY_STANDARDS.DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
+                  <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>
               <select
                 value={payrollSearchFilter.position || '전체'}
                 onChange={(e) =>
-                  setPayrollSearchFilter({
-                    ...payrollSearchFilter,
-                    position: e.target.value,
-                  })
+                  setPayrollSearchFilter({ ...payrollSearchFilter, position: e.target.value })
                 }
-                className="px-3 py-2 border rounded-lg text-sm w-40"
+                className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
               >
                 <option value="전체">전체 직급</option>
                 {COMPANY_STANDARDS.POSITIONS.map((position) => (
-                  <option key={position} value={position}>
-                    {position}
-                  </option>
+                  <option key={position} value={position}>{position}</option>
                 ))}
               </select>
               <select
                 value={payrollSearchFilter.workType || '전체'}
                 onChange={(e) =>
-                  setPayrollSearchFilter({
-                    ...payrollSearchFilter,
-                    workType: e.target.value,
-                  })
+                  setPayrollSearchFilter({ ...payrollSearchFilter, workType: e.target.value })
                 }
-                className="px-3 py-2 border rounded-lg text-sm w-40"
+                className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[100px]"
               >
                 <option value="전체">전체 근무형태</option>
                 <option value="주간">주간</option>
@@ -147,71 +167,20 @@ const AdminPayrollManagement = ({
               </select>
               <input
                 type="text"
-                placeholder="이름 검색 (쉼표 또는 띄어쓰기로 다중 검색 가능)"
+                placeholder="이름 검색"
                 value={payrollSearchFilter.name}
                 onChange={(e) =>
-                  setPayrollSearchFilter({
-                    ...payrollSearchFilter,
-                    name: e.target.value,
-                  })
+                  setPayrollSearchFilter({ ...payrollSearchFilter, name: e.target.value })
                 }
-                className="px-3 py-2 border rounded-lg text-sm w-80"
+                className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[120px]"
               />
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setShowResetModal(true)}
-                className="px-4 py-2 bg-red-400 text-white rounded-lg hover:bg-red-600 flex items-center"
-              >
-                <RefreshCw size={16} className="mr-2" />
-                초기화
-              </button>
-              {/* 편집 버튼 비활성화 (2024-01-16)
-              <button
-                onClick={() => {
-                  setIsPayrollEditMode(!isPayrollEditMode);
-                  setEditingPayrollCell(null);
-                }}
-                className={`px-4 py-2 rounded-lg flex items-center ${
-                  isPayrollEditMode
-                    ? 'bg-orange-500 text-white hover:bg-orange-600'
-                    : 'bg-indigo-500 text-white hover:bg-indigo-600'
-                }`}
-              >
-                <Edit size={16} className="mr-2" />
-                {isPayrollEditMode ? '편집완료' : '편집'}
-              </button>
-              */}
-              <label className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer flex items-center">
-                <Upload size={16} className="mr-2" />
-                업로드
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      handlePayrollFileUpload(file);
-                      e.target.value = '';
-                    }
-                  }}
-                  accept=".xlsx,.xls,.csv"
-                />
-              </label>
-              <button
-                onClick={exportPayrollXLSX}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center"
-              >
-                <Download size={16} className="mr-2" />
-                다운로드
-              </button>
             </div>
           </div>
         </div>
 
-        {/* 통계 정보 */}
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg overflow-x-auto">
-          <div className="grid grid-cols-5 gap-4 text-sm">
+        {/* 통계 정보 - 모바일: 2열, 데스크탑: 5열 */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
             <div className="text-center">
               <div className="font-medium text-gray-600">전체 직원</div>
               <div className="text-lg font-bold text-blue-600">
@@ -321,9 +290,10 @@ const AdminPayrollManagement = ({
       </div>
 
       {/* 네비게이션 및 테이블 카드 */}
+      <div className="overflow-x-auto overflow-y-auto max-h-[70vh] lg:max-h-none lg:h-[900px] w-full">
       <div
         className="bg-white border border-gray-200 rounded-lg p-3"
-        style={{ minWidth: '85.5vw', width: 'fit-content' }}
+        style={{ minWidth: '900px', width: 'fit-content' }}
       >
         {/* 급여대장 테이블 */}
         <style>
@@ -1486,6 +1456,7 @@ const AdminPayrollManagement = ({
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* 초기화 선택 모달 */}

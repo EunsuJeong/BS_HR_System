@@ -703,6 +703,8 @@ const HRManagementSystem = () => {
             rejectedBy: leave.rejectedBy,
             rejectedByName: leave.rejectedByName,
             rejectionReason: leave.rejectionReason,
+            startTime: leave.startTime || null,
+            endTime: leave.endTime || null,
           }));
           setLeaveRequests(formattedLeaves);
           devLog(
@@ -769,6 +771,8 @@ const HRManagementSystem = () => {
                   rejectedBy: leave.rejectedBy,
                   rejectedByName: leave.rejectedByName,
                   rejectionReason: leave.rejectionReason,
+                  startTime: leave.startTime || null,
+                  endTime: leave.endTime || null,
                 }))
               : [];
             const annualData = calculateEmployeeAnnualLeaveUtil(
@@ -3710,6 +3714,8 @@ const HRManagementSystem = () => {
             rejectedBy: leave.rejectedBy,
             rejectedByName: leave.rejectedByName,
             rejectionReason: leave.rejectionReason,
+            startTime: leave.startTime || null,
+            endTime: leave.endTime || null,
           }));
           setLeaveRequests(formattedLeaves);
         }
@@ -3748,6 +3754,8 @@ const HRManagementSystem = () => {
             rejectedBy: leave.rejectedBy,
             rejectedByName: leave.rejectedByName,
             rejectionReason: leave.rejectionReason,
+            startTime: leave.startTime || null,
+            endTime: leave.endTime || null,
           }));
           setLeaveRequests(formattedLeaves);
         }
@@ -3786,6 +3794,8 @@ const HRManagementSystem = () => {
             rejectedBy: leave.rejectedBy,
             rejectedByName: leave.rejectedByName,
             rejectionReason: leave.rejectionReason,
+            startTime: leave.startTime || null,
+            endTime: leave.endTime || null,
           }));
           setLeaveRequests(formattedLeaves);
         }
@@ -4697,6 +4707,8 @@ const HRManagementSystem = () => {
             rejectedBy: leave.rejectedBy,
             rejectedByName: leave.rejectedByName,
             rejectionReason: leave.rejectionReason,
+            startTime: leave.startTime || null,
+            endTime: leave.endTime || null,
           }));
           setLeaveRequests(formattedLeaves);
           devLog(`✅ DB에서 연차 ${formattedLeaves.length}건 로드 완료`);
@@ -5131,6 +5143,8 @@ const HRManagementSystem = () => {
             rejectedBy: leave.rejectedBy,
             rejectedByName: leave.rejectedByName,
             rejectionReason: leave.rejectionReason,
+            startTime: leave.startTime || null,
+            endTime: leave.endTime || null,
           }));
           setLeaveRequests(formattedLeaves);
           devLog('✅ 연차 데이터 갱신 완료');
@@ -5695,7 +5709,11 @@ const HRManagementSystem = () => {
 
   // *[2_관리자 모드] 2.7_건의 관리 - 건의사항 목록 필터링*
   const getFilteredSuggestions = (suggestionList) => {
-    return filterSuggestions(suggestionList, suggestionSearch);
+    // 제한 관리자(allowedDepartments 있음, 관리자 6~9)는 '대표이사' 유형 건의 제외
+    const baseList = currentUser?.allowedDepartments?.length
+      ? suggestionList.filter((sg) => sg.type !== '대표이사')
+      : suggestionList;
+    return filterSuggestions(baseList, suggestionSearch);
   };
 
   // *[2_관리자 모드] 2.6_연차 관리 - 연차 신청 목록 필터링*
@@ -6098,9 +6116,9 @@ const HRManagementSystem = () => {
     // 일반직원 모드일 때만 작동
     if (currentUser && !currentUser.isAdmin) {
       const autoRefreshInterval = setInterval(() => {
-        console.log('🔄 [자동 새로고침] 5분 경과 - 페이지를 새로고침합니다.');
+        console.log('🔄 [자동 새로고침] 10분 경과 - 페이지를 새로고침합니다.');
         window.location.reload();
-      }, 12 * 60 * 1000); // 12분 = 720,000ms
+      }, 10 * 60 * 1000); // 10분 = 600,000ms
 
       // cleanup: 컴포넌트 언마운트 또는 로그아웃 시 interval 정리
       return () => {
