@@ -41,7 +41,7 @@ export const useAnnualLeaveEditor = (dependencies = {}) => {
     (employeeId) => {
       const baseAnnual = editAnnualData.baseAnnual || 0;
       const carryOverLeave = editAnnualData.carryOverLeave || 0;
-      const totalAnnual = baseAnnual; // 총연차 = 기본연차
+      const totalAnnual = baseAnnual + carryOverLeave; // 총연차 = 기본연차 + 이월연차
 
       const finalData = {
         ...editAnnualData,
@@ -176,7 +176,7 @@ export const useLeaveApproval = (dependencies = {}) => {
                 처리유형: '연차 확인',
                 대상자: targetEmployee,
                 처리자: currentUser.name,
-                알림내용: `${targetLeave.name || targetLeave.employeeName}님의 ${targetLeave.type} 신청이 부서장 확인되었습니다.\n기간: ${targetLeave.startDate}${targetLeave.endDate !== targetLeave.startDate ? ` ~ ${targetLeave.endDate}` : ''}\n확인자: ${currentUser.name}`,
+                알림내용: `${targetLeave.name || targetLeave.employeeName}님의 ${targetLeave.type} 신청이 부서장 확인되었습니다.\n기간: ${targetLeave.startDate}${targetLeave.endDate !== targetLeave.startDate ? ` ~ ${targetLeave.endDate}` : ''}\n신청일수: ${targetLeave.requestedDays || '?'}일\n확인자: ${currentUser.name}`,
               });
             }
           }
@@ -1844,6 +1844,7 @@ export const exportEmployeeLeaveStatusToXLSX = (
       근속년수: `${annualData.years}년 ${annualData.months}개월`,
       근무형태: emp.workType || '-',
       계약형태: emp.contractType || '-',
+      상태: emp.status || '재직',
       연차시작일: annualData.annualStart,
       연차종료일: annualData.annualEnd,
       기본연차:

@@ -290,7 +290,7 @@ const AdminPayrollManagement = ({
       </div>
 
       {/* 네비게이션 및 테이블 카드 */}
-      <div className="overflow-x-auto overflow-y-auto max-h-[70vh] lg:max-h-none lg:h-[900px] w-full">
+      <div className="overflow-x-auto overflow-y-auto max-h-[89vh] lg:max-h-none lg:h-[900px] w-full">
       <div
         className="bg-white border border-gray-200 rounded-lg p-3"
         style={{ minWidth: '900px', width: 'fit-content' }}

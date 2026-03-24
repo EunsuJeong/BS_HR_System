@@ -255,6 +255,34 @@ router.put('/employees/:id', async (req, res) => {
       delete req.body.usedLeave;
     }
 
+    // leaveUsedAdjustment → leaveUsed 변환 (관리자 수기 조정값)
+    if (req.body.leaveUsedAdjustment !== undefined) {
+      req.body.leaveUsed = req.body.leaveUsedAdjustment;
+      delete req.body.leaveUsedAdjustment;
+    }
+
+    // ============================================================
+    // 연차 관련 필드 저장 정책
+    // ------------------------------------------------------------
+    // [관리자 직접 수정 허용]
+    //   - baseAnnual     : 기본 연차
+    //   - carryOverLeave : 이월 연차
+    //   - leaveUsed      : 관리자 보정값 (승인 연차 합계에 더해지는 값)
+    // [자동 계산 - 클라이언트 전송값 무시]
+    //   - totalAnnual  = baseAnnual + carryOverLeave  (서버에서 계산)
+    //   - remainAnnual = totalAnnual - usedAnnual     (프론트 실시간 계산)
+    // ============================================================
+
+    // remainAnnual: 자동 계산값이므로 클라이언트 전송값 무조건 제거
+    delete req.body.remainAnnual;
+
+    // totalAnnual: 클라이언트 전송값 제거 후 서버에서 재계산
+    delete req.body.totalAnnual;
+    if (req.body.baseAnnual !== undefined && req.body.carryOverLeave !== undefined) {
+      req.body.totalAnnual = Number(req.body.baseAnnual) + Number(req.body.carryOverLeave);
+      console.log(`📊 [연차] totalAnnual 자동 계산: ${req.body.baseAnnual}(기본) + ${req.body.carryOverLeave}(이월) = ${req.body.totalAnnual}`);
+    }
+
     // findOneAndUpdate를 사용하여 직접 업데이트
     // MongoDB _id 또는 employeeId로 조회
     let query;
@@ -295,9 +323,10 @@ router.put('/employees/:id', async (req, res) => {
 
     console.log('✅ 직원 정보 수정 완료:', employee.employeeId);
 
-    // leaveUsed를 usedLeave로도 매핑 (프론트엔드 호환성)
+    // leaveUsed를 usedLeave / leaveUsedAdjustment로도 매핑 (프론트엔드 호환성)
     const employeeObj = employee.toObject();
     employeeObj.usedLeave = employeeObj.leaveUsed || 0;
+    employeeObj.leaveUsedAdjustment = employeeObj.leaveUsed || 0;
 
     res.json({ success: true, data: employeeObj });
   } catch (error) {

@@ -5845,32 +5845,65 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
 
-  let annualStart = `${currentYear}-${String(hireDate.getMonth() + 1).padStart(
-    2,
-    '0'
-  )}-${String(hireDate.getDate()).padStart(2, '0')}`;
+  // ✅ DB 값 우선 사용 (annualLeaveStart/End 존재 시 무조건 사용)
+  let annualStart = employee.annualLeaveStart || '';
+  let annualEnd = employee.annualLeaveEnd || '';
 
-  let endDate = new Date(
-    currentYear + 1,
-    hireDate.getMonth(),
-    hireDate.getDate()
-  );
-  endDate.setDate(endDate.getDate() - 1);
-  let annualEnd = `${endDate.getFullYear()}-${String(
-    endDate.getMonth() + 1
-  ).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+  // ✅ DB에 미래 연차 기간이 잘못 저장된 경우 1년 전으로 조정
+  // (예: annualLeaveStart=2026-08-15인데 오늘이 2026-03-23이면 → 2025-08-15로 보정)
+  if (annualStart && annualEnd) {
+    const startDate = new Date(annualStart);
+    // 퇴사자: 퇴사일 기준으로 보정 (퇴사일보다 annualStart가 미래인 경우)
+    if (employee.status === '퇴사' && employee.leaveDate) {
+      const resignDate = new Date(employee.leaveDate);
+      if (resignDate < startDate) {
+        const correctedStart = new Date(startDate);
+        correctedStart.setFullYear(correctedStart.getFullYear() - 1);
+        const correctedEnd = new Date(annualEnd);
+        correctedEnd.setFullYear(correctedEnd.getFullYear() - 1);
+        annualStart = correctedStart.toISOString().split('T')[0];
+        annualEnd = correctedEnd.toISOString().split('T')[0];
+      }
+    } else if (currentDate < startDate) {
+      // 재직/휴직자: 오늘 기준 미래면 1년 전으로 보정
+      const correctedStart = new Date(startDate);
+      correctedStart.setFullYear(correctedStart.getFullYear() - 1);
+      const correctedEnd = new Date(annualEnd);
+      correctedEnd.setFullYear(correctedEnd.getFullYear() - 1);
+      annualStart = correctedStart.toISOString().split('T')[0];
+      annualEnd = correctedEnd.toISOString().split('T')[0];
+    }
+  }
 
-  const currentAnnualStartDate = new Date(annualStart);
-  if (currentDate < currentAnnualStartDate) {
-    annualStart = `${currentYear - 1}-${String(
-      hireDate.getMonth() + 1
-    ).padStart(2, '0')}-${String(hireDate.getDate()).padStart(2, '0')}`;
+  // DB 값이 없을 때만 hireDate 기반으로 재계산 (fallback)
+  if (!annualStart || !annualEnd) {
+    annualStart = `${currentYear}-${String(hireDate.getMonth() + 1).padStart(
+      2,
+      '0'
+    )}-${String(hireDate.getDate()).padStart(2, '0')}`;
 
-    endDate = new Date(currentYear, hireDate.getMonth(), hireDate.getDate());
+    let endDate = new Date(
+      currentYear + 1,
+      hireDate.getMonth(),
+      hireDate.getDate()
+    );
     endDate.setDate(endDate.getDate() - 1);
     annualEnd = `${endDate.getFullYear()}-${String(
       endDate.getMonth() + 1
     ).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+
+    const currentAnnualStartDate = new Date(annualStart);
+    if (currentDate < currentAnnualStartDate) {
+      annualStart = `${currentYear - 1}-${String(
+        hireDate.getMonth() + 1
+      ).padStart(2, '0')}-${String(hireDate.getDate()).padStart(2, '0')}`;
+
+      endDate = new Date(currentYear, hireDate.getMonth(), hireDate.getDate());
+      endDate.setDate(endDate.getDate() - 1);
+      annualEnd = `${endDate.getFullYear()}-${String(
+        endDate.getMonth() + 1
+      ).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+    }
   }
 
   const now = new Date();
@@ -5905,18 +5938,22 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
     defaultTotalAnnual += Math.min(additionalYears, 10); // 최대 10일 추가 (총 25일)
   }
 
-  // ✅ 단순화된 계산 로직: DB leaveUsed + 전체 연차 신청 내역
+  // ✅ 사용연차 계산: 승인된 연차 내역 합계 + 관리자 보정값(leaveUsed)
   const annualStartDate = new Date(annualStart);
   const annualEndDate = new Date(annualEnd);
 
-  // 1️⃣ DB에 저장된 leaveUsed 값 (관리자가 직접 설정한 기준값, 기본값 0)
+  // 1️⃣ 관리자 보정값 (leaveUsed)
+  //    - leaveUsed는 최종 사용연차가 아님
+  //    - leaveUsed는 승인 연차 합계에 더해지는 관리자 보정값이다
+  //    - 자동 집계되지 않는 사용 일수를 수기로 조정하는 용도 (기본값 0)
   const dbLeaveUsed = employee.leaveUsed || 0;
 
   // 2️⃣ 연차 신청 내역에서 계산되는 값 (연차, 반차만)
   const leaveRequestsSum = leaveRequests
     .filter((leave) => {
       const matchesEmployee =
-        leave.employeeId === employee.id || leave.name === employee.name;
+        (leave.employeeId === employee.employeeId || leave.employeeId === employee.id) &&
+        (leave.employeeName === employee.name || leave.name === employee.name);
       const isApproved = leave.status === '승인';
       const leaveType = leave.type || leave.leaveType || '';
       const isAnnualLeave = leaveType === '연차' || leaveType.includes('반차');
@@ -5954,15 +5991,31 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
       return sum + (leave.approvedDays || leave.days || 1);
     }, 0);
 
-  // 3️⃣ 최종 사용연차 = DB 저장값 + 연차 신청 합계
-  const usedAnnual = dbLeaveUsed + leaveRequestsSum;
+  // 3️⃣ 최종 사용연차 = 승인된 연차 내역 합계 + 관리자 보정값
+  //    leaveRequestsSum과 dbLeaveUsed는 서로 다른 출처이므로 중복 집계 없음
+  const usedAnnual = leaveRequestsSum + dbLeaveUsed;
 
-  const totalAnnual =
-    savedAnnualData?.total || employee.totalAnnual || defaultTotalAnnual;
+  // ✅ 1년 미만 직원은 DB 값 무시하고 항상 월 단위 동적 계산
+  //    (DB에 잘못된 15일 등이 저장돼 있어도 올바른 월차 값을 보여줌)
+  const isLessThanOneYear = years < 1 && employee.contractType !== '촉탁';
+
+  const baseAnnual = isLessThanOneYear
+    ? defaultTotalAnnual
+    : (employee.baseAnnual != null
+        ? employee.baseAnnual
+        : (savedAnnualData?.baseAnnual ?? defaultTotalAnnual));
 
   const carryOverLeave =
-    savedAnnualData?.carryOver || employee.carryOverLeave || 0;
-  const baseAnnual = savedAnnualData?.baseAnnual || defaultTotalAnnual;
+    employee.carryOverLeave != null
+      ? employee.carryOverLeave
+      : (savedAnnualData?.carryOver ?? 0);
+
+  // 1년 미만은 이월연차 없으므로 totalAnnual = baseAnnual
+  const totalAnnual = isLessThanOneYear
+    ? defaultTotalAnnual
+    : (employee.totalAnnual != null
+        ? employee.totalAnnual
+        : (savedAnnualData?.total ?? defaultTotalAnnual));
 
   return {
     annualStart,
@@ -5970,10 +6023,11 @@ export const calculateEmployeeAnnualLeave = (employee, leaveRequests) => {
     years,
     months,
     totalAnnual,
-    usedAnnual,
-    remainAnnual: totalAnnual - usedAnnual, // 잔여 = 총연차 - 사용연차
-    carryOverLeave, // 이월연차 (기록용, 수당 계산용)
-    baseAnnual, // 기본연차 (총연차와 동일)
+    leaveRequestsSum, // 연차 내역 자동 집계값 (leaveUsed 보정 미포함)
+    usedAnnual,       // 최종 사용연차 = leaveRequestsSum + leaveUsed
+    remainAnnual: totalAnnual - usedAnnual, // 잔여 = 총연차 - 사용연차 (실시간)
+    carryOverLeave,
+    baseAnnual,
   };
 };
 

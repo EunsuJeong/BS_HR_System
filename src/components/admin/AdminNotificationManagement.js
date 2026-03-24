@@ -292,7 +292,21 @@ const AdminNotificationManagement = ({
                               {log.type}
                             </span>
                             <span className="text-xs text-gray-500">
-                              생성일: {formatCreatedAt(log.createdAt)} | 수신자({calculateRecipientCount(log)}명)
+                              생성일: {formatCreatedAt(log.createdAt)} | {(() => {
+                                const count = calculateRecipientCount(log);
+                                if (count >= 10) return `수신자(${count}명)`;
+                                let names = [];
+                                if (typeof log.recipients === 'string' && log.recipients && log.recipients !== '전체직원') {
+                                  names = log.recipients.split(',').map(r => r.replace(/\(.*?\)/g, '').trim()).filter(Boolean);
+                                } else if (typeof log.recipients === 'object' && log.recipients) {
+                                  if (log.recipients.selectedEmployees?.length) {
+                                    names = log.recipients.selectedEmployees;
+                                  } else if (log.recipients.value) {
+                                    names = log.recipients.value.split(',').map(r => r.replace(/\(.*?\)/g, '').trim()).filter(Boolean);
+                                  }
+                                }
+                                return names.length > 0 ? `수신자(${count}명: ${names.join(', ')})` : `수신자(${count}명)`;
+                              })()}
                             </span>
                           </div>
                           <p className="text-xs text-gray-600 break-words">

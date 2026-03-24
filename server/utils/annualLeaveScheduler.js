@@ -84,13 +84,21 @@ async function calculateUsedAnnualLeave(employeeId, annualStart, annualEnd) {
 
   let usedDays = 0;
   approvedLeaves.forEach(leave => {
-    if (leave.type === '연차') {
-      const start = new Date(Math.max(new Date(leave.startDate), new Date(annualStart)));
-      const end = new Date(Math.min(new Date(leave.endDate), new Date(annualEnd)));
-      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-      usedDays += days;
-    } else if (leave.type === '반차(오전)' || leave.type === '반차(오후)') {
+    if (leave.type === '반차(오전)' || leave.type === '반차(오후)') {
       usedDays += 0.5;
+    } else if (leave.type === '연차') {
+      // approvedDays → days 필드 우선 사용 (프론트와 동일한 방식)
+      if (leave.approvedDays) {
+        usedDays += leave.approvedDays;
+      } else if (leave.days) {
+        usedDays += leave.days;
+      } else {
+        // 필드 없을 때 날짜 재계산 (연차 기간 내로 클램핑)
+        const start = new Date(Math.max(new Date(leave.startDate), new Date(annualStart)));
+        const end = new Date(Math.min(new Date(leave.endDate), new Date(annualEnd)));
+        const days = Math.abs(end - start) / (1000 * 60 * 60 * 24) + 1;
+        usedDays += days;
+      }
     }
   });
 
@@ -242,7 +250,8 @@ async function createEmployeeRenewalNotification(employee, nextPeriod, carryOver
   const notification = new Notification({
     notificationType: '시스템',
     title: '📢 연차 기간 자동 갱신 알림',
-    content: `${employee.name}님의 연차가 새 기준으로 자동 갱신되었습니다.\n\n📅 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}\n📊 총 연차: ${nextPeriod.totalAnnual}일\n🔄 이월 연차: ${carryOverLeave}일 (수당 계산용)\n✅ 사용 가능 연차: ${nextPeriod.totalAnnual}일`,
+    content: `${employee.name}님의 연차가 새 기준으로 자동 갱신되었습니다.\n\n📅 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}\n📊 총 연차: ${nextPeriod.totalAnnual}일\n✅ 사용 가능 연차: ${nextPeriod.totalAnnual}일`,
+    // 🔄 이월 연차: ${carryOverLeave}일 (수당 계산용) — 알림에서 제거 (수당 처리 목적으로만 참조)
     message: `연차가 자동 갱신되었습니다. 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}`,
     sender: '시스템',
     priority: 'HIGH',
@@ -288,7 +297,8 @@ async function createAdminRenewalSummary(employee, nextPeriod, carryOverLeave) {
     const adminNotif = new Notification({
       notificationType: '시스템',
       title: `📋 ${employee.name}님 연차 갱신 완료`,
-      content: `${employee.name}님의 연차가 자동 갱신되었습니다.\n\n📅 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}\n📊 총 연차: ${nextPeriod.totalAnnual}일\n🔄 이월 연차: ${carryOverLeave}일 (수당 계산용)\n✅ 사용 가능 연차: ${nextPeriod.totalAnnual}일`,
+      content: `${employee.name}님의 연차가 자동 갱신되었습니다.\n\n📅 새 연차 기간: ${nextPeriod.annualStart} ~ ${nextPeriod.annualEnd}\n📊 총 연차: ${nextPeriod.totalAnnual}일\n✅ 사용 가능 연차: ${nextPeriod.totalAnnual}일`,
+      // 🔄 이월 연차: ${carryOverLeave}일 (수당 계산용) — 알림에서 제거 (수당 처리 목적으로만 참조)
       message: `${employee.name}님 연차 자동 갱신 완료`,
       sender: '시스템',
       priority: 'MEDIUM',
@@ -322,6 +332,57 @@ async function checkAnnualLeaveExpiry(io) {
     // 재직 중인 직원 조회
     const employees = await Employee.find({ status: '재직' });
 
+    // ============ 0-1. 미래 연차 기간 DB 오류 수정 ============
+    // DB에 annualLeaveStart가 오늘보다 미래인 경우 1년 전으로 수정
+    for (const employee of employees) {
+      if (!employee.annualLeaveStart || !employee.annualLeaveEnd) continue;
+
+      const annualStartDate = new Date(employee.annualLeaveStart + 'T00:00:00+09:00');
+      const todayDate = new Date(todayKST + 'T00:00:00+09:00');
+
+      if (todayDate < annualStartDate) {
+        const correctedStart = new Date(annualStartDate);
+        correctedStart.setFullYear(correctedStart.getFullYear() - 1);
+        const correctedEnd = new Date(employee.annualLeaveEnd + 'T00:00:00+09:00');
+        correctedEnd.setFullYear(correctedEnd.getFullYear() - 1);
+
+        const newStart = correctedStart.toISOString().split('T')[0];
+        const newEnd = correctedEnd.toISOString().split('T')[0];
+
+        await Employee.findByIdAndUpdate(employee._id, {
+          annualLeaveStart: newStart,
+          annualLeaveEnd: newEnd,
+        });
+        console.log(`✅ [연차기간수정] ${employee.name}님: ${employee.annualLeaveStart}~${employee.annualLeaveEnd} → ${newStart}~${newEnd}`);
+      }
+    }
+
+    // ============ 0-2. 1년 미만 직원 월차 자동 업데이트 ============
+    for (const employee of employees) {
+      if (employee.contractType === '촉탁') continue;
+
+      const hireDate = new Date(employee.hireDate || employee.joinDate);
+      if (isNaN(hireDate.getTime())) continue;
+
+      const today = new Date();
+      let years = today.getFullYear() - hireDate.getFullYear();
+      let months = today.getMonth() - hireDate.getMonth();
+      if (today.getDate() < hireDate.getDate()) months -= 1;
+      if (months < 0) { years -= 1; months += 12; }
+
+      if (years >= 1) continue; // 1년 이상 직원은 스킵
+
+      const correctBaseAnnual = Math.min(years * 12 + months, 11);
+
+      if (employee.baseAnnual !== correctBaseAnnual) {
+        await Employee.findByIdAndUpdate(employee._id, {
+          baseAnnual: correctBaseAnnual,
+          totalAnnual: correctBaseAnnual, // 1년 미만은 이월연차 없음
+        });
+        console.log(`✅ [월차갱신] ${employee.name}님 기본연차 업데이트: ${employee.baseAnnual ?? '미설정'} → ${correctBaseAnnual}일`);
+      }
+    }
+
     let notificationCount = 0;
 
     for (const employee of employees) {
@@ -346,7 +407,7 @@ async function checkAnnualLeaveExpiry(io) {
         annualEndStr
       );
 
-      const totalAnnual = employee.totalAnnual || employee.baseAnnual || annualPeriod.totalAnnual || 15;
+      const totalAnnual = employee.totalAnnual ?? employee.baseAnnual ?? annualPeriod.totalAnnual ?? 15;
       const annualData = {
         annualStart: annualStartStr,
         annualEnd: annualEndStr,
@@ -432,15 +493,16 @@ async function checkAnnualLeaveExpiry(io) {
           const nextPeriod = calculateNextAnnualPeriod(employee, annualEndStr);
 
           // Employee DB 업데이트
+          const newTotalAnnual = nextPeriod.totalAnnual; // 기본연차만 (이월연차는 수당 처리 목적으로 carryOverLeave에 별도 보관)
           await Employee.findByIdAndUpdate(employee._id, {
             annualLeaveStart: nextPeriod.annualStart,
             annualLeaveEnd: nextPeriod.annualEnd,
             baseAnnual: nextPeriod.totalAnnual,
-            carryOverLeave: carryOverLeave, // 기록용 (수당 계산용)
-            totalAnnual: nextPeriod.totalAnnual, // 총연차 = 기본연차
-            leaveUsed: 0, // 기준 사용연차도 리셋 (프론트 계산 동기화)
+            carryOverLeave: carryOverLeave,
+            totalAnnual: newTotalAnnual,        // 기본연차 + 이월연차
+            leaveUsed: 0,
             usedAnnual: 0,
-            remainAnnual: nextPeriod.totalAnnual // 잔여 = 총연차
+            remainAnnual: newTotalAnnual        // 잔여 = 총연차
           });
 
           // 직원 알림 생성
@@ -478,10 +540,10 @@ async function checkAnnualLeaveExpiry(io) {
 
 // 스케줄러 시작
 function startAnnualLeaveScheduler(io) {
-  console.log('🚀 [연차만료알림] 시작 - 매일 오전 8시 실행');
+  console.log('🚀 [연차만료알림] 시작 - 매일 00시 01분 실행');
 
-  // 매일 오전 8시에 실행 (KST 기준)
-  cron.schedule('0 8 * * *', () => {
+  // 매일 00시 01분에 실행 (KST 기준)
+  cron.schedule('1 0 * * *', () => {
     console.log(`✅ [연차만료알림] 스케줄 시작 - ${new Date().toLocaleString('ko-KR')}`);
     checkAnnualLeaveExpiry(io);
   }, {

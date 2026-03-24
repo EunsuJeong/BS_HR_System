@@ -1079,6 +1079,92 @@ router.post("/validate-and-get-models", async (req, res) => {
 });
 
 // ✅ AI 쿼리 처리 (데이터 수정 기능 포함)
+// ─── AI Router v2 helpers ───────────────────────────────────────────────────
+const { detectIntent } = require('../aiRouter');
+const { getAttendanceSummary } = require('../services/attendanceService');
+const { getLeaveSummary }      = require('../services/leaveService');
+const { getEmployeeSummary }   = require('../services/employeeService');
+
+/**
+ * v2: intent → service layer → structured data string
+ */
+async function buildDbDataV2(query, permissions) {
+  if (!permissions?.read) return '';
+
+  const intent = detectIntent(query);
+  console.log(`🧠 [AI Router v2] intent=${intent}`);
+
+  const {
+    Employee, Attendance, Leave, Notice, Suggestion,
+    Schedule, Payroll, Evaluation, SafetyAccident, Notification
+  } = require('../models');
+
+  // intent별 service 호출 (필요한 데이터만 조회)
+  let structured = '';
+
+  if (intent === 'attendance') {
+    const data = await getAttendanceSummary(query);
+    structured = `
+**📅 출근/근태 분석 데이터 (${data.period.year}년 ${data.period.month}월):**
+- 조회 기간: ${data.period.startOfMonth} ~ ${data.period.endOfMonth}
+
+**오늘(${data.period.today}) 출근 현황:**
+- 실제 출근: ${data.today.checkedIn}명${data.today.names.length > 0 ? ' → ' + data.today.names.join(', ') + (data.today.checkedIn > data.today.names.length ? ` 외 ${data.today.checkedIn - data.today.names.length}명` : '') : ''}
+- 연차/반차/경조 등: ${data.today.leaveCount}건${data.today.leaveTypes.length > 0 ? ' (' + data.today.leaveTypes.join(', ') + ')' : ''}
+
+**${data.period.year}년 ${data.period.month}월 전체 출근 현황:**
+- 총 출근 기록: ${data.month.checkedIn}건
+- 연차/반차/경조 등: ${data.month.leaveCount}건`;
+
+  } else if (intent === 'leave') {
+    const data = await getLeaveSummary(query);
+    structured = `
+**🏖️ 연차/휴가 분석 데이터 (${data.period.year}년 ${data.period.month}월):**
+
+**전체 연차 현황:**
+- 승인 대기: ${data.all.pending}건${data.all.pendingNames.length > 0 ? ' → ' + data.all.pendingNames.join(', ') : ''}
+- 승인됨: ${data.all.approved}건
+- 반려됨: ${data.all.rejected}건
+- 취소됨: ${data.all.cancelled}건
+
+**${data.period.year}년 ${data.period.month}월 연차:**
+- 총 ${data.month.total}건 (대기: ${data.month.pending}건, 승인: ${data.month.approved}건)
+${data.month.records.length > 0 ? data.month.records.map(r => `- ${r.name}: ${r.startDate}~${r.endDate} (${r.type || '연차'}, ${r.status})`).join('\n') : '- 해당 월 연차 없음'}
+
+**⚠️ 상태 구분:** 대기=관리자 승인 대기 / 취소=사용자가 직접 취소`;
+
+  } else if (intent === 'employee') {
+    const data = await getEmployeeSummary(query);
+    structured = `
+**👥 직원 분석 데이터:**
+- 총 직원수: ${data.total}명 (재직: ${data.active}명, 퇴사: ${data.resigned}명)
+- 부서별: ${JSON.stringify(data.byDept)}
+- 직급별: ${JSON.stringify(data.byPosition)}
+${data.mentioned ? `
+**👤 [${data.mentioned.name}] 상세 정보:**
+- 부서: ${data.mentioned.department}, 직급: ${data.mentioned.position}
+- 상태: ${data.mentioned.status}, 입사일: ${data.mentioned.hireDate || '미등록'}
+- 근무형태: ${data.mentioned.workType || '미등록'}` : ''}`;
+
+  } else {
+    // general / 기타: 핵심 요약만 조회 (전체 풀 데이터 대신 경량화)
+    const today = new Date().toISOString().split('T')[0];
+    const [empCount, pendingLeaves, todayAtt] = await Promise.all([
+      Employee.countDocuments({ status: '재직' }),
+      Leave.countDocuments({ status: '대기' }),
+      Attendance.find({ date: today }).lean(),
+    ]);
+    structured = `
+**📊 시스템 요약 (오늘: ${today}):**
+- 재직 직원: ${empCount}명
+- 연차 승인 대기: ${pendingLeaves}건
+- 오늘 출근 기록: ${todayAtt.length}건 (checkIn 완료: ${todayAtt.filter(a => a.checkIn).length}건)`;
+  }
+
+  return structured;
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 router.post("/query", async (req, res) => {
   try {
     const { query, messages, internalData, externalData, permissions } = req.body;
@@ -1212,9 +1298,16 @@ router.post("/query", async (req, res) => {
    - **반차(오후)** (status === '반차(오후)'): 근무일 + 오후반차 카운트
 `;
 
-    // ✅ 읽기 권한이 있으면 전체 DB 데이터 조회
+    // ✅ DB 데이터 조회: feature flag로 v1/v2 분기
     let fullDbData = '';
-    if (permissions?.read) {
+
+    if (process.env.AI_ROUTER_V2) {
+      // ─── v2: Intent Router → Service Layer → Structured Data ───────────
+      console.log('🚀 [AI Router v2] 활성화');
+      fullDbData = await buildDbDataV2(query, permissions);
+      // ────────────────────────────────────────────────────────────────────
+    } else if (permissions?.read) {
+      // ─── v1 (기존): 전체 DB 데이터를 LLM에 전달 ─────────────────────────
       const {
         Employee, Attendance, Leave, Notice, Suggestion,
         Schedule, Payroll, Evaluation, SafetyAccident, Notification
@@ -1283,7 +1376,7 @@ router.post("/query", async (req, res) => {
              schedules, payrolls, evaluations, safetyAccidents, notifications] = await Promise.all([
         Attendance.find({ date: today }).lean(),
         Attendance.find({ date: { $gte: startOfMonth, $lte: endOfMonth } }).lean(),
-        Leave.find().lean(),
+        Leave.find().sort({ startDate: -1 }).limit(300).lean(),
         Notice.find().sort({ date: -1 }).limit(20).lean(),
         Suggestion.find().sort({ createdAt: -1 }).limit(20).lean(),
         Schedule.find().sort({ date: -1 }).limit(20).lean(),
@@ -1303,74 +1396,108 @@ router.post("/query", async (req, res) => {
       console.log("\nSTATUS 값 종류:", [...new Set(allLeaves.map(l => l.status))]);
       console.log("=============================================\n");
 
+      // 오늘 출근 분류
+      const timeRegex = /^\d{2}:\d{2}$/;
+      const todayReal = todayAttendances.filter(a => timeRegex.test(a.checkIn));
+      const todayLeave = todayAttendances.filter(a => a.checkIn && !timeRegex.test(a.checkIn));
+
+      // ✅ 연차 실시간 집계 (Leave 컬렉션 기준 - 승인된 것만)
+      const leaveUsageMap = {};
+      allLeaves.filter(l => l.status === '승인').forEach(l => {
+        const id = l.employeeId || l.employeeName;
+        if (!id) return;
+        leaveUsageMap[id] = (leaveUsageMap[id] || 0) + (Number(l.requestedDays) || 0);
+      });
+
       fullDbData = `
 
-**📊 전체 DB 데이터 (읽기 권한으로 접근 가능):**
+**📊 실시간 DB 데이터 (오늘: ${today}, 조회월: ${targetYear}년 ${targetMonth + 1}월)**
 
-**📅 조회 기간 정보:**
-- 요청 연월: ${targetYear}년 ${targetMonth + 1}월
-- 조회 시작일: ${startOfMonth}
-- 조회 종료일: ${endOfMonth}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**👥 전체 직원 목록 (재직: ${employees.filter(e => e.status === '재직').length}명 / 퇴사: ${employees.filter(e => e.status === '퇴사').length}명)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${employees.filter(e => e.status === '재직').map(e => {
+  const total = e.totalAnnual ?? e.leaveEntitled ?? 0;
+  const used = leaveUsageMap[e.employeeId] ?? leaveUsageMap[e.name] ?? e.usedAnnual ?? e.leaveUsed ?? 0;
+  const remain = total - used;
+  return `[${e.employeeId}] ${e.name} | ${e.department} | ${e.position} | ${e.workType || '미지정'} | 입사: ${e.joinDate ? new Date(e.joinDate).toISOString().split('T')[0] : '미등록'} | 연차: 총${total}일 사용${used}일 잔여${remain}일 (기간:${e.annualLeaveStart||'?'}~${e.annualLeaveEnd||'?'})`;
+}).join('\n')}
+${employees.filter(e => e.status === '퇴사').length > 0 ? `\n[퇴사자] ${employees.filter(e => e.status === '퇴사').map(e => `${e.name}(${e.employeeId})`).join(', ')}` : ''}
 
-**👥 직원 데이터 (${employees.length}명):**
-- 부서별: ${JSON.stringify(employees.reduce((acc, e) => { acc[e.department] = (acc[e.department] || 0) + 1; return acc; }, {}))}
-- 직급별: ${JSON.stringify(employees.reduce((acc, e) => { acc[e.position] = (acc[e.position] || 0) + 1; return acc; }, {}))}
-- 근무유형: 정규직 ${employees.filter(e => e.workType === '정규직').length}명, 계약직 ${employees.filter(e => e.workType === '계약직').length}명
-- 재직상태: 재직 ${employees.filter(e => e.status === '재직').length}명, 퇴사 ${employees.filter(e => e.status === '퇴사').length}명
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**📅 오늘(${today}) 출근 현황 (실제출근: ${todayReal.length}명 / 연차·반차 등: ${todayLeave.length}건)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${todayReal.length > 0 ? todayReal.map(a => `출근 | ${a.employeeName || a.employeeId} | ${a.checkIn}${a.checkOut ? ` ~ ${a.checkOut}` : ' (미퇴근)'}${a.shiftType ? ` [${a.shiftType}]` : ''}`).join('\n') : '- 출근 기록 없음'}
+${todayLeave.length > 0 ? '\n' + todayLeave.map(a => `${a.checkIn} | ${a.employeeName || a.employeeId}`).join('\n') : ''}
 
-**📅 오늘 출근 데이터 (${todayAttendances.length}건):**
-- 정상 출근: ${todayAttendances.filter(a => a.status === '정상').length}건
-- 지각: ${todayAttendances.filter(a => a.status === '지각').length}건 ${todayAttendances.filter(a => a.status === '지각').length > 0 && todayAttendances.filter(a => a.status === '지각').length <= 10 ? '→ ' + todayAttendances.filter(a => a.status === '지각').slice(0, 10).map(a => a.employeeName).join(', ') : ''}
-- 결근: ${todayAttendances.filter(a => a.status === '결근').length}건 ${todayAttendances.filter(a => a.status === '결근').length > 0 && todayAttendances.filter(a => a.status === '결근').length <= 10 ? '→ ' + todayAttendances.filter(a => a.status === '결근').slice(0, 10).map(a => a.employeeName).join(', ') : ''}
-- 연차: ${todayAttendances.filter(a => a.status === '연차').length}건
-
-**📅 ${targetYear}년 ${targetMonth + 1}월 출근 데이터 (${monthAttendances.length}건):**
-- 정상 출근: ${monthAttendances.filter(a => a.status === '정상').length}건
-- 지각: ${monthAttendances.filter(a => a.status === '지각').length}건${monthAttendances.filter(a => a.status === '지각').length > 0 ? ' (예: ' + monthAttendances.filter(a => a.status === '지각').slice(0, 5).map(a => `${a.employeeName}(${a.date.split('-')[2]}일)`).join(', ') + (monthAttendances.filter(a => a.status === '지각').length > 5 ? ` 외 ${monthAttendances.filter(a => a.status === '지각').length - 5}건` : '') + ')' : ''}
-- 결근: ${monthAttendances.filter(a => a.status === '결근').length}건${monthAttendances.filter(a => a.status === '결근').length > 0 ? ' (예: ' + monthAttendances.filter(a => a.status === '결근').slice(0, 5).map(a => `${a.employeeName}(${a.date.split('-')[2]}일)`).join(', ') + (monthAttendances.filter(a => a.status === '결근').length > 5 ? ` 외 ${monthAttendances.filter(a => a.status === '결근').length - 5}건` : '') + ')' : ''}
-- 연차: ${monthAttendances.filter(a => a.status === '연차').length}건
-- 조퇴: ${monthAttendances.filter(a => a.status === '조퇴').length}건
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**📅 ${targetYear}년 ${targetMonth + 1}월 출근 기록 (${startOfMonth} ~ ${endOfMonth})**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${(() => {
+  const real = monthAttendances.filter(a => timeRegex.test(a.checkIn));
+  const leave = monthAttendances.filter(a => a.checkIn && !timeRegex.test(a.checkIn));
+  const byEmployee = {};
+  real.forEach(a => {
+    const name = a.employeeName || a.employeeId;
+    if (!byEmployee[name]) byEmployee[name] = [];
+    byEmployee[name].push(`${a.date}(${a.checkIn})`);
+  });
+  const summary = Object.entries(byEmployee).map(([name, dates]) => `${name}: ${dates.length}일 출근`).join(', ');
+  return `실제출근 총 ${real.length}건 (${Object.keys(byEmployee).length}명)\n${summary || '기록 없음'}\n연차/반차/경조 등: ${leave.length}건`;
+})()}
 ${mentionedEmployee ? `
-**👤 [${mentionedEmployee.name}] 직원 상세 정보:**
-- 부서: ${mentionedEmployee.department}, 직급: ${mentionedEmployee.position}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**👤 ${mentionedEmployee.name}(${mentionedEmployee.employeeId}) 상세 정보**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- 부서: ${mentionedEmployee.department} | 직급: ${mentionedEmployee.position} | 근무형태: ${mentionedEmployee.workType || '미지정'}
+- 입사일: ${mentionedEmployee.joinDate || '미등록'} | 상태: ${mentionedEmployee.status}
+- 연차: 총 ${mentionedEmployee.totalAnnual ?? mentionedEmployee.leaveEntitled ?? 0}일, 사용 ${leaveUsageMap[mentionedEmployee.employeeId] ?? leaveUsageMap[mentionedEmployee.name] ?? mentionedEmployee.usedAnnual ?? mentionedEmployee.leaveUsed ?? 0}일, 잔여 ${(mentionedEmployee.totalAnnual ?? mentionedEmployee.leaveEntitled ?? 0) - (leaveUsageMap[mentionedEmployee.employeeId] ?? leaveUsageMap[mentionedEmployee.name] ?? mentionedEmployee.usedAnnual ?? mentionedEmployee.leaveUsed ?? 0)}일 (기간: ${mentionedEmployee.annualLeaveStart || '?'} ~ ${mentionedEmployee.annualLeaveEnd || '?'}) ✅실시간집계
 - ${targetYear}년 ${targetMonth + 1}월 출근 기록:
-${monthAttendances.filter(a => a.employeeName === mentionedEmployee.name).map(a => `  • ${a.date}: ${a.status}${a.checkIn ? ` (출근: ${a.checkIn})` : ''}${a.checkOut ? ` (퇴근: ${a.checkOut})` : ''}`).join('\n') || '  • 해당 월에 출근 기록이 없습니다.'}
+${monthAttendances.filter(a => a.employeeName === mentionedEmployee.name || a.employeeId === mentionedEmployee.employeeId).map(a => `  ${a.date}: ${a.checkIn ? `출근 ${a.checkIn}` : '미출근'}${a.checkOut ? ` / 퇴근 ${a.checkOut}` : ''}${a.shiftType ? ` [${a.shiftType}]` : ''}`).join('\n') || '  해당 월 출근 기록 없음'}
 ` : ''}
 
-**🏖️ 연차 데이터 (${allLeaves.length}건):**
-- 승인 대기: ${allLeaves.filter(l => l.status === '대기').length}건${allLeaves.filter(l => l.status === '대기').length > 0 ? ' (예: ' + allLeaves.filter(l => l.status === '대기').slice(0, 3).map(l => `${l.employeeName}`).join(', ') + (allLeaves.filter(l => l.status === '대기').length > 3 ? ` 외 ${allLeaves.filter(l => l.status === '대기').length - 3}건` : '') + ')' : ''}
-- 승인됨: ${allLeaves.filter(l => l.status === '승인').length}건
-- 반려됨: ${allLeaves.filter(l => l.status === '반려').length}건
-- 취소됨: ${allLeaves.filter(l => l.status === '취소').length}건 (사용자가 직접 취소한 연차)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**🏖️ 연차 신청 전체 목록 (총 ${allLeaves.length}건)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ "대기"=관리자 승인 대기중 / "취소"=사용자 직접 취소 (두 상태는 다름)
+${allLeaves.length > 0 ? allLeaves.map(l => {
+  const sd = l.startDate ? new Date(l.startDate).toISOString().split('T')[0] : '?';
+  const ed = l.endDate   ? new Date(l.endDate).toISOString().split('T')[0]   : '?';
+  return `[${l.status}] ${l.employeeName}(${l.employeeId || ''}) | ${sd}~${ed} | ${l.type || '연차'} | ${l.requestedDays || '?'}일 | 사유: ${l.reason || '없음'}`;
+}).join('\n') : '- 연차 신청 없음'}
 
-**⚠️ 중요: 상태 구분**
-- "대기" = 관리자 승인 대기 중 (아직 처리되지 않음)
-- "취소" = 사용자가 스스로 취소 (승인 대기와 다름)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**📢 최근 공지사항 (${notices.length}건)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${notices.length > 0 ? notices.map(n => `[${n.priority || 'medium'}] ${n.date || ''} | ${n.title} | 작성: ${n.author || ''}`).join('\n') : '- 공지사항 없음'}
 
-**📢 공지사항 데이터 (${notices.length}건):**
-- 최근 공지 ${notices.length}건 (우선순위별: 높음 ${notices.filter(n => n.priority === 'high').length}건, 보통 ${notices.filter(n => n.priority === 'medium').length}건, 낮음 ${notices.filter(n => n.priority === 'low').length}건)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**💡 건의사항 (${suggestions.length}건)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${suggestions.length > 0 ? suggestions.map(s => `[${s.status}] ${s.author || s.name || ''} | ${s.title} | ${s.category || ''}`).join('\n') : '- 건의사항 없음'}
 
-**💡 건의사항 데이터 (${suggestions.length}건):**
-- 대기중: ${suggestions.filter(s => s.status === '대기').length}건, 검토중: ${suggestions.filter(s => s.status === '검토중').length}건, 완료: ${suggestions.filter(s => s.status === '완료').length}건, 반려: ${suggestions.filter(s => s.status === '반려').length}건
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**📆 최근 일정 (${schedules.length}건)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${schedules.length > 0 ? schedules.map(s => `${s.date || ''} ${s.time || ''} | ${s.title} | ${s.location || ''}`).join('\n') : '- 일정 없음'}
 
-**📆 일정 데이터 (${schedules.length}건):**
-- 총 ${schedules.length}건의 일정 등록됨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**💰 급여 데이터 (${payrolls.length}건)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${payrolls.length > 0 ? payrolls.map(p => `${p.employeeName}(${p.employeeId || ''}) | ${p.month || ''} | 기본급: ${(p.baseSalary || 0).toLocaleString()}원 | 총지급: ${(p.totalSalary || 0).toLocaleString()}원`).join('\n') : '- 급여 데이터 없음'}
 
-**💰 급여 데이터 (${payrolls.length}건):**
-- 평균 기본급: ${payrolls.length > 0 ? Math.round(payrolls.reduce((sum, p) => sum + (p.baseSalary || 0), 0) / payrolls.length).toLocaleString() : 0}원
-- 평균 총 급여: ${payrolls.length > 0 ? Math.round(payrolls.reduce((sum, p) => sum + (p.totalSalary || 0), 0) / payrolls.length).toLocaleString() : 0}원
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**📈 평가 데이터 (${evaluations.length}건)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${evaluations.length > 0 ? evaluations.map(e => `[${e.status}] ${e.employeeName}(${e.employeeId || ''}) | ${e.evaluationType || ''} | 점수: ${e.score != null ? e.score + '점' : '미입력'}`).join('\n') : '- 평가 데이터 없음'}
 
-**📈 평가 데이터 (${evaluations.length}건):**
-- 완료: ${evaluations.filter(e => e.status === '완료').length}건, 진행중: ${evaluations.filter(e => e.status === '진행중').length}건, 대기: ${evaluations.filter(e => e.status === '대기').length}건
-- 평균 점수: ${evaluations.filter(e => e.score).length > 0 ? (evaluations.reduce((sum, e) => sum + (e.score || 0), 0) / evaluations.filter(e => e.score).length).toFixed(1) : 'N/A'}점
-
-**⚠️ 안전사고 데이터 (${safetyAccidents.length}건):**
-- 심각도별: 높음 ${safetyAccidents.filter(a => a.severity === '높음').length}건, 중간 ${safetyAccidents.filter(a => a.severity === '중간').length}건, 낮음 ${safetyAccidents.filter(a => a.severity === '낮음').length}건
-
-**🔔 알림 데이터 (${notifications.length}건):**
-- 읽지 않음: ${notifications.filter(n => n.status === 'unread').length}건, 읽음: ${notifications.filter(n => n.status === 'read').length}건
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**⚠️ 안전사고 (${safetyAccidents.length}건) | 🔔 미읽음 알림 (${notifications.filter(n => n.status === 'unread').length}건)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${safetyAccidents.length > 0 ? safetyAccidents.map(a => `[${a.severity}] ${a.date} | ${a.location} | ${a.type || ''}`).join('\n') : '안전사고 없음'}
 `;
-    }
+      // ────────────────────────────────────────────────────────────────────
+    } // end v1 block
 
     // 권한에 따른 시스템 프롬프트 생성
     let permissionInfo = '';
@@ -1379,8 +1506,8 @@ ${monthAttendances.filter(a => a.employeeName === mentionedEmployee.name).map(a 
     permissionInfo += companyRegulations;
 
     if (permissions?.read) {
-      permissionInfo += `\n\n**✅ 읽기 권한 활성화:** 전체 DB 데이터에 접근 가능합니다.
-**중요:** 사용자가 특정 날짜/월을 요청한 경우, 위 데이터의 "조회 기간 정보"를 확인하고 해당 기간 데이터만 분석하세요.${fullDbData}`;
+      permissionInfo += `\n\n**✅ 읽기 권한 활성화:** 위 DB 데이터에 접근 가능합니다.
+**중요:** 직원 이름/사번이 언급되면 위 직원 목록에서 반드시 찾아서 정확한 정보로 답변하세요.`;
     }
 
     if (permissions?.modify) {
@@ -1425,7 +1552,9 @@ ${monthAttendances.filter(a => a.employeeName === mentionedEmployee.name).map(a 
       permissionInfo += `\n\n**⚠️ 다운로드 권한 없음:** 파일 다운로드가 불가능합니다.`;
     }
 
-    const enhancedSystemPrompt = `${systemPrompt}${permissionInfo}`;
+    // DB 데이터를 systemPrompt 바로 뒤에 배치 (AI가 가장 먼저 참조)
+    const enhancedSystemPrompt = `${systemPrompt}${fullDbData ? '\n\n' + fullDbData : ''}
+${permissionInfo}`;
 
     // 🔍 디버깅: 시스템 프롬프트 크기 확인
     console.log(`📊 시스템 프롬프트 크기: ${enhancedSystemPrompt.length} 문자`);

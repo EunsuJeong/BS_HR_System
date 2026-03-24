@@ -41,7 +41,7 @@ export const useSuggestionApproval = (dependencies = {}) => {
     setSuggestionApprovalData = () => {},
     setShowSuggestionApprovalPopup = () => {},
     employees = [],
-    send자동알림 = () => {},
+    send자동알림 = async () => {},
     currentUser = {},
     suggestionSearch = {},
     suggestionSortField = '',
@@ -62,12 +62,31 @@ export const useSuggestionApproval = (dependencies = {}) => {
             sg.id === suggestionId ? { ...sg, status: '확인' } : sg
           )
         );
+
+        // 알림 전송
+        try {
+          const targetSuggestion = suggestions.find((sg) => sg.id === suggestionId);
+          if (targetSuggestion) {
+            const targetEmployee = employees.find((emp) => emp.id === targetSuggestion.employeeId);
+            if (targetEmployee) {
+              await send자동알림({
+                처리유형: '건의사항 확인',
+                대상자: targetEmployee,
+                처리자: currentUser.name,
+                알림내용: `${targetSuggestion.name}님의 건의사항이 부서장 확인되었습니다.\n건의 유형: ${{ 구매: '구매 (소모품)', 대표이사: '건의 (대표이사)', 관리팀: '건의 (관리팀)' }[targetSuggestion.type] || targetSuggestion.type}\n건의 내용: ${targetSuggestion.content}\n확인자: ${currentUser.name}`,
+                건의유형: targetSuggestion.type,
+              });
+            }
+          }
+        } catch (notifyErr) {
+          console.warn('⚠️ 건의사항 확인 알림 전송 실패 (무시):', notifyErr);
+        }
       } catch (error) {
         console.error('❌ 건의사항 확인 실패:', error);
         alert('건의사항 확인 중 오류가 발생했습니다.');
       }
     },
-    [currentUser, setSuggestions]
+    [currentUser, setSuggestions, suggestions, employees, send자동알림]
   );
 
   // [2_관리자 모드] 2.7_건의관리 - 건의사항 승인 시작
@@ -141,9 +160,7 @@ export const useSuggestionApproval = (dependencies = {}) => {
           처리자: currentUser.name,
           알림내용: `${
             targetSuggestion.name
-          }님의 건의사항이 ${status}되었습니다.\n건의 유형: ${
-            targetSuggestion.type
-          }\n건의 내용: ${
+          }님의 건의사항이 ${status}되었습니다.\n건의 유형: ${{ 구매: '구매 (소모품)', 대표이사: '건의 (대표이사)', 관리팀: '건의 (관리팀)' }[targetSuggestion.type] || targetSuggestion.type}\n건의 내용: ${
             targetSuggestion.content
           }\n${status} 사유: ${finalRemark}\n${status}일시: ${new Date().toLocaleString(
             'ko-KR'
@@ -226,9 +243,9 @@ export const get건의사항알림대상자 = (
 ) => {
   let 알림대상자들 = [];
 
-  if (건의유형 === '구매') {
+  if (건의유형 === '구매' || 건의유형 === '관리팀' || 건의유형 === '기타') {
     return get연차알림대상자(employees, 직원정보, 신청자정보, 처리유형);
-  } else if (건의유형 === '기타') {
+  } else if (건의유형 === '대표이사') {
     const 대표 = employees.find(
       (emp) =>
         emp.department === '대표' &&

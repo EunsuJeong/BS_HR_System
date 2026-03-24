@@ -204,6 +204,10 @@ const AdminEmployeeManagement = ({
                             employeeSearchFilter.subDepartment) &&
                         (!employeeSearchFilter.payType ||
                           emp.payType === employeeSearchFilter.payType) &&
+                        (!employeeSearchFilter.contractType ||
+                          (employeeSearchFilter.contractType === '기타'
+                            ? !['정규', '촉탁', '계약'].includes(emp.contractType || '')
+                            : (emp.contractType || '') === employeeSearchFilter.contractType)) &&
                         (!employeeSearchFilter.workType ||
                           (() => {
                             // DB 근무형태 우선 (근태 데이터는 보조)
@@ -226,7 +230,7 @@ const AdminEmployeeManagement = ({
           </div>
 
           {/* 검색 필터 */}
-          <div className="text-sm grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 mb-3 p-2 bg-gray-50 rounded-lg">
+          <div className="text-sm grid grid-cols-2 lg:grid-cols-9 gap-2 mb-3 p-2 bg-gray-50 rounded-lg">
             <select
               value={employeeSearchFilter.position}
               onChange={(e) =>
@@ -330,6 +334,22 @@ const AdminEmployeeManagement = ({
               ))}
             </select>
             <select
+              value={employeeSearchFilter.contractType || ''}
+              onChange={(e) =>
+                setEmployeeSearchFilter({
+                  ...employeeSearchFilter,
+                  contractType: e.target.value,
+                })
+              }
+              className="px-3 py-2 border rounded-lg"
+            >
+              <option value="">전체 계약형태</option>
+              <option value="정규">정규</option>
+              <option value="촉탁">촉탁</option>
+              <option value="계약">계약</option>
+              <option value="기타">기타</option>
+            </select>
+            <select
               value={employeeSearchFilter.status}
               onChange={(e) =>
                 setEmployeeSearchFilter({
@@ -354,12 +374,12 @@ const AdminEmployeeManagement = ({
                   name: e.target.value,
                 })
               }
-              className="px-3 py-2 border rounded-lg"
+              className="px-3 py-2 border rounded-lg col-span-2 lg:col-span-1"
             />
           </div>
 
           {/* 직원 테이블 */}
-          <div className="overflow-x-auto max-h-[85vh] overflow-y-auto">
+          <div className="overflow-x-auto max-h-[85vh] lg:max-h-[74vh] overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="bg-gray-100 sticky top-0 z-10">
                 <tr>
@@ -705,6 +725,10 @@ const AdminEmployeeManagement = ({
                           employeeSearchFilter.subDepartment) &&
                       (!employeeSearchFilter.payType ||
                         emp.payType === employeeSearchFilter.payType) &&
+                      (!employeeSearchFilter.contractType ||
+                        (employeeSearchFilter.contractType === '기타'
+                          ? !['정규', '촉탁', '계약'].includes(emp.contractType || '')
+                          : (emp.contractType || '') === employeeSearchFilter.contractType)) &&
                       (!employeeSearchFilter.workType ||
                         (() => {
                           // DB 근무형태 우선 (근태 데이터는 보조)

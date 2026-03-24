@@ -267,6 +267,12 @@ export const useSystemManagement = (devLog = console.log) => {
       if (response.ok) {
         const data = await response.json();
         setAiConfig(data);
+        // 저장된 key를 provider별 state에도 동기화
+        if (unifiedApiKey) {
+          if (detectedProvider === 'openai')  setChatgptApiKey(unifiedApiKey);
+          if (detectedProvider === 'claude')  setClaudeApiKey(unifiedApiKey);
+          if (detectedProvider === 'gemini')  setGeminiApiKey(unifiedApiKey);
+        }
         setUnifiedSaveMessage(
           '✅ AI 설정이 성공적으로 저장되었습니다. 시스템 전체에 반영됩니다.'
         );
@@ -299,6 +305,12 @@ export const useSystemManagement = (devLog = console.log) => {
           setUnifiedApiKey(config.apiKey || '');
           setDetectedProvider(config.provider || '');
           setSelectedUnifiedModel(config.model || '');
+          // DB에 저장된 key를 provider별 state에도 동기화
+          if (config.apiKey) {
+            if (config.provider === 'openai')  setChatgptApiKey(config.apiKey);
+            if (config.provider === 'claude')  setClaudeApiKey(config.apiKey);
+            if (config.provider === 'gemini')  setGeminiApiKey(config.apiKey);
+          }
           devLog('✅ AI 통합 설정 로드 완료:', config);
         } else {
           devLog('⚠️ AI 설정 로드 실패, 기본값 사용');
@@ -374,9 +386,9 @@ export const useSystemManagement = (devLog = console.log) => {
       });
       if (!res.ok) throw new Error('SAVE_FAIL');
 
-      if (keyType === 'OPENAI_API_KEY') setChatgptApiKey('');
-      if (keyType === 'ANTHROPIC_API_KEY') setClaudeApiKey('');
-      if (keyType === 'GEMINI_API_KEY') setGeminiApiKey('');
+      if (keyType === 'OPENAI_API_KEY') setChatgptApiKey(keyValue);
+      if (keyType === 'ANTHROPIC_API_KEY') setClaudeApiKey(keyValue);
+      if (keyType === 'GEMINI_API_KEY') setGeminiApiKey(keyValue);
 
       alert('API Key가 저장되었습니다.');
     } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import {
   exportEmployeeLeaveStatusToXLSX,
@@ -50,6 +50,8 @@ const AdminLeaveManagement = ({
   currentUser,
   handleConfirmLeave,
 }) => {
+  const [showInactive, setShowInactive] = useState(false);
+
   // 검색 필터 변경시 페이지 1로 리셋
   useEffect(() => {
     setLeaveHistoryPage(1);
@@ -147,11 +149,22 @@ const AdminLeaveManagement = ({
           <div>
             {/* 직원연차 헤더 */}
             <div className="mb-4 flex flex-col gap-3">
-              {/* 1행: 제목 + 다운로드 버튼 */}
+              {/* 1행: 제목 + 휴직/퇴사자 표시 + 다운로드 버튼 */}
               <div className="flex items-center justify-between">
-                <h4 className="text-md font-semibold text-gray-700">
-                  직원별 연차 현황
-                </h4>
+                <div className="flex items-center gap-8">
+                  <h4 className="text-md font-semibold text-gray-700">
+                    직원별 연차 현황
+                  </h4>
+                  <label className="flex items-center gap-1 text-sm text-gray-600 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showInactive}
+                      onChange={(e) => setShowInactive(e.target.checked)}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    휴직/퇴사자 표시
+                  </label>
+                </div>
                 <button
                   onClick={() =>
                     exportEmployeeLeaveStatusToXLSX(
@@ -168,7 +181,7 @@ const AdminLeaveManagement = ({
               </div>
 
               {/* 2행: 검색 필터 */}
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <select
                   value={leaveSearch.position || '전체'}
                   onChange={(e) =>
@@ -203,6 +216,22 @@ const AdminLeaveManagement = ({
                     </option>
                   ))}
                 </select>
+                <select
+                  value={leaveSearch.contractType || '전체'}
+                  onChange={(e) =>
+                    setLeaveSearch((prev) => ({
+                      ...prev,
+                      contractType: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="전체">전체 계약형태</option>
+                  <option value="정규">정규</option>
+                  <option value="촉탁">촉탁</option>
+                  <option value="계약">계약</option>
+                  <option value="기타">기타</option>
+                </select>
                 <input
                   type="text"
                   value={leaveSearch.keyword || ''}
@@ -213,13 +242,99 @@ const AdminLeaveManagement = ({
                     }))
                   }
                   placeholder="사번 또는 이름 검색"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 col-span-2 lg:col-span-1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
+            {/* 직원 연차 요약 카드 */}
+            {(() => {
+              const filtered = employees.filter((emp) => {
+                if (!showInactive && (emp.status === '퇴사' || emp.status === '휴직')) return false;
+                if (leaveSearch.position && leaveSearch.position !== '전체') {
+                  if ((emp.position || '사원') !== leaveSearch.position) return false;
+                }
+                if (leaveSearch.dept && leaveSearch.dept !== '전체') {
+                  if (emp.department !== leaveSearch.dept) return false;
+                }
+                if (leaveSearch.contractType && leaveSearch.contractType !== '전체') {
+                  const ct = emp.contractType || '기타';
+                  if (leaveSearch.contractType === '기타') {
+                    if (['정규', '촉탁', '계약'].includes(ct)) return false;
+                  } else {
+                    if (ct !== leaveSearch.contractType) return false;
+                  }
+                }
+                if (leaveSearch.keyword) {
+                  const kw = leaveSearch.keyword.toLowerCase();
+                  const empId = (emp.employeeNumber || emp.id || '').toLowerCase();
+                  const empName = (emp.name || '').toLowerCase();
+                  if (!empId.includes(kw) && !empName.includes(kw)) return false;
+                }
+                return true;
+              });
+
+              const count = filtered.length;
+              const annualDataList = filtered.map((emp) => calculateEmployeeAnnualLeave(emp, leaveRequests));
+
+              const totalRegular  = filtered.filter((e) => e.contractType === '정규').length;
+              const totalChoktak  = filtered.filter((e) => e.contractType === '촉탁').length;
+              const totalContract = filtered.filter((e) => e.contractType === '계약').length;
+              const totalOther    = filtered.filter((e) => !['정규', '촉탁', '계약'].includes(e.contractType || '')).length;
+
+              const totalAnnual      = annualDataList.reduce((s, d) => s + (d.totalAnnual || 0), 0);
+              const totalCarryOver   = annualDataList.reduce((s, d) => s + (d.carryOverLeave || 0), 0);
+              const totalUsed        = annualDataList.reduce((s, d) => s + (d.usedAnnual || 0), 0);
+              const totalRemain      = annualDataList.reduce((s, d) => s + (d.remainAnnual || 0), 0);
+
+              const avgYears = count > 0
+                ? annualDataList.reduce((s, d) => s + (d.years || 0) + (d.months || 0) / 12, 0) / count
+                : 0;
+
+              const Card = ({ label, value, color }) => (
+                <div className="text-center">
+                  <div className="text-gray-600 font-medium truncate">{label}</div>
+                  <div className={`font-bold ${color}`}>{value}</div>
+                </div>
+              );
+
+              return (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  {/* 모바일 Row 1: 5열 */}
+                  <div className="grid grid-cols-5 gap-2 text-xs lg:hidden">
+                    <Card label="필터 대상"    value={`${count}명`}                    color="text-blue-600" />
+                    <Card label="평균 근속"    value={`${avgYears.toFixed(1)}년`}      color="text-purple-600" />
+                    <Card label="총 정규직원"    value={`${totalRegular}명`}              color="text-green-700" />
+                    <Card label="총 촉탁직원"    value={`${totalChoktak}명`}              color="text-orange-600" />
+                    <Card label="총 계약직원"    value={`${totalContract}명`}             color="text-yellow-600" />
+                  </div>
+                  {/* 모바일 Row 2: 5열 */}
+                  <div className="grid grid-cols-5 gap-2 text-xs mt-2 lg:hidden">
+                    <Card label="총 기타직원"    value={`${totalOther}명`}                color="text-gray-500" />
+                    <Card label="총 연차"      value={`${totalAnnual.toFixed(1)}일`}    color="text-blue-700" />
+                    <Card label="총 이월연차"  value={`${totalCarryOver.toFixed(1)}일`} color="text-teal-600" />
+                    <Card label="총 사용연차"  value={`${totalUsed.toFixed(1)}일`}      color="text-red-600" />
+                    <Card label="총 잔여연차"  value={`${totalRemain.toFixed(1)}일`}    color="text-green-600" />
+                  </div>
+                  {/* 데스크탑: 10열 1행 */}
+                  <div className="hidden lg:grid gap-2 text-sm" style={{ gridTemplateColumns: 'repeat(10, 1fr)' }}>
+                    <Card label="필터 대상"    value={`${count}명`}                    color="text-blue-600" />
+                    <Card label="평균 근속년수" value={`${avgYears.toFixed(1)}년`}     color="text-purple-600" />
+                    <Card label="총 정규직원"    value={`${totalRegular}명`}              color="text-green-700" />
+                    <Card label="총 촉탁직원"    value={`${totalChoktak}명`}              color="text-orange-600" />
+                    <Card label="총 계약직원"    value={`${totalContract}명`}             color="text-yellow-600" />
+                    <Card label="총 기타직원"    value={`${totalOther}명`}                color="text-gray-500" />
+                    <Card label="총 연차"      value={`${totalAnnual.toFixed(1)}일`}    color="text-blue-700" />
+                    <Card label="총 이월연차"  value={`${totalCarryOver.toFixed(1)}일`} color="text-teal-600" />
+                    <Card label="총 사용연차"  value={`${totalUsed.toFixed(1)}일`}      color="text-red-600" />
+                    <Card label="총 잔여연차"  value={`${totalRemain.toFixed(1)}일`}    color="text-green-600" />
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* 직원 연차 현황 테이블 */}
-            <div className="overflow-x-auto max-h-[85vh] overflow-y-auto">
+            <div className="overflow-x-auto max-h-[85vh] lg:max-h-[63vh] overflow-y-auto">
               <table className="text-xs" style={{ width: 'max-content', minWidth: '100%' }}>
                 <thead className="bg-gray-100 sticky top-0 z-10">
                   <tr>
@@ -294,6 +409,10 @@ const AdminLeaveManagement = ({
                         <button onClick={() => handleAnnualLeaveSort('contractType')} className="text-xs text-gray-500 hover:text-gray-700">▼</button>
                       </div>
                     </th>
+                    <th className="text-center py-1 px-2 whitespace-nowrap">
+                      상태
+                      <button onClick={() => handleAnnualLeaveSort('status')} className="ml-1 text-xs text-gray-500 hover:text-gray-700">▼</button>
+                    </th>
                     <th className="text-center py-1 px-2 leading-none">
                       <div className="flex items-center justify-center gap-1">
                         <div className="flex flex-col items-center lg:flex-row">
@@ -357,8 +476,8 @@ const AdminLeaveManagement = ({
                 <tbody className="divide-y divide-gray-200">
                   {employees
                     .filter((emp) => {
-                      // 퇴사자 제외 (status가 '퇴사'인 경우)
-                      if (emp.status === '퇴사') {
+                      // 재직자만 표시 (기본값)
+                      if (!showInactive && (emp.status === '퇴사' || emp.status === '휴직')) {
                         return false;
                       }
 
@@ -374,6 +493,16 @@ const AdminLeaveManagement = ({
                       // 부서 필터
                       if (leaveSearch.dept && leaveSearch.dept !== '전체') {
                         if (emp.department !== leaveSearch.dept) return false;
+                      }
+
+                      // 계약형태 필터
+                      if (leaveSearch.contractType && leaveSearch.contractType !== '전체') {
+                        const empContractType = emp.contractType || '기타';
+                        if (leaveSearch.contractType === '기타') {
+                          if (['정규', '촉탁', '계약'].includes(empContractType)) return false;
+                        } else {
+                          if (empContractType !== leaveSearch.contractType) return false;
+                        }
                       }
 
                       // 사번/이름 키워드 필터
@@ -653,6 +782,15 @@ const AdminLeaveManagement = ({
                             )}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
+                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                              emp.status === '퇴사' ? 'bg-red-100 text-red-700' :
+                              emp.status === '휴직' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {emp.status || '재직'}
+                            </span>
+                          </td>
+                          <td className="text-center py-1 px-2 whitespace-nowrap">
                             {annualData.annualStart}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
@@ -663,22 +801,21 @@ const AdminLeaveManagement = ({
                               <input
                                 type="number"
                                 value={
-                                  editAnnualData.baseAnnual ||
-                                  annualData.baseAnnual ||
-                                  annualData.totalAnnual -
-                                    (annualData.carryOverLeave || 0)
+                                  editAnnualData.baseAnnual !== undefined
+                                    ? editAnnualData.baseAnnual
+                                    : (annualData.baseAnnual ?? annualData.totalAnnual - (annualData.carryOverLeave ?? 0))
                                 }
                                 onChange={(e) => {
                                   const value = Number(e.target.value) || 0;
                                   setEditAnnualData((prev) => ({
                                     ...prev,
                                     baseAnnual: value,
-                                    totalAnnual: value, // 총연차 = 기본연차
                                   }));
                                 }}
                                 className="w-16 px-2 py-1 border rounded text-center"
                                 min="0"
                                 max="25"
+                                step="any"
                               />
                             ) : (
                               <span className="text-blue-600 font-medium">
@@ -693,9 +830,9 @@ const AdminLeaveManagement = ({
                               <input
                                 type="number"
                                 value={
-                                  editAnnualData.carryOverLeave ||
-                                  annualData.carryOverLeave ||
-                                  0
+                                  editAnnualData.carryOverLeave !== undefined
+                                    ? editAnnualData.carryOverLeave
+                                    : (annualData.carryOverLeave ?? 0)
                                 }
                                 onChange={(e) => {
                                   const value = Number(e.target.value) || 0;
@@ -707,7 +844,7 @@ const AdminLeaveManagement = ({
                                 }}
                                 className="w-16 px-2 py-1 border rounded text-center"
                                 min="0"
-                                step="0.5"
+                                step="any"
                               />
                             ) : (
                               <span className="text-green-600 font-medium">
@@ -717,54 +854,47 @@ const AdminLeaveManagement = ({
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
-                              <input
-                                type="number"
-                                value={
-                                  editAnnualData.totalAnnual !== undefined
-                                    ? editAnnualData.totalAnnual
-                                    : annualData.totalAnnual
-                                }
-                                onChange={(e) => {
-                                  const value = Number(e.target.value) || 0;
-                                  setEditAnnualData((prev) => ({
-                                    ...prev,
-                                    totalAnnual: value,
-                                    baseAnnual: value, // 총연차 = 기본연차
-                                    remainAnnual:
-                                      value -
-                                      (prev.usedAnnual !== undefined
-                                        ? prev.usedAnnual
-                                        : annualData.usedAnnual || 0),
-                                  }));
-                                }}
-                                className="w-16 px-2 py-1 border rounded text-center"
-                              />
+                              <div className="flex flex-col items-center">
+                                <span className="text-xs text-gray-400">(자동)</span>
+                                <span className="font-medium text-gray-600">
+                                  {(editAnnualData.baseAnnual !== undefined ? editAnnualData.baseAnnual : annualData.baseAnnual) +
+                                   (editAnnualData.carryOverLeave !== undefined ? editAnnualData.carryOverLeave : (annualData.carryOverLeave || 0))}
+                                </span>
+                              </div>
                             ) : (
                               annualData.totalAnnual
                             )}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
-                              <input
-                                type="number"
-                                value={
-                                  editAnnualData.usedLeave !== undefined
-                                    ? editAnnualData.usedLeave
-                                    : annualData.usedAnnual
-                                }
-                                onChange={(e) => {
-                                  const value = Number(e.target.value) || 0;
-                                  setEditAnnualData((prev) => ({
-                                    ...prev,
-                                    usedLeave: value,
-                                    remainAnnual:
-                                      (prev.totalAnnual !== undefined
-                                        ? prev.totalAnnual
-                                        : annualData.totalAnnual || 0) - value,
-                                  }));
-                                }}
-                                className="w-16 px-2 py-1 border rounded text-center"
-                              />
+                              <div className="flex flex-col items-center gap-1">
+                                {/* 사용연차(자동): 연차 내역 기반 순수 집계값 (leaveUsed 보정 미포함) */}
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-gray-500">사용(자동)</span>
+                                  <span className="font-medium">{annualData.leaveRequestsSum ?? annualData.usedAnnual}</span>
+                                </div>
+                                {/* leaveUsed: 승인 연차 합계에 더해지는 관리자 보정값 */}
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-gray-500">사용보정</span>
+                                  <input
+                                    type="number"
+                                    value={
+                                      editAnnualData.usedLeave !== undefined
+                                        ? editAnnualData.usedLeave
+                                        : (emp.leaveUsed || 0)
+                                    }
+                                    onChange={(e) => {
+                                      const value = Number(e.target.value) || 0;
+                                      setEditAnnualData((prev) => ({
+                                        ...prev,
+                                        usedLeave: value,
+                                      }));
+                                    }}
+                                    className="w-12 px-1 py-0.5 border rounded text-center text-xs"
+                                    step="any"
+                                  />
+                                </div>
+                              </div>
                             ) : (
                               <span
                                 className={`font-medium ${
@@ -784,11 +914,16 @@ const AdminLeaveManagement = ({
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap">
                             {isEditing ? (
-                              <span className="font-medium text-blue-600">
-                                {editAnnualData.remainAnnual !== undefined
-                                  ? editAnnualData.remainAnnual
-                                  : annualData.remainAnnual}
-                              </span>
+                              <div className="flex flex-col items-center">
+                                <span className="text-xs text-gray-400">(자동)</span>
+                                <span className="font-medium text-blue-600">
+                                  {((editAnnualData.baseAnnual !== undefined ? editAnnualData.baseAnnual : annualData.baseAnnual) +
+                                    (editAnnualData.carryOverLeave !== undefined ? editAnnualData.carryOverLeave : (annualData.carryOverLeave || 0))) -
+                                    // 잔여 = 총연차 - (연차내역 집계 + 보정값)
+                                    ((annualData.leaveRequestsSum ?? (annualData.usedAnnual - (emp.leaveUsed || 0))) +
+                                     (editAnnualData.usedLeave !== undefined ? editAnnualData.usedLeave : (emp.leaveUsed || 0)))}
+                                </span>
+                              </div>
                             ) : (
                               annualData.remainAnnual
                             )}
@@ -800,38 +935,47 @@ const AdminLeaveManagement = ({
                                   className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 hover:bg-blue-200"
                                   onClick={async () => {
                                     try {
-                                      // 사용연차 값 가져오기 (수정된 값 또는 기존 값)
+                                      // leaveUsed는 승인 연차 합계에 더해지는 관리자 보정값이다
+                                      // (annualData.usedAnnual은 자동 계산값이므로 저장하지 않음)
                                       const usedLeave =
                                         editAnnualData.usedLeave !== undefined
                                           ? editAnnualData.usedLeave
-                                          : annualData.usedAnnual;
+                                          : (emp.leaveUsed || 0);
 
                                       console.log('🔍 직원 정보:', emp);
                                       console.log('🔍 employeeId:', emp.id);
-                                      console.log('💾 DB 저장 데이터:', {
+                                      console.log('💾 DB 저장 데이터 (leaveUsed = 관리자 보정값):', {
                                         usedLeave,
                                       });
 
-                                      // DB에 leaveUsed 저장 (기준값)
+                                      // DB에 저장 (기준값)
                                       const { default: EmployeeAPI } =
                                         await import('../../api/employee');
+                                      const baseAnnualVal = editAnnualData.baseAnnual !== undefined ? editAnnualData.baseAnnual : annualData.baseAnnual;
+                                      const carryOverVal = editAnnualData.carryOverLeave !== undefined ? editAnnualData.carryOverLeave : (annualData.carryOverLeave || 0);
                                       const response = await EmployeeAPI.update(
                                         emp.id,
                                         {
                                           leaveUsed: usedLeave,
+                                          baseAnnual: baseAnnualVal,
+                                          carryOverLeave: carryOverVal,
+                                          totalAnnual: baseAnnualVal + carryOverVal,
                                         }
                                       );
 
                                       console.log('✅ API 응답:', response);
 
-                                      // 로컬 state 업데이트 (leaveUsed, usedLeave 모두 업데이트)
+                                      // 로컬 state 업데이트
                                       setEmployees((prev) =>
                                         prev.map((employee) =>
                                           employee.id === emp.id
                                             ? {
                                                 ...employee,
-                                                leaveUsed: usedLeave, // DB 원본 필드
-                                                usedLeave: usedLeave, // 호환성 필드
+                                                leaveUsed: usedLeave,
+                                                usedLeave: usedLeave,
+                                                baseAnnual: baseAnnualVal,
+                                                carryOverLeave: carryOverVal,
+                                                totalAnnual: baseAnnualVal + carryOverVal,
                                               }
                                             : employee
                                         )
@@ -897,7 +1041,7 @@ const AdminLeaveManagement = ({
                                     address: emp.address || '',
                                     password: emp.password || '',
                                     totalAnnual: annualData.totalAnnual,
-                                    usedLeave: annualData.usedAnnual,
+                                    usedLeave: emp.leaveUsed || 0,
                                     remainAnnual: annualData.remainAnnual,
                                     baseAnnual:
                                       annualData.baseAnnual ||
@@ -1018,7 +1162,138 @@ const AdminLeaveManagement = ({
                 />
               </div>
             </div>
-            <div className="overflow-x-auto max-h-[85vh] overflow-y-auto">
+
+            {/* 연차 내역 요약 카드 */}
+            {(() => {
+              const approved = getFilteredLeaveRequests(leaveRequests).filter(l => l.status === '승인');
+              const getDays = (l) => l.approvedDays ?? l.requestedDays ?? l.days ?? 1;
+              const uniqueEmployees = new Set(approved.map(l => l.employeeId || l.name)).size;
+              const totalDays = approved.reduce((s, l) => s + getDays(l), 0);
+              const avgDays = uniqueEmployees > 0 ? (totalDays / uniqueEmployees) : 0;
+              const sumByType  = (type)  => approved.filter(l => l.type === type).reduce((s, l) => s + getDays(l), 0);
+              const countByType = (type) => approved.filter(l => l.type === type).length;
+              const kyungjoTotal = approved.filter(l => l.type === '경조' || l.type === '경조사').reduce((s, l) => s + getDays(l), 0);
+
+              return (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  {/* 모바일 Row 1: 6열 (필터대상~반차(오후)) */}
+                  <div className="grid grid-cols-6 gap-2 text-xs lg:hidden">
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">필터 대상</div>
+                      <div className="font-bold text-blue-600">{uniqueEmployees}명</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">총 사용일</div>
+                      <div className="font-bold text-green-700">{totalDays.toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">평균사용일</div>
+                      <div className="font-bold text-purple-600">{avgDays.toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">연차</div>
+                      <div className="font-bold text-orange-600">{sumByType('연차').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">반차(오전)</div>
+                      <div className="font-bold text-orange-500">{sumByType('반차(오전)').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">반차(오후)</div>
+                      <div className="font-bold text-orange-400">{sumByType('반차(오후)').toFixed(1)}일</div>
+                    </div>
+                  </div>
+                  {/* 모바일 Row 2: 7열 (외출~기타) */}
+                  <div className="grid grid-cols-7 gap-2 text-xs mt-2 lg:hidden">
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">외출</div>
+                      <div className="font-bold text-yellow-600">{countByType('외출')}건</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">조퇴</div>
+                      <div className="font-bold text-yellow-500">{countByType('조퇴')}건</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">경조</div>
+                      <div className="font-bold text-pink-600">{kyungjoTotal.toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">공가</div>
+                      <div className="font-bold text-teal-600">{sumByType('공가').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">휴직</div>
+                      <div className="font-bold text-gray-600">{sumByType('휴직').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">결근</div>
+                      <div className="font-bold text-red-600">{sumByType('결근').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">기타</div>
+                      <div className="font-bold text-gray-500">{countByType('기타')}건</div>
+                    </div>
+                  </div>
+                  {/* 데스크탑: 13열 1행 */}
+                  <div className="hidden lg:grid gap-2 text-sm" style={{ gridTemplateColumns: 'repeat(13, 1fr)' }}>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">필터 대상</div>
+                      <div className="font-bold text-blue-600">{uniqueEmployees}명</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">총 사용일</div>
+                      <div className="font-bold text-green-700">{totalDays.toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">평균 사용일</div>
+                      <div className="font-bold text-purple-600">{avgDays.toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">연차</div>
+                      <div className="font-bold text-orange-600">{sumByType('연차').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">반차(오전)</div>
+                      <div className="font-bold text-orange-500">{sumByType('반차(오전)').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">반차(오후)</div>
+                      <div className="font-bold text-orange-400">{sumByType('반차(오후)').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">외출</div>
+                      <div className="font-bold text-yellow-600">{countByType('외출')}건</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">조퇴</div>
+                      <div className="font-bold text-yellow-500">{countByType('조퇴')}건</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">경조</div>
+                      <div className="font-bold text-pink-600">{kyungjoTotal.toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">공가</div>
+                      <div className="font-bold text-teal-600">{sumByType('공가').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">휴직</div>
+                      <div className="font-bold text-gray-600">{sumByType('휴직').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">결근</div>
+                      <div className="font-bold text-red-600">{sumByType('결근').toFixed(1)}일</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-600 font-medium truncate">기타</div>
+                      <div className="font-bold text-gray-500">{countByType('기타')}건</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="overflow-x-auto max-h-[85vh] lg:max-h-[72vh] overflow-y-auto">
               <table className="w-full text-xs" style={{ minWidth: '600px' }}>
                 <thead className="bg-gray-100 sticky top-0 z-10">
                   <tr>
@@ -1141,7 +1416,7 @@ const AdminLeaveManagement = ({
                       getFilteredLeaveRequests(leaveRequests)
                     );
                     return filteredLeaveRequests
-                      .slice((leaveHistoryPage - 1) * 17, leaveHistoryPage * 17)
+                      .slice((leaveHistoryPage - 1) * 15, leaveHistoryPage * 15)
                       .map((lr) => {
                         const isEditing = editingLeaveHistoryRow === lr.id;
                         return (
@@ -1467,9 +1742,9 @@ const AdminLeaveManagement = ({
               const filteredCount = getSortedLeaveRequests(
                 getFilteredLeaveRequests(leaveRequests)
               ).length;
-              if (filteredCount <= 17) return null;
+              if (filteredCount <= 15) return null;
 
-              const totalPages = Math.ceil(filteredCount / 17);
+              const totalPages = Math.ceil(filteredCount / 15);
               const groupSize = 10;
               const currentGroup = Math.floor((leaveHistoryPage - 1) / groupSize);
               const startPage = currentGroup * groupSize + 1;

@@ -374,15 +374,15 @@ export const useStaffLeave = (dependencies = {}) => {
       처리유형: '연차 신청',
       대상자: currentUser,
       처리자: currentUser.name,
-      알림내용: `유형:${leaveForm.type} \n기간:${leaveForm.startDate}${
+      알림내용: `${currentUser.name}님이 ${leaveForm.type} 신청하였습니다.\n기간:${leaveForm.startDate}${
         leaveForm.endDate !== leaveForm.startDate
           ? ` ~ ${leaveForm.endDate}`
           : ''
-      }${requestedDays > 0 ? `\n신청일수:${requestedDays}일` : ''} \n사유:${
+      }${requestedDays > 0 ? `\n신청일수:${requestedDays}일` : ''}\n사유:${
         leaveForm.reason
-      } \n연락처:${
+      }\n연락처:${
         leaveForm.contact || '미입력'
-      } \n신청일시:${now.toLocaleString('ko-KR')}`,
+      }\n신청일시:${now.toLocaleString('ko-KR')}`,
     });
 
     setLeaveForm({

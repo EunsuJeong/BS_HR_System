@@ -104,7 +104,7 @@ export const useStaffSuggestion = (dependencies = {}) => {
         처리유형: '건의사항 신청',
         대상자: currentUser,
         처리자: currentUser.name,
-        알림내용: `유형:${suggestionInput} \n내용:${applyContent} \n신청일시:${now.toLocaleString(
+        알림내용: `${currentUser.name}님이 ${{ 구매: '구매 (소모품)', 대표이사: '건의 (대표이사)', 관리팀: '건의 (관리팀)' }[suggestionInput] || suggestionInput} 신청하였습니다.\n내용:${applyContent}\n신청일시:${now.toLocaleString(
           'ko-KR'
         )}`,
         건의유형: suggestionInput,

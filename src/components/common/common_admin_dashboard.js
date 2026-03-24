@@ -212,17 +212,27 @@ export const useDashboardStats = ({
           actualShift = workType;
           // workType이 야간이면 전날 데이터 확인
           if (actualShift === '야간' || actualShift === '주간/야간') {
-            checkDate = targetYesterday;
-            checkDateObj = yesterdayObj;
-            attendanceData = getAttendanceForEmployee(
+            const yestData = getAttendanceForEmployee(
               emp.id,
               yesterdayObj.getFullYear(),
               yesterdayObj.getMonth() + 1,
               yesterdayObj.getDate()
             );
-            // 시프터는 야간으로 간주
-            if (actualShift === '주간/야간') {
-              actualShift = '야간';
+            // 전날 실제 checkIn 시간이 야간 범위(15:00 이후 또는 03:00 이전)인 경우만 야간으로 처리
+            const yestMinutes = yestData?.checkIn ? timeToMinutes(yestData.checkIn) : -1;
+            const isRealNightCheckIn = yestMinutes >= 0 && (yestMinutes >= 900 || yestMinutes < 180);
+            if (isRealNightCheckIn) {
+              checkDate = targetYesterday;
+              checkDateObj = yesterdayObj;
+              attendanceData = yestData;
+              if (actualShift === '주간/야간') {
+                actualShift = '야간';
+              }
+            } else {
+              // 전날 checkIn이 야간 시간대가 아니고 오늘도 출근 기록 없음
+              // → 현재 시프트 미정 (오늘 주간/야간 출근 시 Priority 1-2에서 자동 처리됨)
+              // → 집계에서 제외 (주간 결근으로 잡히지 않도록)
+              return;
             }
           } else {
             // 주간이면 당일 데이터 확인

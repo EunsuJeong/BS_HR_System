@@ -320,6 +320,8 @@ const HRManagementSystem = () => {
   // *[1_공통] 1.3.2.1_공휴일 데이터*
   const [holidayData, setHolidayData] = useState({});
   const [holidayLoadingStatus, setHolidayLoadingStatus] = useState({});
+  // 로딩 중 여부를 ref로 추적 (함수 재생성 없이 중복 호출 방지)
+  const holidayInFlightRef = React.useRef({});
 
   // *[1_공통] 1.3.2.2_커스텀 공휴일*
   const [customHolidays, setCustomHolidays] = useState({});
@@ -350,10 +352,15 @@ const HRManagementSystem = () => {
         return {};
       }
 
-      if (holidayData[year] || holidayLoadingStatus[year]) {
+      // ref 기반 중복 방지: 이미 로드됐거나 로딩 중이면 즉시 반환
+      if (holidayInFlightRef.current[year] === 'loaded') {
         return holidayData[year];
       }
+      if (holidayInFlightRef.current[year] === 'loading') {
+        return;
+      }
 
+      holidayInFlightRef.current[year] = 'loading';
       setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'loading' }));
 
       try {
@@ -399,6 +406,7 @@ const HRManagementSystem = () => {
           holidays[shortDate] = name;
         });
 
+        holidayInFlightRef.current[year] = 'loaded';
         setHolidayData((prev) => ({ ...prev, [year]: holidays }));
         setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'loaded' }));
 
@@ -408,6 +416,7 @@ const HRManagementSystem = () => {
           `❌ [DB] ${year}년 공휴일 데이터 로드 실패, 로컬 폴백 사용:`,
           error.message
         );
+        holidayInFlightRef.current[year] = 'error';
         setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'error' }));
 
         // 폴백: HolidayService의 로컬 데이터 사용
@@ -416,7 +425,7 @@ const HRManagementSystem = () => {
         return basicHolidays;
       }
     },
-    [holidayData, holidayLoadingStatus]
+    [] // ref 기반 가드로 함수 참조 안정화 (의존성 제거)
   );
 
   // *[1_공통] 1.3.2.4_공휴일 시스템 초기화 useEffect (DB 기반)*
@@ -1946,7 +1955,7 @@ const HRManagementSystem = () => {
             usedAnnualLeave: annualData.usedAnnual,
             remainingAnnualLeave: annualData.remainAnnual,
             carryOverLeave: annualData.carryOverLeave || 0,
-            baseAnnual: annualData.baseAnnual || annualData.totalAnnual,
+            baseAnnual: annualData.baseAnnual ?? annualData.totalAnnual,
             lastLeaveSync: new Date().toISOString(),
           };
         })
@@ -1999,7 +2008,7 @@ const HRManagementSystem = () => {
               usedAnnualLeave: annualData.usedAnnual,
               remainingAnnualLeave: annualData.remainAnnual,
               carryOverLeave: newCarryOverLeave,
-              baseAnnual: annualData.baseAnnual || annualData.totalAnnual,
+              baseAnnual: annualData.baseAnnual ?? annualData.totalAnnual,
               lastLeaveSync: new Date().toISOString(),
             };
           })
@@ -4533,6 +4542,12 @@ const HRManagementSystem = () => {
               leaveUsed: emp.leaveUsed,
               // ✅ 호환성을 위한 매핑 필드
               usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
+              // ✅ 연차 DB 값 유지 (없으면 calculateEmployeeAnnualLeave fallback 사용)
+              annualLeaveStart: emp.annualLeaveStart,
+              annualLeaveEnd: emp.annualLeaveEnd,
+              baseAnnual: emp.baseAnnual,
+              carryOverLeave: emp.carryOverLeave,
+              totalAnnual: emp.totalAnnual,
             };
 
             // 연차 정보 계산 (leaveRequests가 이미 로드되어 있다면)
@@ -4620,6 +4635,12 @@ const HRManagementSystem = () => {
                 leaveUsed: emp.leaveUsed,
                 // ✅ 호환성을 위한 매핑 필드
                 usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
+                // ✅ 연차 DB 값 유지 (없으면 calculateEmployeeAnnualLeave fallback 사용)
+                annualLeaveStart: emp.annualLeaveStart,
+                annualLeaveEnd: emp.annualLeaveEnd,
+                baseAnnual: emp.baseAnnual,
+                carryOverLeave: emp.carryOverLeave,
+                totalAnnual: emp.totalAnnual,
               };
 
               // 연차 정보 계산

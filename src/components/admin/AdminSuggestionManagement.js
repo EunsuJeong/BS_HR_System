@@ -302,7 +302,7 @@ const AdminSuggestionManagement = ({
                 }
 
                 return filteredSuggestions
-                  .slice((suggestionPage - 1) * 16, suggestionPage * 16)
+                  .slice((suggestionPage - 1) * 17, suggestionPage * 17)
                   .map((s) => {
                     const isEditing = editingSuggestionRow === s.id;
                     return (
@@ -538,9 +538,9 @@ const AdminSuggestionManagement = ({
           const filteredCount = getSortedSuggestions(
             getFilteredSuggestions(suggestions)
           ).length;
-          if (filteredCount <= 16) return null;
+          if (filteredCount <= 17) return null;
 
-          const totalPages = Math.ceil(filteredCount / 16);
+          const totalPages = Math.ceil(filteredCount / 17);
           const groupSize = 10;
           const currentGroup = Math.floor((suggestionPage - 1) / groupSize);
           const startPage = currentGroup * groupSize + 1;
