@@ -131,6 +131,46 @@ export const useAnnualLeaveEditor = (dependencies = {}) => {
 // useLeaveApproval.js
 // ============================================================
 
+// 시간 구간 계산 헬퍼 (HH:MM 두 값의 차이 → "X시간 Y분")
+const calcLeaveDuration = (startT, endT) => {
+  if (!startT || !endT) return '';
+  const [sh, sm] = startT.split(':').map(Number);
+  const [eh, em] = endT.split(':').map(Number);
+  const diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff <= 0) return '';
+  const h = Math.floor(diff / 60), m = diff % 60;
+  return h > 0 && m > 0 ? `${h}시간 ${m}분` : h > 0 ? `${h}시간` : `${m}분`;
+};
+
+// 연차 기간 표시 문자열 (외출/조퇴는 시간 포함, 나머지는 날짜 범위)
+const formatLeavePeriod = (leave) => {
+  const type = leave.type || leave.leaveType || '';
+  if (type === '외출') {
+    const duration = calcLeaveDuration(leave.startTime, leave.endTime);
+    return `${leave.startDate} ${leave.startTime || ''} ~ ${leave.endTime || ''}`;
+  }
+  if (type === '조퇴') {
+    const duration = calcLeaveDuration(leave.endTime, '17:30');
+    return `${leave.startDate} ${leave.endTime || ''}`;
+  }
+  return `${leave.startDate}${leave.endDate !== leave.startDate ? ` ~ ${leave.endDate}` : ''}`;
+};
+
+// 신청/승인 일수 또는 시간 표시 문자열 (prefix: '신청' | '승인')
+const formatLeaveAmount = (leave, prefix) => {
+  const type = leave.type || leave.leaveType || '';
+  if (type === '외출') {
+    const duration = calcLeaveDuration(leave.startTime, leave.endTime);
+    return duration ? `\n${prefix} 시간: ${duration}` : '';
+  }
+  if (type === '조퇴') {
+    const duration = calcLeaveDuration(leave.endTime, '17:30');
+    return duration ? `\n${prefix} 시간: ${duration}` : '';
+  }
+  const days = leave.requestedDays ?? leave.days ?? 0;
+  return days > 0 ? `\n${prefix} 일수: ${days}일` : '';
+};
+
 export const useLeaveApproval = (dependencies = {}) => {
   const {
     leaveRequests = [],
@@ -176,7 +216,7 @@ export const useLeaveApproval = (dependencies = {}) => {
                 처리유형: '연차 확인',
                 대상자: targetEmployee,
                 처리자: currentUser.name,
-                알림내용: `${targetLeave.name || targetLeave.employeeName}님의 ${targetLeave.type} 신청이 부서장 확인되었습니다.\n기간: ${targetLeave.startDate}${targetLeave.endDate !== targetLeave.startDate ? ` ~ ${targetLeave.endDate}` : ''}\n신청일수: ${targetLeave.requestedDays || '?'}일\n확인자: ${currentUser.name}`,
+                알림내용: `${targetLeave.name || targetLeave.employeeName}님의 ${targetLeave.type} 신청이 부서장 확인되었습니다.\n기간: ${formatLeavePeriod(targetLeave)}${formatLeaveAmount(targetLeave, '신청')}\n확인자: ${currentUser.name}`,
               });
             }
           }
@@ -223,15 +263,8 @@ export const useLeaveApproval = (dependencies = {}) => {
     const targetLeave = leaveRequests.find((lr) => lr.id === id);
     if (!targetLeave) return;
 
-    let approvedDays = 0;
     const leaveType = targetLeave.type || targetLeave.leaveType || '';
-    if (leaveType === '연차') {
-      const start = new Date(targetLeave.startDate);
-      const end = new Date(targetLeave.endDate);
-      approvedDays = Math.abs((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    } else if (leaveType.startsWith('반차')) {
-      approvedDays = 0.5;
-    }
+    const approvedDays = targetLeave.requestedDays ?? targetLeave.days ?? 0;
 
     const employeeName =
       employees.find((emp) => emp.id === targetLeave.employeeId)?.name ||
@@ -278,29 +311,19 @@ export const useLeaveApproval = (dependencies = {}) => {
             처리유형: '연차 승인',
             대상자: targetEmployee,
             처리자: currentUser.name,
-            알림내용: `${employeeName}님의 ${
-              targetLeave.type
-            } 신청이 승인되었습니다.\n기간: ${targetLeave.startDate}${
-              targetLeave.endDate !== targetLeave.startDate
-                ? ` ~ ${targetLeave.endDate}`
-                : ''
-            }\n승인 일수: ${approvedDays}일\n승인 사유: ${finalRemark}\n승인일시: ${new Date().toLocaleString(
-              'ko-KR'
-            )}`,
+            알림내용: `${employeeName}님의 ${targetLeave.type} 신청이 승인되었습니다.\n기간: ${formatLeavePeriod(targetLeave)}${formatLeaveAmount(targetLeave, '승인')}\n승인 사유: ${finalRemark}\n승인일시: ${new Date().toLocaleString('ko-KR')}`,
           });
         }
 
         alert(
-          `연차가 승인되었습니다.\n승인 대상: ${employeeName}\n승인 일수: ${approvedDays}일\n승인일: ${new Date().toLocaleDateString(
-            'ko-KR'
-          )}`
+          `연차가 승인되었습니다.\n승인 대상: ${employeeName}${formatLeaveAmount(targetLeave, '승인')}\n승인일: ${new Date().toLocaleDateString('ko-KR')}`
         );
 
         setShowLeaveApprovalPopup(false);
         setLeaveApprovalData({ id: null, type: '', remark: '' });
 
         setTimeout(() => {
-          devLog(`연차 승인 완료 - ${employeeName}: ${approvedDays}일`);
+          devLog(`연차 승인 완료 - ${employeeName}${formatLeaveAmount(targetLeave, '승인')}`);
         }, 100);
       } catch (error) {
         console.error('❌ 연차 승인 실패:', error);
@@ -344,15 +367,7 @@ export const useLeaveApproval = (dependencies = {}) => {
             처리유형: '연차 반려',
             대상자: targetEmployee,
             처리자: currentUser.name,
-            알림내용: `${employeeName}님의 ${
-              targetLeave.type
-            } 신청이 반려되었습니다.\n기간: ${targetLeave.startDate}${
-              targetLeave.endDate !== targetLeave.startDate
-                ? ` ~ ${targetLeave.endDate}`
-                : ''
-            }\n반려 사유: ${finalRemark}\n반려일시: ${new Date().toLocaleString(
-              'ko-KR'
-            )}`,
+            알림내용: `${employeeName}님의 ${targetLeave.type} 신청이 반려되었습니다.\n기간: ${formatLeavePeriod(targetLeave)}\n반려 사유: ${finalRemark}\n반려일시: ${new Date().toLocaleString('ko-KR')}`,
           });
         }
         alert(
@@ -1432,7 +1447,9 @@ export const get연차알림대상자 = (
   }
 
   const 중복제거알림대상자들 = 알림대상자들.filter(
-    (emp, index, self) => index === self.findIndex((e) => e.id === emp.id)
+    (emp, index, self) =>
+      index === self.findIndex((e) => e.id === emp.id) &&
+      emp.status !== '퇴사'
   );
 
   if (신청자정보 && 처리유형.includes('신청')) {
@@ -1441,7 +1458,10 @@ export const get연차알림대상자 = (
 
   if (신청자정보 && (처리유형.includes('승인') || 처리유형.includes('반려'))) {
     const 신청자포함대상자들 = [...중복제거알림대상자들];
-    if (!신청자포함대상자들.find((emp) => emp.id === 신청자정보.id)) {
+    if (
+      신청자정보.status !== '퇴사' &&
+      !신청자포함대상자들.find((emp) => emp.id === 신청자정보.id)
+    ) {
       신청자포함대상자들.push(신청자정보);
     }
     return 신청자포함대상자들;
@@ -1477,8 +1497,9 @@ export const get부서관리자및대표이사 = (
       emp.position?.includes(직책)
     );
     const 세부부서일치 = !세부부서 || emp.subDepartment === 세부부서;
+    const 재직중 = emp.status !== '퇴사';
 
-    return 부서일치 && 관리자직책일치 && 세부부서일치;
+    return 부서일치 && 관리자직책일치 && 세부부서일치 && 재직중;
   });
 
   const 대표이사 =
@@ -1496,7 +1517,7 @@ export const get부서관리자및대표이사 = (
     알림대상자들 = 알림대상자들.filter((대상자) => 대상자.id !== 신청자정보.id);
   }
 
-  return 알림대상자들;
+  return 알림대상자들.filter((emp) => emp.status !== '퇴사');
 };
 
 // ============================================================

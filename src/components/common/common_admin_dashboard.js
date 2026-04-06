@@ -1472,12 +1472,39 @@ export const useDashboardCalculations = ({
   notices = [],
 }) => {
   // *[1_공통] 필터링된 직원 목록 조회*
-  const getFilteredEmployees = (emp, m) =>
+  const getFilteredEmployees = (emp, m, y) =>
     emp.filter((e) => {
       const excluded = ['이철균', '이현주'].includes(e.name);
-      // ✅ 퇴사자는 무조건 제외 (시스템에서 invisible)
-      const resigned = e.status === '퇴사';
-      return !excluded && !resigned;
+      if (excluded) return false;
+
+      // year/month이 지정된 경우: 해당 달에 재직 중이었던 직원 포함
+      if (y !== undefined && m !== undefined) {
+        const firstDay = new Date(y, m, 1);
+        const lastDay = new Date(y, m + 1, 0);
+        firstDay.setHours(0, 0, 0, 0);
+        lastDay.setHours(23, 59, 59, 999);
+
+        // 입사일이 해당 달 마지막 날 이후면 제외
+        const joinDateValue = e.joinDate || e.hireDate;
+        if (joinDateValue) {
+          const joinDate = new Date(joinDateValue);
+          joinDate.setHours(0, 0, 0, 0);
+          if (joinDate > lastDay) return false;
+        }
+
+        // 퇴사자: 퇴사일이 해당 달 첫 날 이전이면 제외 (해당 달에 이미 퇴사)
+        if (e.status === '퇴사') {
+          if (!e.leaveDate) return false;
+          const leaveDate = new Date(e.leaveDate);
+          leaveDate.setHours(0, 0, 0, 0);
+          if (leaveDate < firstDay) return false;
+        }
+
+        return true;
+      }
+
+      // year 미지정 시 기존 로직: 현재 재직자만
+      return e.status !== '퇴사';
     });
 
   // *[2_관리자 모드] 2.1_대시보드 - 월별 출근율 계산*
@@ -4106,7 +4133,7 @@ export const getGoalDataByYearUtil = (
       );
 
       // 퇴사율 계산
-      const filteredEmployees = getFilteredEmployees(employees, month);
+      const filteredEmployees = getFilteredEmployees(employees, month, year);
       const resignedCount = employees.filter((emp) => {
         if (
           !['이철균', '이현주'].includes(emp.name) &&
@@ -4149,7 +4176,7 @@ function calculateMonthlyRate(
   leaveRequests
 ) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const baseFilteredEmployees = getFilteredEmployees(employees, month);
+  const baseFilteredEmployees = getFilteredEmployees(employees, month, year);
 
   let totalCount = 0; // 총 카운트 (출근/지각/결근 횟수)
   let totalWorkDays = 0; // 총 근무일 수 (정상 근무일 × 직원 수)

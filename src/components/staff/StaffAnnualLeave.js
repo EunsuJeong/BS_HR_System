@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
-import { LEAVE_TYPES, LEAVE_PAGE_SIZE } from '../common/common_staff_leave';
+import { LEAVE_TYPES, LEAVE_PAGE_SIZE, useStaffLeave } from '../common/common_staff_leave';
 
 // ============================================================
 // 시간 셀렉트 피커 (12시간제, 오전/오후 언어 지원)
@@ -132,15 +132,8 @@ const StaffAnnualLeave = ({
   currentUser,
   leaveRequests,
   setLeaveRequests,
-  leaveForm,
-  setLeaveForm,
-  leaveFormError,
-  setLeaveFormError,
-  leaveFormPreview,
-  setLeaveFormPreview,
-  handleLeaveFormChange,
-  handleLeaveRequest,
-  handleCancelLeave,
+  isHolidayDate,
+  send자동알림,
   getUsedAnnualLeave,
   getLeaveDays,
   formatDateByLang,
@@ -150,6 +143,59 @@ const StaffAnnualLeave = ({
   selectedLanguage,
   fontSize = 'normal',
 }) => {
+  // 연차 폼 로컬 state (App.js 전체 리렌더 방지)
+  const [leaveForm, setLeaveForm] = useState({
+    startDate: '',
+    endDate: '',
+    type: '연차',
+    reason: '',
+    contact: '',
+    startTime: '',
+    endTime: '',
+  });
+  const [leaveFormError, setLeaveFormError] = useState('');
+  const [leaveFormPreview, setLeaveFormPreview] = useState(null);
+
+  // 연차 폼 미리보기 useEffect
+  useEffect(() => {
+    if (
+      currentUser &&
+      currentUser.id &&
+      leaveForm.startDate &&
+      leaveForm.endDate &&
+      leaveForm.type &&
+      leaveForm.reason &&
+      leaveForm.contact
+    ) {
+      const now = new Date();
+      setLeaveFormPreview({
+        ...leaveForm,
+        status: '작성중',
+        employeeId: currentUser.id,
+        requestDate: now.toISOString().slice(0, 10),
+        requestDateTime: now.toISOString(),
+      });
+    } else {
+      setLeaveFormPreview(null);
+    }
+  }, [leaveForm, currentUser]);
+
+  // 연차 관리 훅
+  const { handleCancelLeave, handleLeaveFormChange, handleLeaveRequest } =
+    useStaffLeave({
+      leaveForm,
+      setLeaveForm,
+      setLeaveFormError,
+      setLeaveFormPreview,
+      leaveRequests,
+      setLeaveRequests,
+      currentUser,
+      remainAnnualLeave: currentUser?.remainingAnnualLeave || 0,
+      isHolidayDate,
+      send자동알림,
+      getText,
+    });
+
   const [showLeaveHistoryPopup, setShowLeaveHistoryPopup] = useState(false);
   const [showEditLeavePopup, setShowEditLeavePopup] = useState(false);
   const [editingLeave, setEditingLeave] = useState(null);

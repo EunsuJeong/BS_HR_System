@@ -1,17 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
-import { exportEvaluationToXLSX } from '../common/common_admin_evaluation';
+import { exportEvaluationToXLSX, useEvaluationManagement } from '../common/common_admin_evaluation';
+import { useDebounce } from '../common/common_common';
 
 const AdminEvaluationManagement = ({
   evaluationData,
+  setEvaluationData,
   evaluationSearch,
   setEvaluationSearch,
-  evaluationForm,
-  setEvaluationForm,
-  evaluationTab,
-  editingEvaluationId,
-  editingEvaluationData,
-  setEditingEvaluationData,
   employees,
   COMPANY_STANDARDS,
   STATUS_COLORS,
@@ -19,13 +15,52 @@ const AdminEvaluationManagement = ({
   getFilteredEvaluation,
   getSortedEvaluations,
   handleEvaluationSort,
-  handleEvaluationSubmit,
-  handleEvaluationEdit,
-  handleEvaluationSave,
-  handleEvaluationDelete,
-  evaluationPage,
-  setEvaluationPage,
+  send자동알림,
+  currentUser,
 }) => {
+  const [evaluationForm, setEvaluationForm] = useState({
+    year: new Date().getFullYear(),
+    employeeId: '',
+    name: '',
+    position: '',
+    department: '',
+    grade: 'A',
+    content: '',
+    status: '예정',
+  });
+  const [showEvaluationForm, setShowEvaluationForm] = useState(false);
+  const [editingEvaluationId, setEditingEvaluationId] = useState(null);
+  const [editingEvaluationData, setEditingEvaluationData] = useState({});
+  const [evaluationPage, setEvaluationPage] = useState(1);
+
+  // 평가 검색 필터 로컬 state + debounce (타이핑 렉 방지)
+  const [evalYearInput, setEvalYearInput] = useState(evaluationSearch?.year || '');
+  const [evalKeywordInput, setEvalKeywordInput] = useState(evaluationSearch?.keyword || '');
+  const debouncedEvalYear = useDebounce(evalYearInput, 200);
+  const debouncedEvalKeyword = useDebounce(evalKeywordInput, 200);
+  useEffect(() => { setEvaluationSearch((s) => ({ ...s, year: debouncedEvalYear })); }, [debouncedEvalYear]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setEvaluationSearch((s) => ({ ...s, keyword: debouncedEvalKeyword })); }, [debouncedEvalKeyword]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const {
+    handleEvaluationSubmit,
+    handleEvaluationEdit,
+    handleEvaluationSave,
+    handleEvaluationDelete,
+  } = useEvaluationManagement({
+    evaluationForm,
+    setEvaluationForm,
+    evaluationData,
+    setEvaluationData,
+    setShowEvaluationForm,
+    editingEvaluationId,
+    setEditingEvaluationId,
+    editingEvaluationData,
+    setEditingEvaluationData,
+    employees,
+    send자동알림,
+    currentUser,
+  });
+
   // 검색 필터 변경시 페이지 1로 리셋
   useEffect(() => {
     setEvaluationPage(1);
@@ -63,10 +98,8 @@ const AdminEvaluationManagement = ({
             <input
               type="text"
               placeholder="연도"
-              value={evaluationSearch.year}
-              onChange={(e) =>
-                setEvaluationSearch((s) => ({ ...s, year: e.target.value }))
-              }
+              value={evalYearInput}
+              onChange={(e) => setEvalYearInput(e.target.value)}
               className="px-2 py-1.5 border rounded-lg text-sm w-20"
             />
             <select
@@ -105,13 +138,8 @@ const AdminEvaluationManagement = ({
             <input
               type="text"
               placeholder="사번/이름 검색"
-              value={evaluationSearch.keyword}
-              onChange={(e) =>
-                setEvaluationSearch((s) => ({
-                  ...s,
-                  keyword: e.target.value,
-                }))
-              }
+              value={evalKeywordInput}
+              onChange={(e) => setEvalKeywordInput(e.target.value)}
               className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[140px]"
             />
           </div>
@@ -246,8 +274,7 @@ const AdminEvaluationManagement = ({
           </div>
         </div>
 
-        {evaluationTab === 'employee' ? (
-          <>
+        <>
             <div className="overflow-x-auto max-h-[85vh] overflow-y-auto">
               <table className="w-full text-xs" style={{ minWidth: '600px' }}>
                 <thead className="bg-gray-100 sticky top-0 z-10">
@@ -524,17 +551,9 @@ const AdminEvaluationManagement = ({
               );
             })()}
           </>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <p className="text-lg">연도별 성과 분석</p>
-            <p className="text-sm">
-              연도별 성과 통계 및 분석 자료를 표시합니다.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
-export default AdminEvaluationManagement;
+export default React.memo(AdminEvaluationManagement);

@@ -9,6 +9,7 @@ const { startBackupScheduler } = require('./utils/backupScheduler');
 const { startDataRetentionScheduler } = require('./utils/dataRetentionScheduler');
 const { startAnnualLeaveScheduler } = require('./utils/annualLeaveScheduler');
 const { startSelfPingScheduler } = require('./utils/selfPing');
+const { startExcelBackupScheduler } = require('./utils/excelBackupScheduler');
 
 const app = express();
 const server = createServer(app);
@@ -500,6 +501,7 @@ server.listen(PORT, () => {
   startDataRetentionScheduler();
   startAnnualLeaveScheduler(io);
   startSelfPingScheduler(); // Railway sleep 방지 (매일 오전 5시)
+  startExcelBackupScheduler(); // Excel 백업 (매일: 직원/근태/연차, 매달 15일: 급여)
   console.log('✅ 모든 스케줄러 시작 완료\n');
 });
 

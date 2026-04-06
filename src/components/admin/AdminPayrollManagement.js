@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Edit, Upload, Download, RefreshCw } from 'lucide-react';
+import { useDebounce } from '../common/common_common';
 
 const AdminPayrollManagement = ({
   payrollTableData,
@@ -23,6 +24,13 @@ const AdminPayrollManagement = ({
   setPayrollHashes,
 }) => {
   const [showResetModal, setShowResetModal] = useState(false);
+
+  // 이름 검색 debounce (App.js 전체 리렌더 방지)
+  const [nameInput, setNameInput] = useState(payrollSearchFilter?.name || '');
+  const debouncedName = useDebounce(nameInput, 300);
+  useEffect(() => {
+    setPayrollSearchFilter((prev) => ({ ...prev, name: debouncedName }));
+  }, [debouncedName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 급여 데이터 초기화 핸들러
   const handleResetPayrollData = (resetType) => {
@@ -168,10 +176,8 @@ const AdminPayrollManagement = ({
               <input
                 type="text"
                 placeholder="이름 검색"
-                value={payrollSearchFilter.name}
-                onChange={(e) =>
-                  setPayrollSearchFilter({ ...payrollSearchFilter, name: e.target.value })
-                }
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
                 className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[120px]"
               />
             </div>
@@ -1503,4 +1509,4 @@ const AdminPayrollManagement = ({
   );
 };
 
-export default AdminPayrollManagement;
+export default React.memo(AdminPayrollManagement);

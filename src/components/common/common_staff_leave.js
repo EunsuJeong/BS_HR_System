@@ -109,8 +109,8 @@ export const useStaffLeave = (dependencies = {}) => {
     ) {
       setLeaveFormError(
         getText(
-          '반차는 시작일과 종료일이 같아야 합니다.',
-          'For half-day leave, start and end date must be the same.'
+          '반차는 당일만 신청 가능합니다.',
+          'Half-day leave can only be applied for a single day.'
         )
       );
       return;
@@ -288,7 +288,7 @@ export const useStaffLeave = (dependencies = {}) => {
 
     const now = new Date();
 
-    // 연차 일수 계산
+    // 연차 일수 계산 (외출/조퇴는 시간으로 표시하므로 0, 나머지는 실제 날짜 수)
     let requestedDays = 0;
     if (leaveForm.type === '연차') {
       const start = parseLocalDate(leaveForm.startDate);
@@ -296,12 +296,13 @@ export const useStaffLeave = (dependencies = {}) => {
       requestedDays = Math.abs((end - start) / (1000 * 60 * 60 * 24)) + 1;
     } else if (leaveForm.type.startsWith('반차')) {
       requestedDays = 0.5;
-    } else if (leaveForm.type === '경조' || leaveForm.type === '공가' || leaveForm.type === '휴직') {
-      // 경조, 공가, 휴직: 연차 미차감 (0일)
-      requestedDays = 0;
+    } else if (leaveForm.type === '외출' || leaveForm.type === '조퇴') {
+      requestedDays = 0; // 시간으로 표시
     } else {
-      // 외출, 조퇴, 결근, 기타: 1일
-      requestedDays = 1;
+      // 경조, 공가, 휴직, 결근, 기타: 실제 날짜 수
+      const start = parseLocalDate(leaveForm.startDate);
+      const end = parseLocalDate(leaveForm.endDate);
+      requestedDays = Math.abs((end - start) / (1000 * 60 * 60 * 24)) + 1;
     }
 
     const isTimeType = ['외출', '조퇴'].includes(leaveForm.type);
@@ -369,20 +370,34 @@ export const useStaffLeave = (dependencies = {}) => {
     };
     setLeaveRequests((prev) => [formattedLeave, ...prev]);
 
-    // requestedDays는 이미 위에서 계산됨 (205줄)
+    // 외출/조퇴 시간 계산 헬퍼 (30분=0.5시간 단위로 표시)
+    const calcDuration = (startT, endT) => {
+      if (!startT || !endT) return '';
+      const [sh, sm] = startT.split(':').map(Number);
+      const [eh, em] = endT.split(':').map(Number);
+      const diff = (eh * 60 + em) - (sh * 60 + sm);
+      if (diff <= 0) return '';
+      const hours = diff / 60;
+      return `${hours % 1 === 0 ? hours : hours.toFixed(1)}시간`;
+    };
+    let 알림기간, 알림시간항목;
+    if (leaveForm.type === '외출') {
+      const duration = calcDuration(leaveForm.startTime, leaveForm.endTime);
+      알림기간 = `${leaveForm.startDate} ${leaveForm.startTime} ~ ${leaveForm.endTime}`;
+      알림시간항목 = duration ? `\n신청시간: ${duration}` : '';
+    } else if (leaveForm.type === '조퇴') {
+      const duration = calcDuration(leaveForm.endTime, '17:30');
+      알림기간 = `${leaveForm.startDate} ${leaveForm.endTime}`;
+      알림시간항목 = duration ? `\n신청시간: ${duration}` : '';
+    } else {
+      알림기간 = leaveForm.startDate + (leaveForm.endDate !== leaveForm.startDate ? ` ~ ${leaveForm.endDate}` : '');
+      알림시간항목 = requestedDays > 0 ? `\n신청일수: ${requestedDays}일` : '';
+    }
     send자동알림({
       처리유형: '연차 신청',
       대상자: currentUser,
       처리자: currentUser.name,
-      알림내용: `${currentUser.name}님이 ${leaveForm.type} 신청하였습니다.\n기간:${leaveForm.startDate}${
-        leaveForm.endDate !== leaveForm.startDate
-          ? ` ~ ${leaveForm.endDate}`
-          : ''
-      }${requestedDays > 0 ? `\n신청일수:${requestedDays}일` : ''}\n사유:${
-        leaveForm.reason
-      }\n연락처:${
-        leaveForm.contact || '미입력'
-      }\n신청일시:${now.toLocaleString('ko-KR')}`,
+      알림내용: `${currentUser.name}님이 ${leaveForm.type} 신청하였습니다.\n기간: ${알림기간}${알림시간항목}\n사유: ${leaveForm.reason}\n연락처: ${leaveForm.contact || '미입력'}\n신청일시: ${now.toLocaleString('ko-KR')}`,
     });
 
     setLeaveForm({

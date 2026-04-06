@@ -4,6 +4,7 @@ import {
   exportEmployeeLeaveStatusToXLSX,
   exportLeaveHistoryToXLSX,
 } from '../common/common_admin_leave';
+import { useDebounce } from '../common/common_common';
 
 const AdminLeaveManagement = ({
   leaveManagementTab,
@@ -14,10 +15,6 @@ const AdminLeaveManagement = ({
   setLeaveSearch,
   COMPANY_STANDARDS,
   calculateEmployeeAnnualLeave,
-  editingAnnualLeave,
-  setEditingAnnualLeave,
-  editAnnualData,
-  setEditAnnualData,
   annualLeaveSortField,
   annualLeaveSortOrder,
   handleAnnualLeaveSort,
@@ -32,25 +29,29 @@ const AdminLeaveManagement = ({
   STATUS_COLORS,
   handleApproveLeave,
   handleRejectLeave,
-  leaveHistoryPage,
-  setLeaveHistoryPage,
-  editingLeave,
-  setEditingLeave,
-  editingLeaveRemark,
-  setEditingLeaveRemark,
   showLeaveApprovalPopup,
   setShowLeaveApprovalPopup,
   leaveApprovalData,
   setLeaveApprovalData,
   handleLeaveApprovalConfirm,
-  editingLeaveHistoryRow,
-  setEditingLeaveHistoryRow,
-  editingLeaveHistoryData,
-  setEditingLeaveHistoryData,
   currentUser,
   handleConfirmLeave,
 }) => {
   const [showInactive, setShowInactive] = useState(false);
+  const [editingAnnualLeave, setEditingAnnualLeave] = useState(null);
+  const [editAnnualData, setEditAnnualData] = useState({});
+  const [leaveHistoryPage, setLeaveHistoryPage] = useState(1);
+  const [editingLeave, setEditingLeave] = useState(null);
+  const [editingLeaveRemark, setEditingLeaveRemark] = useState('');
+  const [editingLeaveHistoryRow, setEditingLeaveHistoryRow] = useState(null);
+  const [editingLeaveHistoryData, setEditingLeaveHistoryData] = useState({});
+
+  // keyword 검색 debounce
+  const [keywordInput, setKeywordInput] = useState(leaveSearch?.keyword || '');
+  const debouncedKeyword = useDebounce(keywordInput, 300);
+  useEffect(() => {
+    setLeaveSearch((prev) => ({ ...prev, keyword: debouncedKeyword }));
+  }, [debouncedKeyword]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 검색 필터 변경시 페이지 1로 리셋
   useEffect(() => {
@@ -234,13 +235,8 @@ const AdminLeaveManagement = ({
                 </select>
                 <input
                   type="text"
-                  value={leaveSearch.keyword || ''}
-                  onChange={(e) =>
-                    setLeaveSearch((prev) => ({
-                      ...prev,
-                      keyword: e.target.value,
-                    }))
-                  }
+                  value={keywordInput}
+                  onChange={(e) => setKeywordInput(e.target.value)}
                   placeholder="사번 또는 이름 검색"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -1908,5 +1904,5 @@ const AdminLeaveManagement = ({
   );
 };
 
-export default AdminLeaveManagement;
+export default React.memo(AdminLeaveManagement);
 

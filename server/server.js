@@ -5,6 +5,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const express = require('express');
+const compression = require('compression');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -70,6 +71,9 @@ const allowedOrigins = [
   'https://bs-hr-system.vercel.app', // Vercel 프로덕션 URL (백업)
   process.env.FRONTEND_URL, // 환경변수로 설정된 URL
 ].filter(Boolean); // undefined 제거
+
+// HTTP 응답 압축 (gzip) - 대용량 JSON 응답 크기 50~70% 감소
+app.use(compression());
 
 app.use(
   cors({
@@ -152,9 +156,9 @@ async function checkAndPublishScheduledNotices() {
 
 // ================== DB 연결 ==================
 const mongoURI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/busung_hr';
-const { startBackupScheduler } = require('./utils/backupScheduler');
-const { startAnnualLeaveScheduler } = require('./utils/annualLeaveScheduler');
 const { startSelfPingScheduler } = require('./utils/selfPing');
+const { checkAndRunCatchupBackup } = require('./utils/backupScheduler');
+const { checkAndRunCatchupExcelBackup } = require('./utils/excelBackupScheduler');
 
 mongoose
   .connect(mongoURI)
@@ -169,19 +173,69 @@ mongoose
     setInterval(checkAndPublishScheduledNotices, 60000);
     console.log('⏰ 예약 공지사항 자동 체크 시작 (1분마다)');
 
-    // 백업 스케줄러 시작 (매일 자정 자동 백업)
-    startBackupScheduler();
-
-    // 연차 만료 알림 스케줄러 시작
-    startAnnualLeaveScheduler(io);
-
     // Self-ping 스케줄러 시작 (Railway sleep 방지 - 매일 오전 5시)
     startSelfPingScheduler();
+
+    // 서버 재시작 시 당일 백업 누락 여부 보정 (Windows 작업 스케줄러 보완)
+    checkAndRunCatchupBackup();
+    checkAndRunCatchupExcelBackup();
   })
   .catch((err) => console.error('❌ MongoDB 연결 실패:', err));
 
 // ================== 라우트 ==================
 app.use('/api', routes);
+
+// 연차 만료 체크 즉시 실행 엔드포인트 (갱신 누락 보정용)
+app.post('/api/admin/annual-leave/check', async (req, res) => {
+  try {
+    const { checkAnnualLeaveExpiry } = require('./utils/annualLeaveScheduler');
+    console.log('🔧 수동 연차 만료 체크 실행 요청');
+    await checkAnnualLeaveExpiry(null);
+    res.json({ success: true, message: '연차 만료 체크 완료' });
+  } catch (err) {
+    console.error('❌ 수동 연차 체크 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// JSON 백업 즉시 실행 엔드포인트 (Windows 작업 스케줄러에서 호출)
+app.post('/api/admin/backup/run', async (req, res) => {
+  try {
+    const { performBackup } = require('./utils/backupScheduler');
+    console.log('🔧 수동 JSON 백업 실행 요청');
+    const result = await performBackup();
+    res.json({ success: result, message: result ? 'JSON 백업 완료' : 'JSON 백업 실패' });
+  } catch (err) {
+    console.error('❌ 수동 JSON 백업 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 연차 갱신 즉시 실행 엔드포인트 (Windows 작업 스케줄러에서 호출)
+app.post('/api/admin/annual-leave/renew', async (req, res) => {
+  try {
+    const { performAnnualRenewal } = require('./utils/annualLeaveScheduler');
+    console.log('🔧 수동 연차 갱신 실행 요청');
+    await performAnnualRenewal(null);
+    res.json({ success: true, message: '연차 갱신 완료' });
+  } catch (err) {
+    console.error('❌ 수동 연차 갱신 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Excel 백업 즉시 실행 엔드포인트 (Windows 작업 스케줄러에서 호출)
+app.post('/api/admin/excel-backup/run', async (req, res) => {
+  try {
+    const { performDailyExcelBackup } = require('./utils/excelBackupScheduler');
+    console.log('🔧 수동 Excel 백업 실행 요청');
+    const result = await performDailyExcelBackup();
+    res.json({ success: result, message: result ? 'Excel 백업 완료' : 'Excel 백업 실패' });
+  } catch (err) {
+    console.error('❌ 수동 Excel 백업 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // 기본 라우트
 app.get('/', (req, res) =>

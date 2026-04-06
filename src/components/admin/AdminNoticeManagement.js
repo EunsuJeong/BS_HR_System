@@ -1,29 +1,58 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { FileText, Edit, Upload, Download, Trash2 } from 'lucide-react';
 import { useNoticeManagement } from '../common/common_admin_notice';
+import { useDebounce } from '../common/common_common';
 
 const AdminNoticeManagement = ({
   notices,
   setNotices,
-  noticeForm,
-  setNoticeForm,
   noticeSearch,
   setNoticeSearch,
   adminNoticePage,
   setAdminNoticePage,
-  editingNoticeId,
-  setEditingNoticeId,
   noticeFiles,
   setNoticeFiles,
   noticeFilesRef,
-  handleNoticeFileUpload,
-  handleRemoveNoticeFile,
-  handleNoticePasteImage,
   getFilteredNotices,
   currentUser,
 }) => {
+  // 공지 폼 로컬 state (App.js 전체 리렌더 방지)
+  const [noticeForm, setNoticeForm] = useState({
+    id: null,
+    title: '',
+    content: '',
+    isScheduled: false,
+    scheduledDate: '',
+    scheduledTime: '09:00',
+  });
+  const [editingNoticeId, setEditingNoticeId] = useState(null);
+  // 공지 검색 debounce
+  const [yearInput, setYearInput] = useState(noticeSearch?.year || '');
+  const [monthInput, setMonthInput] = useState(noticeSearch?.month || '');
+  const [dayInput, setDayInput] = useState(noticeSearch?.day || '');
+  const [keywordInput, setKeywordInput] = useState(noticeSearch?.keyword || '');
+  const debouncedYear = useDebounce(yearInput, 300);
+  const debouncedMonth = useDebounce(monthInput, 300);
+  const debouncedDay = useDebounce(dayInput, 300);
+  const debouncedKeyword = useDebounce(keywordInput, 300);
+  useEffect(() => {
+    setNoticeSearch((s) => ({ ...s, year: debouncedYear }));
+  }, [debouncedYear]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setNoticeSearch((s) => ({ ...s, month: debouncedMonth }));
+  }, [debouncedMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setNoticeSearch((s) => ({ ...s, day: debouncedDay }));
+  }, [debouncedDay]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setNoticeSearch((s) => ({ ...s, keyword: debouncedKeyword }));
+  }, [debouncedKeyword]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // [2_관리자 모드] 2.3_공지 관리 - Hook
   const {
+    handleNoticeFileUpload,
+    handleRemoveNoticeFile,
+    handleNoticePasteImage,
     loadNoticeForEdit,
     handleNoticeCreate,
     handleNoticeUpdate,
@@ -240,39 +269,29 @@ const AdminNoticeManagement = ({
               <input
                 type="text"
                 placeholder="연도"
-                value={noticeSearch.year}
-                onChange={(e) =>
-                  setNoticeSearch((s) => ({ ...s, year: e.target.value }))
-                }
+                value={yearInput}
+                onChange={(e) => setYearInput(e.target.value)}
                 className="px-2 py-1 border rounded-lg text-sm w-20"
               />
               <input
                 type="text"
                 placeholder="월"
-                value={noticeSearch.month}
-                onChange={(e) =>
-                  setNoticeSearch((s) => ({ ...s, month: e.target.value }))
-                }
+                value={monthInput}
+                onChange={(e) => setMonthInput(e.target.value)}
                 className="px-2 py-1 border rounded-lg text-sm w-14"
               />
               <input
                 type="text"
                 placeholder="일"
-                value={noticeSearch.day}
-                onChange={(e) =>
-                  setNoticeSearch((s) => ({ ...s, day: e.target.value }))
-                }
+                value={dayInput}
+                onChange={(e) => setDayInput(e.target.value)}
                 className="px-2 py-1 border rounded-lg text-sm w-14"
               />
               <input
                 type="text"
                 placeholder="제목 또는 내용"
-                value={noticeSearch.keyword}
-                onChange={(e) =>
-                  setNoticeSearch((s) => ({
-                    ...s,
-                    keyword: e.target.value,
-                  }))
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)
                 }
                 className="px-2 py-1 border rounded-lg text-sm flex-1 min-w-[120px]"
               />
@@ -787,4 +806,4 @@ const AdminNoticeManagement = ({
   );
 };
 
-export default AdminNoticeManagement;
+export default React.memo(AdminNoticeManagement);

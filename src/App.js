@@ -68,11 +68,9 @@ import {
 import { useEmployeeManagement } from './components/common/common_admin_employee';
 // import { useSuggestionApproval } from './hooks/hooks_admin_suggestion'; // 병합됨: common_admin_suggestion
 // import { useEvaluationManagement } from './hooks/hooks_admin_evaluation'; // 병합됨: common_admin_evaluation
-import { useEvaluationManagement } from './components/common/common_admin_evaluation';
-// import { useStaffLeave } from './hooks/hooks_staff_leave'; // 병합됨: common_staff_leave
-import { useStaffLeave } from './components/common/common_staff_leave';
-// import { useStaffSuggestion } from './hooks/hooks_staff_suggestion'; // 병합됨: common_staff_suggestion
-import { useStaffSuggestion } from './components/common/common_staff_suggestion';
+// useEvaluationManagement → AdminEvaluationManagement 컴포넌트 내부로 이동
+// useStaffLeave → StaffAnnualLeave 컴포넌트 내부로 이동
+// import { useStaffSuggestion } from './hooks/hooks_staff_suggestion'; // 병합됨: common_staff_suggestion → StaffSuggestion 컴포넌트로 이동
 import { getAttendanceDotColor } from './components/common/common_staff_attendance';
 // import { useStaffSalary } from './hooks/hooks_staff_salary'; // 병합됨: common_staff_payroll
 // import { maskSalary, generateSalaryHistory as generateSalaryHistoryUtil } from './utils/utils_staff_salary'; // 병합됨: common_staff_payroll
@@ -153,6 +151,7 @@ import {
   useEmployeeSearch,
   useNotificationRecipients,
   useSortHandlers,
+  useDebounce,
 } from './components/common/common_common';
 import {
   useNotificationHandlers,
@@ -213,7 +212,6 @@ import { sortSuggestions } from './components/common/common_admin_suggestion';
 import { sortEvaluations } from './components/common/common_admin_evaluation';
 import { sortEmployees } from './components/common/common_admin_employee';
 import {
-  useNoticeManagement,
   filterNotices as filterNoticesFromNotice,
 } from './components/common/common_admin_notification';
 // import useAIRecommendations, { useChatbotPermissions, useAISettings } from './hooks/hooks_admin_ai'; // 병합됨: common_admin_ai
@@ -223,9 +221,9 @@ import {
   useAISettings,
 } from './components/common/common_admin_ai';
 import {
-  useAnnualLeaveEditor,
   useLeaveApproval,
 } from './components/common/common_admin_leave';
+// useAnnualLeaveEditor → AdminLeaveManagement 내부로 이동
 // import { useAttendanceCellSelection, useAttendanceClipboard } from './hooks/hooks_admin_attendance.js'; // 병합됨: common_admin_attendance
 import {
   useSafetyManagement,
@@ -699,7 +697,8 @@ const HRManagementSystem = () => {
             type: leave.leaveType || leave.type,
             startDate: formatDateByLang(leave.startDate),
             endDate: formatDateByLang(leave.endDate),
-            days: leave.days,
+            days: leave.requestedDays,
+            requestedDays: leave.requestedDays,
             reason: leave.reason,
             contact: leave.contact,
             status: leave.status,
@@ -765,7 +764,8 @@ const HRManagementSystem = () => {
                   type: leave.leaveType || leave.type,
                   startDate: formatDateByLang(leave.startDate),
                   endDate: formatDateByLang(leave.endDate),
-                  days: leave.days,
+                  days: leave.requestedDays,
+                  requestedDays: leave.requestedDays,
                   reason: leave.reason,
                   contact: leave.contact,
                   status: leave.status,
@@ -813,20 +813,8 @@ const HRManagementSystem = () => {
   }, []);
 
   // *[2_관리자 모드] 2.2_직원 관리 - 신규 직원 등록 모달*
+  // newEmployee → AdminEmployeeManagement 로컬 state로 이동
   const [showNewEmployeeModal, setShowNewEmployeeModal] = useState(false);
-  const [newEmployee, setNewEmployee] = useState({
-    name: '',
-    position: '',
-    department: '',
-    subDepartment: '',
-    role: '',
-    workType: '주간',
-    contractType: '정규',
-    payType: '연봉',
-    annualSalary: '',
-    hourlyWage: '',
-    joinDate: formatDateToString(new Date()),
-  });
 
   const [currentUser, setCurrentUser] = useState(() => {
     // F5 새로고침 시에는 유지, 창 닫기 시에는 로그아웃
@@ -840,19 +828,11 @@ const HRManagementSystem = () => {
     }
     return null;
   });
-  const [loginForm, setLoginForm] = useState({ id: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberUserId, setRememberUserId] = useState(false);
 
-  // *[1_공통] 1.3.4.2_아이디 저장 기능 - localStorage에서 저장된 아이디 불러오기*
-  useEffect(() => {
-    const savedUserId = localStorage.getItem('savedUserId');
-    if (savedUserId) {
-      setLoginForm((prev) => ({ ...prev, id: savedUserId }));
-      setRememberUserId(true);
-    }
-  }, []);
+  // *[1_공통] 1.3.4.2_아이디 저장 기능 - CommonLogin 로컬 useEffect로 이동*
 
   // *[1_공통] 1.3.4.1_급여 내역 생성 wrapper*
   const generateSalaryHistory = (
@@ -1039,45 +1019,17 @@ const HRManagementSystem = () => {
   //---[2_관리자 모드] 2.6_연차 관리 STATE---//
   const [leaveManagementTab, setLeaveManagementTab] =
     useState('employee-leave'); // 'employee-leave' 또는 'leave-history'
-  const [editingAnnualLeave, setEditingAnnualLeave] = useState(null);
-  const [editAnnualData, setEditAnnualData] = useState({});
-  const [leaveHistoryPage, setLeaveHistoryPage] = useState(1); // 연차 내역 페이지네이션
+  // editingAnnualLeave, editAnnualData, leaveHistoryPage → AdminLeaveManagement 로컬 state로 이동
 
   //---[2_관리자 모드] 2.7_건의 관리 STATE---//
   const [suggestions, setSuggestions] = useState([]);
-  const [suggestionInput, setSuggestionInput] = useState('구매');
-  const [showSuggestionApplyPopup, setShowSuggestionApplyPopup] =
-    useState(false);
   const [suggestionPage, setSuggestionPage] = useState(1);
 
   //---[2_관리자 모드] 2.10_평가 관리 STATE---//
   const [evaluations, setEvaluations] = useState([]);
   const [notices, setNotices] = useState([]);
-  const [showEvaluationForm, setShowEvaluationForm] = useState(false);
-  const [evaluationPage, setEvaluationPage] = useState(1);
-
-  // *[2_관리자 모드] 2.10.1_평가 관리 편집 상태*
-  const [editingEvaluationId, setEditingEvaluationId] = useState(null);
-  const [editingEvaluationData, setEditingEvaluationData] = useState({});
-
-  // *[2_관리자 모드] 2.10.2_안전사고 편집 상태*
-  const [editingAccidentId, setEditingAccidentId] = useState(null);
-  const [editDate, setEditDate] = useState('');
-  const [editCreatedAt, setEditCreatedAt] = useState('');
-  const [editContent, setEditContent] = useState('');
-  const [editSeverity, setEditSeverity] = useState('경미');
-
-  // *[2_관리자 모드] 2.10.3_평가 입력 폼*
-  const [evaluationForm, setEvaluationForm] = useState({
-    year: new Date().getFullYear(),
-    employeeId: '',
-    name: '',
-    position: '',
-    department: '',
-    grade: 'A',
-    content: '',
-    status: '예정',
-  });
+  // *[2_관리자 모드] 2.10_평가관리 state → AdminEvaluationManagement 로컬 state로 이동*
+  // *[2_관리자 모드] 2.10.2_안전사고 편집 상태 → AdminDashboard 로컬 state로 이동*
 
   //---[2_관리자 모드] 2.4_알림 관리 STATE---//
   const [regularNotifications, setRegularNotifications] = useState([]);
@@ -1276,27 +1228,12 @@ const HRManagementSystem = () => {
 ================================ */
   //---[3_일반직원 모드] 3.5_연차 신청 STATE---//
   const [leaveRequests, setLeaveRequests] = useState([]);
-  const [leaveForm, setLeaveForm] = useState({
-    startDate: '',
-    endDate: '',
-    type: '연차',
-    reason: '',
-    contact: '',
-    startTime: '',
-    endTime: '',
-  });
-  const [leaveFormError, setLeaveFormError] = useState('');
-  const [leaveFormPreview, setLeaveFormPreview] = useState(null);
+  // leaveForm/leaveFormError/leaveFormPreview → StaffAnnualLeave 로컬 state로 이동
 
   //---[3_일반직원 모드] 3.7_건의 사항 STATE---//
-  const [applyTitle, setApplyTitle] = useState('');
-  const [applyContent, setApplyContent] = useState('');
-  const [editingSuggestion, setEditingSuggestion] = useState(null);
-  const [editingSuggestionRemark, setEditingSuggestionRemark] = useState('');
+  // editingSuggestion/Remark/Row/Data → AdminSuggestionManagement 로컬 state로 이동
 
   // *[2_관리자 모드] 2.7_건의 관리 - 건의 내역 전체 수정 STATE*
-  const [editingSuggestionRow, setEditingSuggestionRow] = useState(null);
-  const [editingSuggestionData, setEditingSuggestionData] = useState({});
 
   //---[2_관리자 모드] 2.1_대시보드 STATE---//
   // *[2_관리자 모드] 2.1.1_대시보드 날짜 필터*
@@ -2843,7 +2780,7 @@ const HRManagementSystem = () => {
                 const ratio = 4 / dailyTotal;
                 adjustedCategorized = {};
                 Object.keys(categorized).forEach(key => {
-                  adjustedCategorized[key] = (categorized[key] || 0) * ratio;
+                  adjustedCategorized[key] = roundDownToHalfHour((categorized[key] || 0) * ratio);
                 });
                 
                 console.warn(`⚠️ [반차 조정] ${employee.name} ${dateStr}: ${dailyTotal}시간 → 4시간으로 제한`);
@@ -2949,15 +2886,7 @@ const HRManagementSystem = () => {
     useState(false);
 
   //---[2_관리자 모드] 2.3_공지 관리 STATE---//
-  const [noticeForm, setNoticeForm] = useState({
-    id: null,
-    title: '',
-    content: '',
-    isScheduled: false,
-    scheduledDate: '',
-    scheduledTime: '09:00',
-  });
-  const [editingNoticeId, setEditingNoticeId] = useState(null);
+  // noticeForm/editingNoticeId → AdminNoticeManagement 로컬 state로 이동
 
   //---[2_관리자 모드] 2.2_직원 관리 STATE---//
   const [employeeSearchFilter, setEmployeeSearchFilter] = useState({
@@ -2985,13 +2914,7 @@ const HRManagementSystem = () => {
     remark: '',
   });
 
-  // *[2_관리자 모드] 2.6_연차 관리 - 비고 관련 STATE*
-  const [editingLeave, setEditingLeave] = useState(null);
-  const [editingLeaveRemark, setEditingLeaveRemark] = useState('');
-
-  // *[2_관리자 모드] 2.6_연차 관리 - 연차 내역 전체 수정 STATE*
-  const [editingLeaveHistoryRow, setEditingLeaveHistoryRow] = useState(null);
-  const [editingLeaveHistoryData, setEditingLeaveHistoryData] = useState({});
+  // editingLeave, editingLeaveRemark, editingLeaveHistoryRow/Data → AdminLeaveManagement 로컬 state로 이동
   const [showLeaveApprovalPopup, setShowLeaveApprovalPopup] = useState(false);
   const [leaveApprovalData, setLeaveApprovalData] = useState({
     id: null,
@@ -3710,7 +3633,8 @@ const HRManagementSystem = () => {
             type: leave.leaveType || leave.type,
             startDate: formatDateByLang(leave.startDate),
             endDate: formatDateByLang(leave.endDate),
-            days: leave.days,
+            days: leave.requestedDays,
+            requestedDays: leave.requestedDays,
             reason: leave.reason,
             contact: leave.contact,
             status: leave.status,
@@ -3750,7 +3674,8 @@ const HRManagementSystem = () => {
             type: leave.leaveType || leave.type,
             startDate: formatDateByLang(leave.startDate),
             endDate: formatDateByLang(leave.endDate),
-            days: leave.days,
+            days: leave.requestedDays,
+            requestedDays: leave.requestedDays,
             reason: leave.reason,
             contact: leave.contact,
             status: leave.status,
@@ -3790,7 +3715,8 @@ const HRManagementSystem = () => {
             type: leave.leaveType || leave.type,
             startDate: formatDateByLang(leave.startDate),
             endDate: formatDateByLang(leave.endDate),
-            days: leave.days,
+            days: leave.requestedDays,
+            requestedDays: leave.requestedDays,
             reason: leave.reason,
             contact: leave.contact,
             status: leave.status,
@@ -4277,7 +4203,6 @@ const HRManagementSystem = () => {
     showConfirmPassword,
     setShowConfirmPassword,
   } = useAuth({
-    loginForm,
     admins,
     employees,
     setCurrentUser,
@@ -4337,11 +4262,8 @@ const HRManagementSystem = () => {
     setSuggestionSearch,
     evaluationSearch,
     setEvaluationSearch,
-    editingEmpId,
-    setEditingEmpId,
-    editForm,
-    setEditForm,
   } = useAdminFilters();
+  // editingEmpId, editForm → AdminEmployeeManagement 로컬 state로 이동
 
   // *[2_관리자 모드] 2.3_공지 관리 State* (관리자 공지사항 페이지네이션)
   const {
@@ -4713,7 +4635,8 @@ const HRManagementSystem = () => {
             type: leave.leaveType || leave.type,
             startDate: formatDateByLang(leave.startDate),
             endDate: formatDateByLang(leave.endDate),
-            days: leave.days,
+            days: leave.requestedDays,
+            requestedDays: leave.requestedDays,
             reason: leave.reason,
             contact: leave.contact,
             status: leave.status,
@@ -5151,7 +5074,8 @@ const HRManagementSystem = () => {
             type: leave.leaveType || leave.type,
             startDate: formatDateByLang(leave.startDate),
             endDate: formatDateByLang(leave.endDate),
-            days: leave.days,
+            days: leave.requestedDays,
+            requestedDays: leave.requestedDays,
             reason: leave.reason,
             contact: leave.contact,
             status: leave.status,
@@ -5279,10 +5203,6 @@ const HRManagementSystem = () => {
     setEmployeeSearchFilter,
     setEmployeeSearchTerm,
     setSearchResults,
-    setEditingEmpId,
-    setEditForm,
-    setEditingNoticeId,
-    setNoticeForm,
     setNoticeFiles,
     setEmployeeSortField,
     setEmployeeSortOrder,
@@ -5292,8 +5212,6 @@ const HRManagementSystem = () => {
     setSuggestionSortOrder,
     setAnnualLeaveSortField,
     setAnnualLeaveSortOrder,
-    setEditingAnnualLeave,
-    setEditAnnualData,
   });
 
   // *[2_관리자 모드] 2.4_수신자 관리 훅*
@@ -5416,19 +5334,7 @@ const HRManagementSystem = () => {
   });
 
   // *[2_관리자 모드] 2.6_연차관리 - 연차 수정 훅*
-  const {
-    handleEditAnnualLeave,
-    handleSaveAnnualLeave,
-    handleCancelAnnualLeaveEdit,
-  } = useAnnualLeaveEditor({
-    calculateEmployeeAnnualLeave,
-    setEditingAnnualLeave,
-    setEditAnnualData,
-    editAnnualData,
-    setEmployees,
-    setLeaveRequests,
-    devLog,
-  });
+  // useAnnualLeaveEditor → AdminLeaveManagement 컴포넌트 내부로 이동 (핸들러 미사용)
 
   // *[2_관리자 모드] 2.2_직원관리 훅*
   const {
@@ -5507,26 +5413,7 @@ const HRManagementSystem = () => {
     setAnnualLeaveSortOrder,
   });
 
-  // *[2_관리자 모드] 2.10_평가관리 훅*
-  const {
-    handleEvaluationSubmit,
-    handleEvaluationEdit,
-    handleEvaluationSave,
-    handleEvaluationDelete,
-  } = useEvaluationManagement({
-    evaluationForm,
-    setEvaluationForm,
-    evaluationData,
-    setEvaluationData,
-    setShowEvaluationForm,
-    editingEvaluationId,
-    setEditingEvaluationId,
-    editingEvaluationData,
-    setEditingEvaluationData,
-    employees,
-    send자동알림,
-    currentUser,
-  });
+  // *[2_관리자 모드] 2.10_평가관리 훅 → AdminEvaluationManagement로 이동*
 
   // *[1_공통] 사용자 권한 체크 래퍼*
   const checkUserPermission = (action, targetData = null) => {
@@ -5884,8 +5771,6 @@ const HRManagementSystem = () => {
 
   // *[1_공통] AI 챗봇 쿼리 처리 훅*
   const { handleAiQuery } = useAiChat({
-    aiInput,
-    setAiInput,
     setAiMessages,
     currentUser,
     devLog,
@@ -5918,50 +5803,10 @@ const HRManagementSystem = () => {
     },
   });
 
-  // *[3_일반직원 모드] 3.5_연차 신청/내역 - 연차 관리 훅*
-  const { handleCancelLeave, handleLeaveFormChange, handleLeaveRequest } =
-    useStaffLeave({
-      leaveForm,
-      setLeaveForm,
-      setLeaveFormError,
-      setLeaveFormPreview,
-      leaveRequests,
-      setLeaveRequests,
-      currentUser,
-      remainAnnualLeave,
-      isHolidayDate,
-      send자동알림,
-      getText,
-    });
+  // *[3_일반직원 모드] 3.5_연차 신청/내역 - 훅 → StaffAnnualLeave 로컬로 이동*
 
-  // *[3_일반직원 모드] 3.7_건의 사항 - 건의사항 관리 훅*
-  const { handleSuggestionApply, handleSuggestionSubmit } = useStaffSuggestion({
-    suggestionInput,
-    setSuggestionInput,
-    setApplyTitle,
-    setApplyContent,
-    setShowSuggestionApplyPopup,
-    applyTitle,
-    applyContent,
-    currentUser,
-    setSuggestions,
-    send자동알림,
-    setSuggestionPage,
-    getText,
-  });
 
-  // *[2_관리자 모드] 2.3_공지 관리 - 공지 파일 관리 훅*
-  const {
-    handleNoticeFileUpload,
-    handleRemoveNoticeFile,
-    handleNoticePasteImage,
-  } = useNoticeManagement({
-    noticeFiles,
-    setNoticeFiles,
-    noticeFilesRef,
-    noticeForm,
-    setNoticeForm,
-  });
+  // *[2_관리자 모드] 2.3_공지 관리 - 파일 훅 → AdminNoticeManagement 로컬로 이동*
 
   // *[2_관리자 모드] 2.8_근태 관리 - 셀 선택 관리 훅*
   const {
@@ -6073,29 +5918,7 @@ const HRManagementSystem = () => {
     loadHolidayData,
   });
 
-  // *[3_일반직원 모드] 3.5_연차 신청/내역 - 연차 폼 미리보기 useEffect*
-  React.useEffect(() => {
-    if (
-      currentUser &&
-      currentUser.id &&
-      leaveForm.startDate &&
-      leaveForm.endDate &&
-      leaveForm.type &&
-      leaveForm.reason &&
-      leaveForm.contact
-    ) {
-      const now = new Date();
-      setLeaveFormPreview({
-        ...leaveForm,
-        status: '작성중',
-        employeeId: currentUser.id,
-        requestDate: now.toISOString().slice(0, 10),
-        requestDateTime: now.toISOString(),
-      });
-    } else {
-      setLeaveFormPreview(null);
-    }
-  }, [leaveForm, currentUser]);
+  // *[3_일반직원 모드] 3.5_연차 폼 미리보기 useEffect → StaffAnnualLeave 로컬로 이동*
 
   // *[1_공통] 팝업 상태 초기화*
   const clearPopupState = () => {
@@ -6112,13 +5935,9 @@ const HRManagementSystem = () => {
 
     clearPopupState();
 
-    // 아이디 저장이 체크되어 있으면 아이디 유지, 아니면 초기화
-    if (rememberUserId) {
-      localStorage.setItem('savedUserId', loginForm.id);
-      setLoginForm({ id: loginForm.id, password: '' }); // 아이디는 유지, 비밀번호만 초기화
-    } else {
+    // 아이디 저장 처리 (loginForm은 CommonLogin 로컬 state로 이동됨)
+    if (!rememberUserId) {
       localStorage.removeItem('savedUserId');
-      setLoginForm({ id: '', password: '' });
     }
 
     setShowPassword(false); // 비밀번호 표시 상태 초기화
@@ -6170,8 +5989,6 @@ const HRManagementSystem = () => {
     <CommonLogin
       currentUser={currentUser}
       showLanguageSelection={showLanguageSelection}
-      loginForm={loginForm}
-      setLoginForm={setLoginForm}
       loginError={loginError}
       showPassword={showPassword}
       setShowPassword={setShowPassword}
@@ -6312,14 +6129,6 @@ const HRManagementSystem = () => {
             setSafetyAccidentPage={setSafetyAccidentPage}
             safetyAccidentSearch={safetyAccidentSearch}
             setSafetyAccidentSearch={setSafetyAccidentSearch}
-            editDate={editDate}
-            setEditDate={setEditDate}
-            editCreatedAt={editCreatedAt}
-            setEditCreatedAt={setEditCreatedAt}
-            editContent={editContent}
-            setEditContent={setEditContent}
-            editSeverity={editSeverity}
-            setEditSeverity={setEditSeverity}
             aiPromptSettings={aiPromptSettings}
             setAiPromptSettings={setAiPromptSettings}
             handleSafetyAccidentInput={handleSafetyAccidentInput}
@@ -6329,8 +6138,6 @@ const HRManagementSystem = () => {
             handleCancelAccidentEdit={handleCancelAccidentEdit}
             downloadAiHistory={downloadAiHistory}
             handleAiPromptSave={handleAiPromptSave}
-            editingAccidentId={editingAccidentId}
-            setEditingAccidentId={setEditingAccidentId}
             aiRecommendationHistory={aiRecommendationHistory}
             showEmployeeListPopup={showEmployeeListPopup}
             setShowEmployeeListPopup={setShowEmployeeListPopup}
@@ -6357,16 +6164,10 @@ const HRManagementSystem = () => {
             employeeSortField={employeeSortField}
             employeeSortOrder={employeeSortOrder}
             handleSort={handleSort}
-            editingEmpId={editingEmpId}
-            setEditingEmpId={setEditingEmpId}
-            editForm={editForm}
-            setEditForm={setEditForm}
             handleUpdateEmployee={handleUpdateEmployee}
             handleDeleteEmployee={handleDeleteEmployee}
             showNewEmployeeModal={showNewEmployeeModal}
             setShowNewEmployeeModal={setShowNewEmployeeModal}
-            newEmployee={newEmployee}
-            setNewEmployee={setNewEmployee}
             COMPANY_STANDARDS={COMPANY_STANDARDS}
             getSortedEmployees={getSortedEmployees}
             attendanceSheetData={attendanceSheetData}
@@ -6381,20 +6182,13 @@ const HRManagementSystem = () => {
           <AdminNoticeManagement
             notices={notices}
             setNotices={setNotices}
-            noticeForm={noticeForm}
-            setNoticeForm={setNoticeForm}
             noticeSearch={noticeSearch}
             setNoticeSearch={setNoticeSearch}
             adminNoticePage={adminNoticePage}
             setAdminNoticePage={setAdminNoticePage}
-            editingNoticeId={editingNoticeId}
-            setEditingNoticeId={setEditingNoticeId}
             noticeFiles={noticeFiles}
             setNoticeFiles={setNoticeFiles}
             noticeFilesRef={noticeFilesRef}
-            handleNoticeFileUpload={handleNoticeFileUpload}
-            handleRemoveNoticeFile={handleRemoveNoticeFile}
-            handleNoticePasteImage={handleNoticePasteImage}
             getFilteredNotices={getFilteredNotices}
             currentUser={currentUser}
           />
@@ -6557,10 +6351,6 @@ const HRManagementSystem = () => {
             setLeaveSearch={setLeaveSearch}
             COMPANY_STANDARDS={COMPANY_STANDARDS}
             calculateEmployeeAnnualLeave={calculateEmployeeAnnualLeave}
-            editingAnnualLeave={editingAnnualLeave}
-            setEditingAnnualLeave={setEditingAnnualLeave}
-            editAnnualData={editAnnualData}
-            setEditAnnualData={setEditAnnualData}
             annualLeaveSortField={annualLeaveSortField}
             annualLeaveSortOrder={annualLeaveSortOrder}
             handleAnnualLeaveSort={handleAnnualLeaveSort}
@@ -6575,21 +6365,11 @@ const HRManagementSystem = () => {
             STATUS_COLORS={STATUS_COLORS}
             handleApproveLeave={handleApproveLeave}
             handleRejectLeave={handleRejectLeave}
-            leaveHistoryPage={leaveHistoryPage}
-            setLeaveHistoryPage={setLeaveHistoryPage}
-            editingLeave={editingLeave}
-            setEditingLeave={setEditingLeave}
-            editingLeaveRemark={editingLeaveRemark}
-            setEditingLeaveRemark={setEditingLeaveRemark}
             showLeaveApprovalPopup={showLeaveApprovalPopup}
             setShowLeaveApprovalPopup={setShowLeaveApprovalPopup}
             leaveApprovalData={leaveApprovalData}
             setLeaveApprovalData={setLeaveApprovalData}
             handleLeaveApprovalConfirm={handleLeaveApprovalConfirm}
-            editingLeaveHistoryRow={editingLeaveHistoryRow}
-            setEditingLeaveHistoryRow={setEditingLeaveHistoryRow}
-            editingLeaveHistoryData={editingLeaveHistoryData}
-            setEditingLeaveHistoryData={setEditingLeaveHistoryData}
             currentUser={currentUser}
             handleConfirmLeave={handleConfirmLeave}
           />
@@ -6603,10 +6383,6 @@ const HRManagementSystem = () => {
             setSuggestions={setSuggestions}
             suggestionSearch={suggestionSearch}
             setSuggestionSearch={setSuggestionSearch}
-            editingSuggestion={editingSuggestion}
-            setEditingSuggestion={setEditingSuggestion}
-            editingSuggestionRemark={editingSuggestionRemark}
-            setEditingSuggestionRemark={setEditingSuggestionRemark}
             showSuggestionApprovalPopup={showSuggestionApprovalPopup}
             setShowSuggestionApprovalPopup={setShowSuggestionApprovalPopup}
             suggestionApprovalData={suggestionApprovalData}
@@ -6622,10 +6398,6 @@ const HRManagementSystem = () => {
             handleSuggestionApprovalConfirm={handleSuggestionApprovalConfirm}
             suggestionPage={suggestionPage}
             setSuggestionPage={setSuggestionPage}
-            editingSuggestionRow={editingSuggestionRow}
-            setEditingSuggestionRow={setEditingSuggestionRow}
-            editingSuggestionData={editingSuggestionData}
-            setEditingSuggestionData={setEditingSuggestionData}
             currentUser={currentUser}
             handleConfirmSuggestion={handleConfirmSuggestion}
           />
@@ -6712,14 +6484,9 @@ const HRManagementSystem = () => {
         return (
           <AdminEvaluationManagement
             evaluationData={evaluationData}
+            setEvaluationData={setEvaluationData}
             evaluationSearch={evaluationSearch}
             setEvaluationSearch={setEvaluationSearch}
-            evaluationForm={evaluationForm}
-            setEvaluationForm={setEvaluationForm}
-            evaluationTab={'employee'} // Removed - unused tab state
-            editingEvaluationId={editingEvaluationId}
-            editingEvaluationData={editingEvaluationData}
-            setEditingEvaluationData={setEditingEvaluationData}
             employees={employees}
             COMPANY_STANDARDS={COMPANY_STANDARDS}
             STATUS_COLORS={STATUS_COLORS}
@@ -6727,12 +6494,8 @@ const HRManagementSystem = () => {
             getFilteredEvaluation={getFilteredEvaluation}
             getSortedEvaluations={getSortedEvaluations}
             handleEvaluationSort={handleEvaluationSort}
-            handleEvaluationSubmit={handleEvaluationSubmit}
-            handleEvaluationEdit={handleEvaluationEdit}
-            handleEvaluationSave={handleEvaluationSave}
-            handleEvaluationDelete={handleEvaluationDelete}
-            evaluationPage={evaluationPage}
-            setEvaluationPage={setEvaluationPage}
+            send자동알림={send자동알림}
+            currentUser={currentUser}
           />
         );
 
@@ -6746,8 +6509,6 @@ const HRManagementSystem = () => {
             geminiApiKey={geminiApiKey}
             chatbotPermissions={chatbotPermissions}
             chatMessages={aiMessages}
-            chatInput={aiInput}
-            setChatInput={setAiInput}
             chatContainerRef={chatContainerRef}
             setActiveTab={setActiveTab}
             handleSendMessage={handleAiQuery}
@@ -6891,15 +6652,8 @@ const HRManagementSystem = () => {
                 currentUser={currentUser}
                 leaveRequests={leaveRequests}
                 setLeaveRequests={setLeaveRequests}
-                leaveForm={leaveForm}
-                setLeaveForm={setLeaveForm}
-                leaveFormError={leaveFormError}
-                setLeaveFormError={setLeaveFormError}
-                leaveFormPreview={leaveFormPreview}
-                setLeaveFormPreview={setLeaveFormPreview}
-                handleLeaveFormChange={handleLeaveFormChange}
-                handleLeaveRequest={handleLeaveRequest}
-                handleCancelLeave={handleCancelLeave}
+                isHolidayDate={isHolidayDateWithData}
+                send자동알림={send자동알림}
                 getUsedAnnualLeave={getUsedAnnualLeave}
                 getLeaveDays={getLeaveDays}
                 formatDateByLang={formatDateByLang}
@@ -6918,17 +6672,7 @@ const HRManagementSystem = () => {
                 getText={getText}
                 selectedLanguage={selectedLanguage}
                 send자동알림={send자동알림}
-                handleSuggestionApply={handleSuggestionApply}
-                handleSuggestionSubmit={handleSuggestionSubmit}
-                suggestionInput={suggestionInput}
-                setSuggestionInput={setSuggestionInput}
-                showSuggestionApplyPopup={showSuggestionApplyPopup}
-                setShowSuggestionApplyPopup={setShowSuggestionApplyPopup}
-                applyTitle={applyTitle}
-                setApplyTitle={setApplyTitle}
-                applyContent={applyContent}
                 fontSize={fontSize}
-                setApplyContent={setApplyContent}
                 suggestionPage={suggestionPage}
                 setSuggestionPage={setSuggestionPage}
               />

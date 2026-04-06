@@ -401,11 +401,14 @@ async function checkAnnualLeaveExpiry(io) {
       const annualPeriod = calculateAnnualLeavePeriod(employee) || {};
 
       // 사용한 연차 계산 (DB의 연차 기간 기준)
-      const usedAnnual = await calculateUsedAnnualLeave(
+      const usedAnnualFromLeaves = await calculateUsedAnnualLeave(
         employee.employeeId,
         annualStartStr,
         annualEndStr
       );
+      // Leave 기록(실제 사용) + leaveUsed(관리자 보정) 합산
+      const leaveUsed = employee.leaveUsed || 0;
+      const usedAnnual = usedAnnualFromLeaves + leaveUsed;
 
       const totalAnnual = employee.totalAnnual ?? employee.baseAnnual ?? annualPeriod.totalAnnual ?? 15;
       const annualData = {
@@ -538,20 +541,107 @@ async function checkAnnualLeaveExpiry(io) {
   }
 }
 
-// 스케줄러 시작
-function startAnnualLeaveScheduler(io) {
-  console.log('🚀 [연차만료알림] 시작 - 매일 00시 01분 실행');
+// ============================================================
+// 연차 갱신 통합 함수 (매일 23:57, KST)
+// 순서: 갱신 대상 탐색 → 이월 연차 DB 저장 → leaveUsed 초기화 → 연차 갱신 완료
+// ============================================================
 
-  // 매일 00시 01분에 실행 (KST 기준)
+async function performAnnualRenewal(io) {
+  try {
+    console.log('\n========================================');
+    console.log('🔄 [23:57] 연차 갱신 시작');
+    console.log('========================================');
+
+    const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const employees = await Employee.find({ status: '재직' });
+    let renewalCount = 0;
+
+    for (const employee of employees) {
+      const annualEndStr = employee.annualLeaveEnd;
+      const annualStartStr = employee.annualLeaveStart;
+      if (!annualEndStr || !annualStartStr) continue;
+
+      // 만료일 <= 오늘: 갱신 대상 (당일 포함, 누락 소급 처리)
+      const daysUntilExpiry = Math.round(
+        (new Date(annualEndStr + 'T00:00:00+09:00') - new Date(todayKST + 'T00:00:00+09:00'))
+        / (1000 * 60 * 60 * 24)
+      );
+      if (daysUntilExpiry > 0) continue;
+
+      console.log(`\n▶ [갱신 대상] ${employee.name} (만료일: ${annualEndStr})`);
+
+      // ── Step 1: 사용 연차 계산 ───────────────────────────────
+      const usedAnnualFromLeaves = await calculateUsedAnnualLeave(
+        employee.employeeId, annualStartStr, annualEndStr
+      );
+      const leaveUsed = employee.leaveUsed || 0;
+      const usedAnnual = usedAnnualFromLeaves + leaveUsed;
+      const totalAnnual = employee.totalAnnual ?? employee.baseAnnual ?? 15;
+      const remainAnnual = Math.max(totalAnnual - usedAnnual, 0);
+      console.log(`  [Step1] 총${totalAnnual}일 - (기록${usedAnnualFromLeaves} + 보정${leaveUsed}) = 잔여${remainAnnual}일`);
+
+      // ── Step 2: 이월 연차 DB 저장 (leaveUsed 초기화 전에 선행) ─
+      const carryOverLeave = calculateCarryOverLeave(remainAnnual);
+      await Employee.findByIdAndUpdate(employee._id, { carryOverLeave });
+      console.log(`  [Step2] 이월 연차 ${carryOverLeave}일 저장`);
+
+      // ── Step 3: leaveUsed = 0 초기화 ────────────────────────
+      await Employee.findByIdAndUpdate(employee._id, { leaveUsed: 0 });
+      console.log(`  [Step3] leaveUsed = 0 초기화`);
+
+      // ── Step 4: 연차 갱신 완료 (새 기간 적용 + 알림) ──────────
+      const nextPeriod = calculateNextAnnualPeriod(employee, annualEndStr);
+      const newTotalAnnual = nextPeriod.totalAnnual;
+
+      await Employee.findByIdAndUpdate(employee._id, {
+        annualLeaveStart: nextPeriod.annualStart,
+        annualLeaveEnd:   nextPeriod.annualEnd,
+        baseAnnual:       nextPeriod.totalAnnual,
+        totalAnnual:      newTotalAnnual,
+        usedAnnual:       0,
+        remainAnnual:     newTotalAnnual,
+      });
+
+      const employeeNotif = await createEmployeeRenewalNotification(employee, nextPeriod, carryOverLeave);
+      await createAdminRenewalSummary(employee, nextPeriod, carryOverLeave);
+
+      if (io) {
+        io.emit('new-notification', {
+          type: 'annualLeaveRenewal',
+          employeeId: employee.employeeId,
+          notification: employeeNotif.toObject(),
+        });
+      }
+
+      console.log(`  [Step4] 갱신 완료 - 이월${carryOverLeave}일, 새 기간 ${nextPeriod.annualStart}~${nextPeriod.annualEnd}, 기본연차 ${newTotalAnnual}일`);
+      renewalCount++;
+    }
+
+    console.log(`\n✅ [23:57] 연차 갱신 완료: ${renewalCount}명`);
+  } catch (err) {
+    console.error('❌ [23:57] 연차 갱신 오류:', err);
+  }
+}
+
+// ============================================================
+// 스케줄러 시작
+// ============================================================
+function startAnnualLeaveScheduler(io) {
+  // [만료 예고 알림] 매일 00:01 - 180일/90일/30일/7일 전 알림
   cron.schedule('1 0 * * *', () => {
     console.log(`✅ [연차만료알림] 스케줄 시작 - ${new Date().toLocaleString('ko-KR')}`);
     checkAnnualLeaveExpiry(io);
-  }, {
-    timezone: "Asia/Seoul"
-  });
+  }, { timezone: 'Asia/Seoul' });
 
-  // 즉시 시작 시 테스트 용도로 바로 체크 (테스트 후 주석 처리 권장)
-  // checkAnnualLeaveExpiry(io);
+  // [연차 갱신] 매일 21:00 - 탐색 → 이월 저장 → leaveUsed 초기화 → 갱신 완료
+  cron.schedule('0 21 * * *', () => performAnnualRenewal(io), { timezone: 'Asia/Seoul' });
+
+  console.log('✅ [연차만료알림] 스케줄러 시작 (매일 00:01 KST)');
+  console.log('✅ [연차갱신] 스케줄러 시작 (매일 21:00 KST)');
 }
 
-module.exports = { startAnnualLeaveScheduler, checkAnnualLeaveExpiry };
+module.exports = {
+  startAnnualLeaveScheduler,
+  checkAnnualLeaveExpiry,
+  performAnnualRenewal,
+};

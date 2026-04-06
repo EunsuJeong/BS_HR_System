@@ -89,14 +89,6 @@ const AdminDashboard = ({
   setSafetyAccidentPage,
   safetyAccidentSearch,
   setSafetyAccidentSearch,
-  editDate,
-  setEditDate,
-  editCreatedAt,
-  setEditCreatedAt,
-  editContent,
-  setEditContent,
-  editSeverity,
-  setEditSeverity,
   aiPromptSettings,
   setAiPromptSettings,
   // 함수
@@ -125,8 +117,6 @@ const AdminDashboard = ({
   handleCancelAccidentEdit,
   downloadAiHistory,
   handleAiPromptSave,
-  editingAccidentId,
-  setEditingAccidentId,
   aiRecommendationHistory,
   // 직원 리스트 팝업 관련
   showEmployeeListPopup,
@@ -155,6 +145,13 @@ const AdminDashboard = ({
 
   // 워라밸 팝업용 연도별 근태 데이터 state (차트 및 상세 팝업 모두 사용)
   const [workLifeYearData, setWorkLifeYearData] = useState({});
+
+  // 안전사고 편집 state (로컬 — App.js 전체 리렌더 방지)
+  const [editingAccidentId, setEditingAccidentId] = useState(null);
+  const [editDate, setEditDate] = useState('');
+  const [editCreatedAt, setEditCreatedAt] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editSeverity, setEditSeverity] = useState('경미');
 
   // selectedYear 변경 시 데이터 로드
   useEffect(() => {
@@ -1617,7 +1614,7 @@ const AdminDashboard = ({
               <div className="flex items-center gap-4">
                 <p className="text-sm text-gray-500">
                   총 인원수:{' '}
-                  {getFilteredEmployees(employees, goalDetailMonth).length}명
+                  {getFilteredEmployees(employees, goalDetailMonth, selectedYear).length}명
                 </p>
                 <button
                   onClick={() => setShowGoalDetailDataPopup(false)}
@@ -4439,4 +4436,4 @@ const AdminDashboard = ({
 
 // *[2_관리자 모드] 2.1_대시보드 유틸리티 함수들*
 
-export default AdminDashboard;
+export default React.memo(AdminDashboard);

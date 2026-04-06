@@ -1,17 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import { exportSuggestionsToXLSX } from '../common/common_admin_suggestion';
 import { getSuggestionCategoryText } from '../common/common_staff_suggestion';
+import { useDebounce } from '../common/common_common';
 
 const AdminSuggestionManagement = ({
   suggestions,
   setSuggestions,
   suggestionSearch,
   setSuggestionSearch,
-  editingSuggestion,
-  setEditingSuggestion,
-  editingSuggestionRemark,
-  setEditingSuggestionRemark,
   showSuggestionApprovalPopup,
   setShowSuggestionApprovalPopup,
   suggestionApprovalData,
@@ -27,13 +24,37 @@ const AdminSuggestionManagement = ({
   handleSuggestionApprovalConfirm,
   suggestionPage,
   setSuggestionPage,
-  editingSuggestionRow,
-  setEditingSuggestionRow,
-  editingSuggestionData,
-  setEditingSuggestionData,
   currentUser,
   handleConfirmSuggestion,
 }) => {
+  // 건의사항 편집 로컬 state (App.js 전체 리렌더 방지)
+  const [editingSuggestion, setEditingSuggestion] = useState(null);
+  const [editingSuggestionRemark, setEditingSuggestionRemark] = useState('');
+  const [editingSuggestionRow, setEditingSuggestionRow] = useState(null);
+  const [editingSuggestionData, setEditingSuggestionData] = useState({});
+
+  // 텍스트 검색 debounce
+  const [yearInput, setYearInput] = useState(suggestionSearch?.year || '');
+  const [monthInput, setMonthInput] = useState(suggestionSearch?.month || '');
+  const [dayInput, setDayInput] = useState(suggestionSearch?.day || '');
+  const [keywordInput, setKeywordInput] = useState(suggestionSearch?.keyword || '');
+  const debouncedYear = useDebounce(yearInput, 300);
+  const debouncedMonth = useDebounce(monthInput, 300);
+  const debouncedDay = useDebounce(dayInput, 300);
+  const debouncedKeyword = useDebounce(keywordInput, 200);
+  useEffect(() => {
+    setSuggestionSearch((s) => ({ ...s, year: debouncedYear }));
+  }, [debouncedYear]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setSuggestionSearch((s) => ({ ...s, month: debouncedMonth }));
+  }, [debouncedMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setSuggestionSearch((s) => ({ ...s, day: debouncedDay }));
+  }, [debouncedDay]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setSuggestionSearch((s) => ({ ...s, keyword: debouncedKeyword }));
+  }, [debouncedKeyword]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 검색 필터 변경시 페이지 1로 리셋
   useEffect(() => {
     setSuggestionPage(1);
@@ -120,28 +141,22 @@ const AdminSuggestionManagement = ({
             <input
               type="text"
               placeholder="연도"
-              value={suggestionSearch.year}
-              onChange={(e) =>
-                setSuggestionSearch((s) => ({ ...s, year: e.target.value }))
-              }
+              value={yearInput}
+              onChange={(e) => setYearInput(e.target.value)}
               className="px-2 py-1.5 border rounded-lg text-sm w-16"
             />
             <input
               type="text"
               placeholder="월"
-              value={suggestionSearch.month}
-              onChange={(e) =>
-                setSuggestionSearch((s) => ({ ...s, month: e.target.value }))
-              }
+              value={monthInput}
+              onChange={(e) => setMonthInput(e.target.value)}
               className="px-2 py-1.5 border rounded-lg text-sm w-12"
             />
             <input
               type="text"
               placeholder="일"
-              value={suggestionSearch.day}
-              onChange={(e) =>
-                setSuggestionSearch((s) => ({ ...s, day: e.target.value }))
-              }
+              value={dayInput}
+              onChange={(e) => setDayInput(e.target.value)}
               className="px-2 py-1.5 border rounded-lg text-sm w-12"
             />
             <select
@@ -186,10 +201,8 @@ const AdminSuggestionManagement = ({
             <input
               type="text"
               placeholder="사번 또는 이름"
-              value={suggestionSearch.keyword}
-              onChange={(e) =>
-                setSuggestionSearch((s) => ({ ...s, keyword: e.target.value }))
-              }
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
               className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[120px]"
             />
           </div>
@@ -702,4 +715,4 @@ const AdminSuggestionManagement = ({
   );
 };
 
-export default AdminSuggestionManagement;
+export default React.memo(AdminSuggestionManagement);

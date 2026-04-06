@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Edit, Upload, Download } from 'lucide-react';
 import { formatTimeDisplay } from '../common/common_common';
 
@@ -38,6 +38,16 @@ const AdminAttendanceManagement = ({
   getKoreanHolidays,
   attendanceSheetData = {},
 }) => {
+  // 이름 검색 - 비제어 입력으로 근태 테이블 리렌더 완전 제거
+  const nameDebounceRef = useRef(null);
+  const handleNameChange = (e) => {
+    const val = e.target.value;
+    clearTimeout(nameDebounceRef.current);
+    nameDebounceRef.current = setTimeout(() => {
+      setAttendanceSearchFilter((f) => ({ ...f, name: val }));
+    }, 300);
+  };
+
   const daysInCurrentMonth = getDaysInMonth(
     attendanceSheetYear,
     attendanceSheetMonth
@@ -218,10 +228,8 @@ const AdminAttendanceManagement = ({
               <input
                 type="text"
                 placeholder="이름 검색"
-                value={attendanceSearchFilter.name}
-                onChange={(e) =>
-                  setAttendanceSearchFilter((f) => ({ ...f, name: e.target.value }))
-                }
+                defaultValue={attendanceSearchFilter?.name || ''}
+                onChange={handleNameChange}
                 className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[120px]"
               />
             </div>

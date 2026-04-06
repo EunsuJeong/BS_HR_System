@@ -26,7 +26,7 @@ function getBackupFilePath(targetDate = new Date()) {
   const month = pad2(targetDate.getMonth() + 1);
   const day = pad2(targetDate.getDate());
   const backupFileName = `${year}_${month}_${day}.json`;
-  return path.join(BACKUP_DIR, year, month, backupFileName);
+  return path.join(BACKUP_DIR, year, month, 'json', backupFileName);
 }
 
 /**
@@ -55,13 +55,13 @@ async function performBackup() {
     const month = pad2(now.getMonth() + 1);
     const day = pad2(now.getDate());
 
-    const monthlyDir = path.join(BACKUP_DIR, year, month);
-    if (!fs.existsSync(monthlyDir)) {
-      fs.mkdirSync(monthlyDir, { recursive: true });
+    const jsonDir = path.join(BACKUP_DIR, year, month, 'json');
+    if (!fs.existsSync(jsonDir)) {
+      fs.mkdirSync(jsonDir, { recursive: true });
     }
 
     const backupFileName = `${year}_${month}_${day}.json`;
-    const backupFilePath = path.join(monthlyDir, backupFileName);
+    const backupFilePath = path.join(jsonDir, backupFileName);
 
     console.log('🗄️ 백업 시작:', new Date().toLocaleString('ko-KR'));
 
@@ -99,8 +99,8 @@ async function performBackup() {
       data: backupData,
     };
 
-    // JSON 파일로 저장
-    fs.writeFileSync(backupFilePath, JSON.stringify(finalBackup, null, 2));
+    // JSON 파일로 저장 (비동기 - 이벤트 루프 블로킹 방지)
+    await fs.promises.writeFile(backupFilePath, JSON.stringify(finalBackup, null, 2));
 
     console.log('✅ 백업 완료:', backupFileName);
     console.log('📊 백업 정보:');
@@ -176,24 +176,31 @@ async function deleteOldBackups() {
  * 백업 스케줄러 시작
  */
 function startBackupScheduler() {
-  // 매일 자정(00:00, KST) 자동 백업
+  // 매일 00:03 JSON 백업
   cron.schedule(
-    '0 0 * * *',
+    '3 0 * * *',
     async () => {
       console.log('\n========================================');
-      console.log('⏰ 예약된 백업 작업 시작 (매일 자정)');
+      console.log('⏰ JSON 백업 시작 (매일 00:03)');
       console.log('========================================');
       await performBackup();
     },
-    {
-      timezone: 'Asia/Seoul',
-    }
+    { timezone: 'Asia/Seoul' }
   );
 
-  console.log('✅ 자동 백업 스케줄러 시작됨 (매일 00:00 KST)');
+  // 매일 00:08 누락 여부 체크 (00:03 백업이 실패했을 경우 보정)
+  cron.schedule(
+    '8 0 * * *',
+    async () => {
+      await checkAndRunCatchupBackup();
+    },
+    { timezone: 'Asia/Seoul' }
+  );
+
+  console.log('✅ 자동 백업 스케줄러 시작됨 (매일 00:03 KST, 보정 00:08)');
   console.log('📁 백업 저장 경로:', BACKUP_DIR);
 
-  // 자정 실행 누락 대비: 서버 시작 시 당일 백업 파일이 없으면 즉시 1회 보정
+  // 서버 시작 시 당일 백업 파일이 없으면 즉시 1회 보정
   if (process.env.BACKUP_CATCHUP_ON_START !== 'false') {
     checkAndRunCatchupBackup();
   }

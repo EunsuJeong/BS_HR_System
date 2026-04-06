@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   MessageSquare,
   AlertCircle,
@@ -16,13 +16,15 @@ const AdminAIChatbot = ({
   geminiApiKey,
   chatbotPermissions,
   chatMessages,
-  chatInput,
-  setChatInput,
   chatContainerRef,
   setActiveTab,
   handleSendMessage,
   generateDownloadFile,
 }) => {
+  // 채팅 입력 - 비제어 입력으로 메시지 목록 리렌더 완전 제거
+  const chatInputRef = useRef(null);
+  const getChatInput = () => chatInputRef.current?.value || '';
+
   const activeModel = getActiveModel(modelUsageStatus);
   const hasActiveModel = !!activeModel;
   const hasApiKey = checkApiKeyByModel(activeModel, {
@@ -352,21 +354,30 @@ const AdminAIChatbot = ({
 
               <div className="flex gap-2">
                 <input
+                  ref={chatInputRef}
                   type="text"
-                  value={chatInput || ''}
-                  onChange={(e) => setChatInput(e.target.value)}
+                  defaultValue=""
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter' && chatInput && typeof chatInput === 'string' && chatInput.trim()) {
-                      handleSendMessage();
+                    if (e.key === 'Enter') {
+                      const val = getChatInput();
+                      if (val.trim()) {
+                        handleSendMessage(val);
+                        if (chatInputRef.current) chatInputRef.current.value = '';
+                      }
                     }
                   }}
                   placeholder="AI 비서에게 질문하세요..."
                   className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 />
                 <button
-                  onClick={handleSendMessage}
-                  disabled={!chatInput || typeof chatInput !== 'string' || !chatInput.trim()}
-                  className="px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 text-sm"
+                  onClick={() => {
+                    const val = getChatInput();
+                    if (val.trim()) {
+                      handleSendMessage(val);
+                      if (chatInputRef.current) chatInputRef.current.value = '';
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1.5 text-sm"
                 >
                   {false ? (
                     <>
@@ -514,4 +525,4 @@ const AdminAIChatbot = ({
   );
 };
 
-export default AdminAIChatbot;
+export default React.memo(AdminAIChatbot);

@@ -1,5 +1,5 @@
-import React from 'react';
-import holidayService from '../common/common_common';
+import React, { useState, useEffect } from 'react';
+import holidayService, { useDebounce } from '../common/common_common';
 import {
   EVENT_TYPES,
   EVENT_TYPE_COLORS,
@@ -65,6 +65,64 @@ const AdminScheduleManagement = ({
   showDeletedHolidaysModal,
   setShowDeletedHolidaysModal,
 }) => {
+  // 일정/공휴일/통합 폼 text 입력 로컬 state + debounce (타이핑 렉 방지)
+  const [evtTitleInput, setEvtTitleInput] = useState(eventForm?.title || '');
+  const [evtDescInput, setEvtDescInput] = useState(eventForm?.description || '');
+  const [holNameInput, setHolNameInput] = useState(holidayForm?.name || '');
+  const [uniTitleInput, setUniTitleInput] = useState(unifiedForm?.title || '');
+  const [uniDescInput, setUniDescInput] = useState(unifiedForm?.description || '');
+  const [uniNameInput, setUniNameInput] = useState(unifiedForm?.name || '');
+
+  const debouncedEvtTitle = useDebounce(evtTitleInput, 200);
+  const debouncedEvtDesc = useDebounce(evtDescInput, 200);
+  const debouncedHolName = useDebounce(holNameInput, 200);
+  const debouncedUniTitle = useDebounce(uniTitleInput, 200);
+  const debouncedUniDesc = useDebounce(uniDescInput, 200);
+  const debouncedUniName = useDebounce(uniNameInput, 200);
+
+  useEffect(() => { setEventForm((p) => ({ ...p, title: debouncedEvtTitle })); }, [debouncedEvtTitle]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setEventForm((p) => ({ ...p, description: debouncedEvtDesc })); }, [debouncedEvtDesc]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setHolidayForm((p) => ({ ...p, name: debouncedHolName })); }, [debouncedHolName]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setUnifiedForm((p) => ({ ...p, title: debouncedUniTitle })); }, [debouncedUniTitle]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setUnifiedForm((p) => ({ ...p, description: debouncedUniDesc })); }, [debouncedUniDesc]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setUnifiedForm((p) => ({ ...p, name: debouncedUniName })); }, [debouncedUniName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 일정 검색 필터 로컬 state + debounce (타이핑 렉 방지)
+  const [schYearInput, setSchYearInput] = useState(scheduleSearch?.year || '');
+  const [schMonthInput, setSchMonthInput] = useState(scheduleSearch?.month || '');
+  const [schTitleInput, setSchTitleInput] = useState(scheduleSearch?.titleOrContent || '');
+
+  const debouncedSchYear = useDebounce(schYearInput, 200);
+  const debouncedSchMonth = useDebounce(schMonthInput, 200);
+  const debouncedSchTitle = useDebounce(schTitleInput, 200);
+
+  useEffect(() => { setScheduleSearch((p) => ({ ...p, year: debouncedSchYear })); }, [debouncedSchYear]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setScheduleSearch((p) => ({ ...p, month: debouncedSchMonth })); }, [debouncedSchMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setScheduleSearch((p) => ({ ...p, titleOrContent: debouncedSchTitle })); }, [debouncedSchTitle]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 팝업 열릴 때 / 수정 모드 진입 시 로컬 state 동기화
+  useEffect(() => {
+    setEvtTitleInput(eventForm?.title || '');
+    setEvtDescInput(eventForm?.description || '');
+  }, [editingEvent]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (showAddEventPopup && !editingEvent) {
+      setEvtTitleInput('');
+      setEvtDescInput('');
+    }
+  }, [showAddEventPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setHolNameInput(holidayForm?.name || '');
+  }, [showHolidayPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setUniTitleInput('');
+    setUniDescInput('');
+    setUniNameInput('');
+  }, [showUnifiedAddPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 공휴일 데이터 강제 새로고침 함수
   const forceRefreshHolidays = createForceRefreshHolidays({
     holidayService,
@@ -363,25 +421,15 @@ const AdminScheduleManagement = ({
             <div className="flex flex-wrap gap-3 lg:flex-1 min-w-0">
               <input
                 type="text"
-                value={scheduleSearch.year}
-                onChange={(e) =>
-                  setScheduleSearch({
-                    ...scheduleSearch,
-                    year: e.target.value,
-                  })
-                }
+                value={schYearInput}
+                onChange={(e) => setSchYearInput(e.target.value)}
                 className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="연도"
               />
               <input
                 type="text"
-                value={scheduleSearch.month}
-                onChange={(e) =>
-                  setScheduleSearch({
-                    ...scheduleSearch,
-                    month: e.target.value,
-                  })
-                }
+                value={schMonthInput}
+                onChange={(e) => setSchMonthInput(e.target.value)}
                 className="w-12 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="월"
               />
@@ -406,13 +454,8 @@ const AdminScheduleManagement = ({
               </select>
               <input
                 type="text"
-                value={scheduleSearch.titleOrContent}
-                onChange={(e) =>
-                  setScheduleSearch({
-                    ...scheduleSearch,
-                    titleOrContent: e.target.value,
-                  })
-                }
+                value={schTitleInput}
+                onChange={(e) => setSchTitleInput(e.target.value)}
                 className="flex-1 min-w-[100px] px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="제목 또는 내용"
               />
@@ -584,10 +627,8 @@ const AdminScheduleManagement = ({
               <input
                 type="text"
                 placeholder="일정 제목"
-                value={eventForm.title}
-                onChange={(e) =>
-                  setEventForm({ ...eventForm, title: e.target.value })
-                }
+                value={evtTitleInput}
+                onChange={(e) => setEvtTitleInput(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               />
               <select
@@ -605,10 +646,8 @@ const AdminScheduleManagement = ({
               </select>
               <textarea
                 placeholder="일정 설명 (선택사항)"
-                value={eventForm.description}
-                onChange={(e) =>
-                  setEventForm({ ...eventForm, description: e.target.value })
-                }
+                value={evtDescInput}
+                onChange={(e) => setEvtDescInput(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg h-24 resize-none"
               />
               <div className="flex space-x-3">
@@ -655,10 +694,8 @@ const AdminScheduleManagement = ({
               <input
                 type="text"
                 placeholder="일정 제목"
-                value={eventForm.title}
-                onChange={(e) =>
-                  setEventForm({ ...eventForm, title: e.target.value })
-                }
+                value={evtTitleInput}
+                onChange={(e) => setEvtTitleInput(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               />
               <select
@@ -676,10 +713,8 @@ const AdminScheduleManagement = ({
               </select>
               <textarea
                 placeholder="일정 설명 (선택사항)"
-                value={eventForm.description}
-                onChange={(e) =>
-                  setEventForm({ ...eventForm, description: e.target.value })
-                }
+                value={evtDescInput}
+                onChange={(e) => setEvtDescInput(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg h-24 resize-none"
               />
               <div className="flex space-x-3">
@@ -738,10 +773,8 @@ const AdminScheduleManagement = ({
               <input
                 type="text"
                 placeholder="공휴일명 (예: 회사창립일, 임시휴무일)"
-                value={holidayForm.name}
-                onChange={(e) =>
-                  setHolidayForm({ ...holidayForm, name: e.target.value })
-                }
+                value={holNameInput}
+                onChange={(e) => setHolNameInput(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               />
               <div className="text-sm text-gray-600 bg-yellow-50 p-3 rounded-lg">
@@ -822,13 +855,8 @@ const AdminScheduleManagement = ({
                     <input
                       type="text"
                       placeholder="일정 제목을 입력하세요"
-                      value={unifiedForm.title}
-                      onChange={(e) =>
-                        setUnifiedForm({
-                          ...unifiedForm,
-                          title: e.target.value,
-                        })
-                      }
+                      value={uniTitleInput}
+                      onChange={(e) => setUniTitleInput(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                     />
                   </div>
@@ -856,13 +884,8 @@ const AdminScheduleManagement = ({
                     </label>
                     <textarea
                       placeholder="일정에 대한 설명을 입력하세요"
-                      value={unifiedForm.description}
-                      onChange={(e) =>
-                        setUnifiedForm({
-                          ...unifiedForm,
-                          description: e.target.value,
-                        })
-                      }
+                      value={uniDescInput}
+                      onChange={(e) => setUniDescInput(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg h-20 resize-none"
                     />
                   </div>
@@ -877,10 +900,8 @@ const AdminScheduleManagement = ({
                     <input
                       type="text"
                       placeholder="공휴일 이름을 입력하세요"
-                      value={unifiedForm.name}
-                      onChange={(e) =>
-                        setUnifiedForm({ ...unifiedForm, name: e.target.value })
-                      }
+                      value={uniNameInput}
+                      onChange={(e) => setUniNameInput(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                     />
                   </div>
@@ -1052,4 +1073,4 @@ const AdminScheduleManagement = ({
   );
 };
 
-export default AdminScheduleManagement;
+export default React.memo(AdminScheduleManagement);

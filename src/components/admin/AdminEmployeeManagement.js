@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { getWorkPeriodText } from '../common/common_common';
+import { getWorkPeriodText, useDebounce } from '../common/common_common';
 import {
   exportOrganizationToXLSX,
   useEmployeeManagement,
@@ -16,22 +16,46 @@ const AdminEmployeeManagement = ({
   employeeSortField,
   employeeSortOrder,
   handleSort,
-  editingEmpId,
-  setEditingEmpId,
-  editForm,
-  setEditForm,
   handleUpdateEmployee,
   handleDeleteEmployee,
   showNewEmployeeModal,
   setShowNewEmployeeModal,
-  newEmployee,
-  setNewEmployee,
   COMPANY_STANDARDS,
   getSortedEmployees,
   attendanceSheetData = {},
   attendanceSheetYear = new Date().getFullYear(),
   attendanceSheetMonth = new Date().getMonth() + 1,
 }) => {
+  // 인라인 수정 state (로컬 — App.js 전체 리렌더 방지)
+  const [editingEmpId, setEditingEmpId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    id: '', name: '', position: '', department: '', joinDate: '',
+    resignDate: '', workType: '주간', status: '', phone: '', address: '',
+    password: '', payType: '', subDepartment: '',
+  });
+
+  // 신규 직원 등록 폼 state (로컬 — App.js 전체 리렌더 방지)
+  const [newEmployee, setNewEmployee] = useState({
+    name: '',
+    position: '',
+    department: '',
+    subDepartment: '',
+    role: '',
+    workType: '주간',
+    contractType: '정규',
+    payType: '연봉',
+    annualSalary: '',
+    hourlyWage: '',
+    joinDate: new Date().toISOString().split('T')[0],
+  });
+
+  // 이름 검색 debounce: 타자마다 App.js 전체 리렌더 방지
+  const [nameInputValue, setNameInputValue] = useState(employeeSearchFilter.name || '');
+  const debouncedName = useDebounce(nameInputValue, 300);
+  useEffect(() => {
+    setEmployeeSearchFilter((prev) => ({ ...prev, name: debouncedName }));
+  }, [debouncedName]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // [2_관리자 모드] 2.2_직원 관리 - Hook
   const { handleRegisterEmployee } = useEmployeeManagement({
     employees,
@@ -367,13 +391,8 @@ const AdminEmployeeManagement = ({
             <input
               type="text"
               placeholder="사번 또는 이름 검색"
-              value={employeeSearchFilter.name}
-              onChange={(e) =>
-                setEmployeeSearchFilter({
-                  ...employeeSearchFilter,
-                  name: e.target.value,
-                })
-              }
+              value={nameInputValue}
+              onChange={(e) => setNameInputValue(e.target.value)}
               className="px-3 py-2 border rounded-lg col-span-2 lg:col-span-1"
             />
           </div>
@@ -1473,4 +1492,4 @@ const AdminEmployeeManagement = ({
   );
 };
 
-export default AdminEmployeeManagement;
+export default React.memo(AdminEmployeeManagement);

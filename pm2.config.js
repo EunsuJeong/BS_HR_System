@@ -21,8 +21,8 @@ module.exports = {
       // ==================== 클러스터 설정 ====================
       // 'cluster' 모드: 여러 워커 프로세스로 병렬 처리 (권장)
       // 'fork' 모드: 단일 워커 프로세스 (테스트용)
-      instances: 'max', // CPU 코어 수만큼 자동 실행 (예: 4코어 = 4개 프로세스)
-      exec_mode: 'cluster',
+      instances: 1, // 로컬 PC 환경: 단일 프로세스 (max 사용 시 메모리 과부하)
+      exec_mode: 'fork',
 
       // ==================== 환경 변수 ====================
       // Windows PC 사내 서버 환경변수
@@ -75,6 +75,36 @@ module.exports = {
       // ==================== 환경 변수 파일 ====================
       // PM2가 .env 파일을 자동으로 로드하지 않으므로 dotenv-cli 또는 수동 설정
       // 추천: server.js에서 dotenv.config() 사용 (현재 구현됨)
+    },
+    {
+      // ==================== 스케줄러 프로세스 ====================
+      // 메인 서버와 완전 분리 → 백업/연차 블로킹이 API 서버에 영향 없음
+      name: 'bs-hr-scheduler',
+      script: './server/scheduler.js',
+      description: '부성스틸 AI 인사관리 시스템 스케줄러 (백업/연차)',
+
+      instances: 1,
+      exec_mode: 'fork',
+
+      env: {
+        NODE_ENV: 'production',
+      },
+
+      error_file: './logs/scheduler-error.log',
+      out_file: './logs/scheduler-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      time: true,
+      merge_logs: true,
+
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '300M',
+      max_restarts: 10,
+      min_uptime: '30s',
+
+      cwd: './',
+      interpreter: 'node',
+      interpreter_args: '--max-old-space-size=512',
     },
   ],
 

@@ -3,7 +3,7 @@
  * - Constants → Hook → Service → Util → Export
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useSocket } from '../../contexts/SocketContext';
 import Holidays from 'date-holidays';
 import EmployeeAPI from '../../api/employee';
@@ -1159,6 +1159,19 @@ export const analyzeAttendanceStatus = (
 // *[2_관리자 모드] 관리자 필터/정렬/검색 STATE 관리*
 
 /**
+ * 입력값을 지정한 delay(ms) 이후에만 반영하는 debounce 훅
+ * 검색 input의 타자마다 발생하는 리렌더링을 방지
+ */
+export const useDebounce = (value, delay = 300) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debouncedValue;
+};
+
+/**
  * 관리자 모드 필터, 정렬, 검색 STATE를 관리하는 커스텀 훅
  * @returns {Object} 관리자 필터 관련 STATE 및 setter 함수들
  */
@@ -1220,23 +1233,7 @@ export const useAdminFilters = () => {
     keyword: '',
   });
 
-  // *[2_관리자 모드] 2.2_인라인 수정*
-  const [editingEmpId, setEditingEmpId] = useState(null);
-  const [editForm, setEditForm] = useState({
-    id: '',
-    name: '',
-    position: '',
-    department: '',
-    joinDate: '',
-    resignDate: '',
-    workType: '주간',
-    status: '',
-    phone: '',
-    address: '',
-    password: '',
-    payType: '',
-    subDepartment: '',
-  });
+  // editingEmpId, editForm → AdminEmployeeManagement 로컬 state로 이동
 
   return {
     // 직원관리 정렬
@@ -1280,11 +1277,6 @@ export const useAdminFilters = () => {
     // 평가관리 검색
     evaluationSearch,
     setEvaluationSearch,
-    // 인라인 수정
-    editingEmpId,
-    setEditingEmpId,
-    editForm,
-    setEditForm,
   };
 };
 
@@ -1986,10 +1978,11 @@ export const useAiChat = ({
   onDataUpdate = () => {},
 } = {}) => {
   // [1_공통] AI 챗봇 쿼리 처리
-  const handleAiQuery = useCallback(async () => {
-    if (!aiInput || !aiInput.trim()) return;
+  const handleAiQuery = useCallback(async (inputOverride) => {
+    const input = inputOverride !== undefined ? inputOverride : aiInput;
+    if (!input || !input.trim()) return;
 
-    const userMessage = aiInput.trim();
+    const userMessage = input.trim();
     setAiInput('');
 
     setAiMessages((prev) => [...prev, { type: 'user', message: userMessage }]);
@@ -2419,7 +2412,6 @@ export const useAiChat = ({
       );
     }
   }, [
-    aiInput,
     setAiInput,
     setAiMessages,
     currentUser,
@@ -2751,7 +2743,6 @@ export const useSystemSettings = () => {
 
 export const useAuth = (dependencies = {}) => {
   const {
-    loginForm = {},
     admins = [],
     employees = [],
     setCurrentUser = () => {},
@@ -2784,7 +2775,7 @@ export const useAuth = (dependencies = {}) => {
 
   // [1_공통] 로그인 처리
   const handleLogin = useCallback(
-    async (e) => {
+    async (e, formData = {}) => {
       e.preventDefault();
 
       // 버전 정보 가져오기
@@ -2798,8 +2789,8 @@ export const useAuth = (dependencies = {}) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              id: loginForm.id,
-              password: loginForm.password,
+              id: formData.id,
+              password: formData.password,
               versionInfo,
             }),
           }
@@ -2851,7 +2842,7 @@ export const useAuth = (dependencies = {}) => {
 
             // 아이디 저장 처리
             if (rememberUserId) {
-              localStorage.setItem('savedUserId', loginForm.id);
+              localStorage.setItem('savedUserId', formData.id);
             } else {
               localStorage.removeItem('savedUserId');
             }
@@ -2866,8 +2857,8 @@ export const useAuth = (dependencies = {}) => {
       // 2. 직원 로그인 확인 (DB)
       try {
         const response = await EmployeeAPI.login({
-          id: loginForm.id,
-          password: loginForm.password,
+          id: formData.id,
+          password: formData.password,
           versionInfo,
         });
 
@@ -2930,7 +2921,7 @@ export const useAuth = (dependencies = {}) => {
 
           // 아이디 저장 처리
           if (rememberUserId) {
-            localStorage.setItem('savedUserId', loginForm.id);
+            localStorage.setItem('savedUserId', formData.id);
           } else {
             localStorage.removeItem('savedUserId');
           }
@@ -2956,7 +2947,6 @@ export const useAuth = (dependencies = {}) => {
       );
     },
     [
-      loginForm,
       setCurrentUser,
       setLoginError,
       setSelectedLanguage,
@@ -3192,10 +3182,6 @@ export const useMenuStateReset = ({
   setEmployeeSearchFilter,
   setEmployeeSearchTerm,
   setSearchResults,
-  setEditingEmpId,
-  setEditForm,
-  setEditingNoticeId,
-  setNoticeForm,
   setNoticeFiles,
   setEmployeeSortField,
   setEmployeeSortOrder,
@@ -3205,8 +3191,6 @@ export const useMenuStateReset = ({
   setSuggestionSortOrder,
   setAnnualLeaveSortField,
   setAnnualLeaveSortOrder,
-  setEditingAnnualLeave,
-  setEditAnnualData,
 }) => {
   useEffect(() => {
     setLeaveSearch({
@@ -3254,23 +3238,6 @@ export const useMenuStateReset = ({
     setEmployeeSearchTerm('');
     setSearchResults([]);
 
-    setEditingEmpId(null);
-    setEditForm({
-      id: '',
-      name: '',
-      position: '',
-      department: '',
-      joinDate: '',
-      resignDate: '',
-      workType: '주간',
-      status: '',
-      phone: '',
-      address: '',
-      password: '',
-    });
-
-    setEditingNoticeId(null);
-    setNoticeForm({ id: null, title: '', content: '' });
     setNoticeFiles([]);
 
     setEmployeeSortField('');
@@ -3281,9 +3248,6 @@ export const useMenuStateReset = ({
     setSuggestionSortOrder('asc');
     setAnnualLeaveSortField('');
     setAnnualLeaveSortOrder('asc');
-
-    setEditingAnnualLeave(null);
-    setEditAnnualData({});
   }, [
     activeTab,
     setLeaveSearch,
@@ -3293,10 +3257,6 @@ export const useMenuStateReset = ({
     setEmployeeSearchFilter,
     setEmployeeSearchTerm,
     setSearchResults,
-    setEditingEmpId,
-    setEditForm,
-    setEditingNoticeId,
-    setNoticeForm,
     setNoticeFiles,
     setEmployeeSortField,
     setEmployeeSortOrder,
@@ -3306,8 +3266,6 @@ export const useMenuStateReset = ({
     setSuggestionSortOrder,
     setAnnualLeaveSortField,
     setAnnualLeaveSortOrder,
-    setEditingAnnualLeave,
-    setEditAnnualData,
   ]);
 };
 

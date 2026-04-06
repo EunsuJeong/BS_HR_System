@@ -3,6 +3,7 @@ import { MessageSquare } from 'lucide-react';
 import {
   SUG_PAGE_SIZE,
   getSuggestionCategoryText,
+  useStaffSuggestion,
 } from '../common/common_staff_suggestion';
 import { SuggestionAPI } from '../../api/communication';
 
@@ -13,20 +14,29 @@ const StaffSuggestion = ({
   getText,
   selectedLanguage,
   send자동알림,
-  handleSuggestionApply,
-  handleSuggestionSubmit,
-  suggestionInput,
-  setSuggestionInput,
-  showSuggestionApplyPopup,
-  setShowSuggestionApplyPopup,
-  applyTitle,
-  setApplyTitle,
-  applyContent,
-  setApplyContent,
   suggestionPage,
   setSuggestionPage,
   fontSize = 'normal',
 }) => {
+  const [applyTitle, setApplyTitle] = useState('');
+  const [applyContent, setApplyContent] = useState('');
+  const [suggestionInput, setSuggestionInput] = useState('구매');
+  const [showSuggestionApplyPopup, setShowSuggestionApplyPopup] = useState(false);
+
+  const { handleSuggestionApply, handleSuggestionSubmit } = useStaffSuggestion({
+    suggestionInput,
+    setSuggestionInput,
+    setApplyTitle,
+    setApplyContent,
+    setShowSuggestionApplyPopup,
+    applyTitle,
+    applyContent,
+    currentUser,
+    setSuggestions,
+    send자동알림,
+    setSuggestionPage,
+    getText,
+  });
   const [showSuggestionMorePopup, setShowSuggestionMorePopup] = useState(false);
   const [showEditPopup, setShowEditPopup] = useState(false);
   const [editingSuggestion, setEditingSuggestion] = useState(null);

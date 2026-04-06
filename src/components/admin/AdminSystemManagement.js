@@ -549,4 +549,4 @@ const AdminSystemManagement = ({
   );
 };
 
-export default AdminSystemManagement;
+export default React.memo(AdminSystemManagement);

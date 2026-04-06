@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
@@ -8,8 +8,6 @@ import { Eye, EyeOff } from 'lucide-react';
 const CommonLogin = ({
   currentUser,
   showLanguageSelection,
-  loginForm,
-  setLoginForm,
   loginError,
   showPassword,
   setShowPassword,
@@ -19,6 +17,18 @@ const CommonLogin = ({
   setRememberUserId,
 }) => {
   const [skipInFuture, setSkipInFuture] = useState(false);
+
+  // 로그인 폼 로컬 state (App.js 전체 리렌더 방지)
+  const [loginForm, setLoginForm] = useState({ id: '', password: '' });
+
+  // 아이디 저장 기능: localStorage에서 초기값 로드
+  useEffect(() => {
+    const savedId = localStorage.getItem('savedUserId');
+    if (savedId) {
+      setLoginForm((prev) => ({ ...prev, id: savedId }));
+      setRememberUserId(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 로그인 화면
   if (!currentUser) {
@@ -45,7 +55,7 @@ const CommonLogin = ({
                 onChange={(e) =>
                   setLoginForm((prev) => ({ ...prev, id: e.target.value }))
                 }
-                onKeyPress={(e) => e.key === 'Enter' && handleLogin(e)}
+                onKeyPress={(e) => e.key === 'Enter' && handleLogin(e, loginForm)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="직원명을 입력하세요"
               />
@@ -65,7 +75,7 @@ const CommonLogin = ({
                       password: e.target.value,
                     }))
                   }
-                  onKeyPress={(e) => e.key === 'Enter' && handleLogin(e)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleLogin(e, loginForm)}
                   className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="첫 로그인 시 휴대폰 끝번호 4자리"
                 />
@@ -98,7 +108,7 @@ const CommonLogin = ({
             )}
 
             <button
-              onClick={handleLogin}
+              onClick={(e) => handleLogin(e, loginForm)}
               className="w-full text-lg bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 font-medium"
             >
               로그인

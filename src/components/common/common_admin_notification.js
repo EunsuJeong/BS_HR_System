@@ -1737,7 +1737,7 @@ export const send자동알림 = async ({
   } else if (처리유형.includes('건의사항') && 건의유형) {
     알림대상자들 = get건의사항알림대상자(대상자, 대상자, 처리유형, 건의유형);
   } else if (처리유형 === '직원평가 수신' || 처리유형 === '급여 수신') {
-    알림대상자들 = [대상자];
+    알림대상자들 = 대상자.status !== '퇴사' ? [대상자] : [];
   } else {
     알림대상자들 = get부서관리자및대표이사(
       대상자.department,
@@ -2760,8 +2760,10 @@ const useNotification = ({
         return;
       }
 
-      const filtered = employees.filter((employee) =>
-        employee.name.toLowerCase().includes(searchTerm.toLowerCase())
+      const filtered = employees.filter(
+        (employee) =>
+          employee.status !== '퇴사' &&
+          employee.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setSearchResults(filtered);
     },

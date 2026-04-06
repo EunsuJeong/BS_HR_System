@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import {
   formatCreatedAt,
   calculateDDay,
   getRecurringSettingsDisplay,
 } from '../common/common_admin_notification';
+import { useDebounce } from '../common/common_common';
 
 const AdminNotificationManagement = ({
   currentUser,
@@ -68,6 +69,85 @@ const AdminNotificationManagement = ({
   요일목록,
   employees,
 }) => {
+  // 정기/실시간 알림 title/content 로컬 state + debounce (타이핑 렉 방지)
+  const [regTitleInput, setRegTitleInput] = useState(regularNotificationForm?.title || '');
+  const [regContentInput, setRegContentInput] = useState(regularNotificationForm?.content || '');
+  const [rtTitleInput, setRtTitleInput] = useState(realtimeNotificationForm?.title || '');
+  const [rtContentInput, setRtContentInput] = useState(realtimeNotificationForm?.content || '');
+
+  const debouncedRegTitle = useDebounce(regTitleInput, 200);
+  const debouncedRegContent = useDebounce(regContentInput, 200);
+  const debouncedRtTitle = useDebounce(rtTitleInput, 200);
+  const debouncedRtContent = useDebounce(rtContentInput, 200);
+
+  useEffect(() => {
+    setRegularNotificationForm((prev) => ({ ...prev, title: debouncedRegTitle }));
+  }, [debouncedRegTitle]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setRegularNotificationForm((prev) => ({ ...prev, content: debouncedRegContent }));
+  }, [debouncedRegContent]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setRealtimeNotificationForm((prev) => ({ ...prev, title: debouncedRtTitle }));
+  }, [debouncedRtTitle]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setRealtimeNotificationForm((prev) => ({ ...prev, content: debouncedRtContent }));
+  }, [debouncedRtContent]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 수정 모드 진입 시 로컬 state 동기화
+  useEffect(() => {
+    if (editingRegularNotification) {
+      setRegTitleInput(regularNotificationForm?.title || '');
+      setRegContentInput(regularNotificationForm?.content || '');
+    } else {
+      setRegTitleInput('');
+      setRegContentInput('');
+    }
+  }, [editingRegularNotification]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (editingRealtimeNotification) {
+      setRtTitleInput(realtimeNotificationForm?.title || '');
+      setRtContentInput(realtimeNotificationForm?.content || '');
+    } else {
+      setRtTitleInput('');
+      setRtContentInput('');
+    }
+  }, [editingRealtimeNotification]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 추가 팝업 열릴 때 로컬 state 초기화
+  useEffect(() => {
+    if (showAddRegularNotificationPopup) {
+      setRegTitleInput('');
+      setRegContentInput('');
+    }
+  }, [showAddRegularNotificationPopup]);
+
+  useEffect(() => {
+    if (showAddRealtimeNotificationPopup) {
+      setRtTitleInput('');
+      setRtContentInput('');
+    }
+  }, [showAddRealtimeNotificationPopup]);
+
+  // 알림 로그 필터 로컬 state + debounce (타이핑 렉 방지)
+  const [logYearInput, setLogYearInput] = useState(notificationLogSearch?.year || '');
+  const [logMonthInput, setLogMonthInput] = useState(notificationLogSearch?.month || '');
+  const [logRecipientInput, setLogRecipientInput] = useState(notificationLogSearch?.recipient || '');
+  const [logTitleInput, setLogTitleInput] = useState(notificationLogSearch?.titleOrContent || '');
+
+  const debouncedLogYear = useDebounce(logYearInput, 200);
+  const debouncedLogMonth = useDebounce(logMonthInput, 200);
+  const debouncedLogRecipient = useDebounce(logRecipientInput, 200);
+  const debouncedLogTitle = useDebounce(logTitleInput, 200);
+
+  useEffect(() => { setNotificationLogSearch((p) => ({ ...p, year: debouncedLogYear })); }, [debouncedLogYear]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setNotificationLogSearch((p) => ({ ...p, month: debouncedLogMonth })); }, [debouncedLogMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setNotificationLogSearch((p) => ({ ...p, recipient: debouncedLogRecipient })); }, [debouncedLogRecipient]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setNotificationLogSearch((p) => ({ ...p, titleOrContent: debouncedLogTitle })); }, [debouncedLogTitle]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 w-full">
       {/* 좌측: 통합 알림 관리 */}
@@ -196,25 +276,15 @@ const AdminNotificationManagement = ({
               <div className="flex flex-wrap gap-3 lg:flex-1 min-w-0">
                 <input
                   type="text"
-                  value={notificationLogSearch.year}
-                  onChange={(e) =>
-                    setNotificationLogSearch({
-                      ...notificationLogSearch,
-                      year: e.target.value,
-                    })
-                  }
+                  value={logYearInput}
+                  onChange={(e) => setLogYearInput(e.target.value)}
                   className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="년도"
                 />
                 <input
                   type="text"
-                  value={notificationLogSearch.month}
-                  onChange={(e) =>
-                    setNotificationLogSearch({
-                      ...notificationLogSearch,
-                      month: e.target.value,
-                    })
-                  }
+                  value={logMonthInput}
+                  onChange={(e) => setLogMonthInput(e.target.value)}
                   className="w-12 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="월"
                 />
@@ -234,25 +304,15 @@ const AdminNotificationManagement = ({
                 </select>
                 <input
                   type="text"
-                  value={notificationLogSearch.recipient}
-                  onChange={(e) =>
-                    setNotificationLogSearch({
-                      ...notificationLogSearch,
-                      recipient: e.target.value,
-                    })
-                  }
+                  value={logRecipientInput}
+                  onChange={(e) => setLogRecipientInput(e.target.value)}
                   className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="수신자"
                 />
                 <input
                   type="text"
-                  value={notificationLogSearch.titleOrContent}
-                  onChange={(e) =>
-                    setNotificationLogSearch({
-                      ...notificationLogSearch,
-                      titleOrContent: e.target.value,
-                    })
-                  }
+                  value={logTitleInput}
+                  onChange={(e) => setLogTitleInput(e.target.value)}
                   className="flex-1 min-w-[120px] px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="제목 또는 내용"
                 />
@@ -384,13 +444,8 @@ const AdminNotificationManagement = ({
                 </label>
                 <input
                   type="text"
-                  value={regularNotificationForm.title}
-                  onChange={(e) =>
-                    setRegularNotificationForm({
-                      ...regularNotificationForm,
-                      title: e.target.value,
-                    })
-                  }
+                  value={regTitleInput}
+                  onChange={(e) => setRegTitleInput(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="알림 제목을 입력하세요"
                 />
@@ -400,13 +455,8 @@ const AdminNotificationManagement = ({
                   알림 내용
                 </label>
                 <textarea
-                  value={regularNotificationForm.content}
-                  onChange={(e) =>
-                    setRegularNotificationForm({
-                      ...regularNotificationForm,
-                      content: e.target.value,
-                    })
-                  }
+                  value={regContentInput}
+                  onChange={(e) => setRegContentInput(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24"
                   placeholder="알림 내용을 입력하세요"
                 />
@@ -707,13 +757,8 @@ const AdminNotificationManagement = ({
                 </label>
                 <input
                   type="text"
-                  value={realtimeNotificationForm.title}
-                  onChange={(e) =>
-                    setRealtimeNotificationForm({
-                      ...realtimeNotificationForm,
-                      title: e.target.value,
-                    })
-                  }
+                  value={rtTitleInput}
+                  onChange={(e) => setRtTitleInput(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="알림 제목을 입력하세요"
                 />
@@ -723,13 +768,8 @@ const AdminNotificationManagement = ({
                   알림 내용
                 </label>
                 <textarea
-                  value={realtimeNotificationForm.content}
-                  onChange={(e) =>
-                    setRealtimeNotificationForm({
-                      ...realtimeNotificationForm,
-                      content: e.target.value,
-                    })
-                  }
+                  value={rtContentInput}
+                  onChange={(e) => setRtContentInput(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-24"
                   placeholder="알림 내용을 입력하세요"
                 />
@@ -1037,24 +1077,12 @@ const AdminNotificationManagement = ({
                 </label>
                 <input
                   type="text"
-                  value={
+                  value={알림유형 === '정기' ? regTitleInput : rtTitleInput}
+                  onChange={(e) =>
                     알림유형 === '정기'
-                      ? regularNotificationForm.title
-                      : realtimeNotificationForm.title
+                      ? setRegTitleInput(e.target.value)
+                      : setRtTitleInput(e.target.value)
                   }
-                  onChange={(e) => {
-                    if (알림유형 === '정기') {
-                      setRegularNotificationForm({
-                        ...regularNotificationForm,
-                        title: e.target.value,
-                      });
-                    } else {
-                      setRealtimeNotificationForm({
-                        ...realtimeNotificationForm,
-                        title: e.target.value,
-                      });
-                    }
-                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="알림 제목을 입력하세요"
                 />
@@ -1065,24 +1093,12 @@ const AdminNotificationManagement = ({
                   알림 내용
                 </label>
                 <textarea
-                  value={
+                  value={알림유형 === '정기' ? regContentInput : rtContentInput}
+                  onChange={(e) =>
                     알림유형 === '정기'
-                      ? regularNotificationForm.content
-                      : realtimeNotificationForm.content
+                      ? setRegContentInput(e.target.value)
+                      : setRtContentInput(e.target.value)
                   }
-                  onChange={(e) => {
-                    if (알림유형 === '정기') {
-                      setRegularNotificationForm({
-                        ...regularNotificationForm,
-                        content: e.target.value,
-                      });
-                    } else {
-                      setRealtimeNotificationForm({
-                        ...realtimeNotificationForm,
-                        content: e.target.value,
-                      });
-                    }
-                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24"
                   placeholder="알림 내용을 입력하세요"
                 />
@@ -1400,13 +1416,8 @@ const AdminNotificationManagement = ({
                 </label>
                 <input
                   type="text"
-                  value={regularNotificationForm.title}
-                  onChange={(e) =>
-                    setRegularNotificationForm({
-                      ...regularNotificationForm,
-                      title: e.target.value,
-                    })
-                  }
+                  value={regTitleInput}
+                  onChange={(e) => setRegTitleInput(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="알림 제목을 입력하세요"
                 />
@@ -1417,13 +1428,8 @@ const AdminNotificationManagement = ({
                   알림 내용
                 </label>
                 <textarea
-                  value={regularNotificationForm.content}
-                  onChange={(e) =>
-                    setRegularNotificationForm({
-                      ...regularNotificationForm,
-                      content: e.target.value,
-                    })
-                  }
+                  value={regContentInput}
+                  onChange={(e) => setRegContentInput(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24"
                   placeholder="알림 내용을 입력하세요"
                 />
@@ -1713,13 +1719,8 @@ const AdminNotificationManagement = ({
                 </label>
                 <input
                   type="text"
-                  value={realtimeNotificationForm.title}
-                  onChange={(e) =>
-                    setRealtimeNotificationForm({
-                      ...realtimeNotificationForm,
-                      title: e.target.value,
-                    })
-                  }
+                  value={rtTitleInput}
+                  onChange={(e) => setRtTitleInput(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="알림 제목을 입력하세요"
                 />
@@ -1729,13 +1730,8 @@ const AdminNotificationManagement = ({
                   알림 내용
                 </label>
                 <textarea
-                  value={realtimeNotificationForm.content}
-                  onChange={(e) =>
-                    setRealtimeNotificationForm({
-                      ...realtimeNotificationForm,
-                      content: e.target.value,
-                    })
-                  }
+                  value={rtContentInput}
+                  onChange={(e) => setRtContentInput(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-24"
                   placeholder="알림 내용을 입력하세요"
                 />
@@ -2186,4 +2182,4 @@ const AdminNotificationManagement = ({
   );
 };
 
-export default AdminNotificationManagement;
+export default React.memo(AdminNotificationManagement);
