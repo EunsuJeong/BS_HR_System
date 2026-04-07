@@ -9,17 +9,23 @@ const BASE = process.env.REACT_APP_API_BASE_URL ||
 // 동일 GET 요청 중복 방지 (진행 중인 요청 재사용)
 const pendingRequests = new Map();
 
+// 진행 중인 요청의 AbortController 집합 (abortAll 용)
+const activeControllers = new Set();
+
 // Retry + timeout wrapper
 async function fetchWithRetry(url, init, retries = 3, timeout = 30000) {
   for (let i = 0; i < retries; i++) {
     try {
       const controller = new AbortController();
+      activeControllers.add(controller);
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
       const res = await fetch(url, { ...init, signal: controller.signal });
       clearTimeout(timeoutId);
+      activeControllers.delete(controller);
       return res;
     } catch (err) {
+      activeControllers.delete(controller);
       if (i === retries - 1) throw err;
       await new Promise(r => setTimeout(r, 1000 * (i + 1))); // exponential backoff
     }
@@ -96,6 +102,12 @@ export const api = {
   put: (path, body) =>
     request(path, { method: 'PUT', body: JSON.stringify(body) }),
   del: (path) => request(path, { method: 'DELETE' }),
+  // 진행 중인 모든 요청 abort (새로고침 직전 정리용)
+  abortAll: () => {
+    activeControllers.forEach((c) => c.abort());
+    activeControllers.clear();
+    pendingRequests.clear();
+  },
   base: BASE,
   baseURL: BASE,
 };

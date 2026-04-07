@@ -2874,6 +2874,8 @@ export const useAuth = (dependencies = {}) => {
           const employeeUser = response.data;
           setCurrentUser(employeeUser);
           sessionStorage.setItem('currentUser', JSON.stringify(employeeUser));
+          // ✅ 직원 로그인 시 1회 새로고침 트리거
+          sessionStorage.setItem('staffFirstLoad', 'true');
           setLoginError('');
           // DB에 저장된 언어 설정이 있으면 언어 선택 화면 생략
           if (employeeUser.preferredLanguage) {

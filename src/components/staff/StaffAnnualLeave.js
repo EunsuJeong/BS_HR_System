@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
 import { LEAVE_TYPES, LEAVE_PAGE_SIZE, useStaffLeave } from '../common/common_staff_leave';
+import LeaveAPI from '../../api/leave';
 
 // ============================================================
 // 시간 셀렉트 피커 (12시간제, 오전/오후 언어 지원)
@@ -142,6 +143,7 @@ const StaffAnnualLeave = ({
   getText,
   selectedLanguage,
   fontSize = 'normal',
+  onEditingChange,
 }) => {
   // 연차 폼 로컬 state (App.js 전체 리렌더 방지)
   const [leaveForm, setLeaveForm] = useState({
@@ -208,6 +210,48 @@ const StaffAnnualLeave = ({
       leaveScrollRef.current.scrollTop = 0;
     }
   }, [showLeaveHistoryPopup, leavePage]);
+
+  // 편집 중 상태 → App.js에 전달 (자동 새로고침 연기용)
+  useEffect(() => {
+    const isEditing =
+      !!(leaveForm.startDate || leaveForm.endDate || leaveForm.reason || leaveForm.contact) ||
+      leaveFormPreview !== null ||
+      showEditLeavePopup;
+    onEditingChange?.(isEditing);
+  }, [leaveForm, leaveFormPreview, showEditLeavePopup, onEditingChange]);
+
+  // 더보기 팝업 열릴 때 1회 조회 + 10분 polling
+  useEffect(() => {
+    if (!showLeaveHistoryPopup || !currentUser?.id) return;
+
+    const load = async () => {
+      try {
+        const dbLeaves = await LeaveAPI.list();
+        if (Array.isArray(dbLeaves) && dbLeaves.length > 0) {
+          setLeaveRequests(
+            dbLeaves.map((l) => ({
+              id: l._id || l.id,
+              employeeId: l.employeeId,
+              type: l.leaveType,
+              startDate: l.startDate?.slice(0, 10),
+              endDate: l.endDate?.slice(0, 10),
+              days: l.days,
+              reason: l.reason,
+              status: l.status,
+              requestDate: l.createdAt?.slice(0, 10),
+              remark: l.remark || '',
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('❌ [연차 더보기] 연차 데이터 재조회 실패:', err);
+      }
+    };
+
+    load();
+    const intervalId = setInterval(load, 10 * 60 * 1000); // 10분 polling
+    return () => clearInterval(intervalId);
+  }, [showLeaveHistoryPopup, currentUser, setLeaveRequests]);
 
   // fontSize에 따른 공통 클래스 반환 (버튼, input, select 모두 동일)
   const getCommonClass = () => {

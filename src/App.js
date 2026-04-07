@@ -3352,8 +3352,22 @@ const HRManagementSystem = () => {
       transports: ['websocket', 'polling'],
     });
 
-    socket.on('connect', () => {
+    let globalSocketConnected = false;
+    socket.on('connect', async () => {
       devLog('🔌 [전역 Socket] 연결됨');
+      if (globalSocketConnected) {
+        // 재연결: 알림 API 1회 재조회
+        devLog('🔄 [전역 Socket] 재연결 - 알림 재조회');
+        try {
+          const regularResponse = await NotificationAPI.list('정기');
+          if (regularResponse?.length > 0) setRegularNotifications(regularResponse);
+          const realtimeResponse = await NotificationAPI.list('실시간');
+          if (realtimeResponse?.length > 0) setRealtimeNotifications(realtimeResponse);
+        } catch (err) {
+          console.error('❌ [전역 Socket] 재연결 알림 재조회 실패:', err);
+        }
+      }
+      globalSocketConnected = true;
     });
 
     // 직원 실시간 업데이트
@@ -4286,7 +4300,7 @@ const HRManagementSystem = () => {
         socket.disconnect();
       }
     };
-  }, [currentUser, leaveRequests]);
+  }, [currentUser]);
 
   // *[1_공통] 언어 및 다국어*
   const { handleLanguageSelect, getText, getLeaveTypeText } = useLanguage({
@@ -4746,55 +4760,56 @@ const HRManagementSystem = () => {
     // 즉시 로드
     loadNoticesFromDB();
 
-    // Socket.io 비활성화 - Railway 서버 WebSocket 미지원으로 연결 오류 발생
-    /*
-    // Socket.io 연결 설정 (실시간 업데이트용)
+    // 공지사항 전용 Socket.io 연결
     const socket = io(SERVER_URL, {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'],
     });
 
+    let noticeSocketConnected = false;
     socket.on('connect', () => {
-      devLog('🔌 Socket.io 연결됨 - 실시간 업데이트 활성화');
+      devLog('🔌 [공지 Socket] 연결됨');
+      if (noticeSocketConnected) {
+        // 재연결: 공지사항 API 1회 재조회
+        devLog('🔄 [공지 Socket] 재연결 - 공지사항 재조회');
+        loadNoticesFromDB();
+      }
+      noticeSocketConnected = true;
     });
 
     // 예약 공지사항 자동 게시
-    socket.on('notice-published', (data) => {
-      devLog(
-        `📢 예약 공지사항 ${data.count}건이 자동 게시되었습니다. 공지사항을 다시 로드합니다.`
-      );
+    socket.on('notice-published', () => {
+      devLog('📢 예약 공지사항 자동 게시 - 공지사항 재조회');
       loadNoticesFromDB();
     });
 
     // 공지사항 실시간 업데이트
     socket.on('notice-created', (data) => {
-      devLog(`✨ 공지사항 등록됨: ${data.title}`);
+      devLog(`✨ [공지 Socket] 공지사항 등록됨: ${data.title}`);
       loadNoticesFromDB();
     });
 
     socket.on('notice-updated', (data) => {
-      devLog(`✏️ 공지사항 수정됨: ${data.title}`);
+      devLog(`✏️ [공지 Socket] 공지사항 수정됨: ${data.title}`);
       loadNoticesFromDB();
     });
 
     socket.on('notice-deleted', (data) => {
-      devLog(`🗑️ 공지사항 삭제됨: ${data.noticeId}`);
+      devLog(`🗑️ [공지 Socket] 공지사항 삭제됨: ${data.noticeId}`);
       loadNoticesFromDB();
     });
 
     socket.on('disconnect', () => {
-      devLog('🔌 Socket.io 연결 해제됨');
+      devLog('🔌 [공지 Socket] 연결 해제됨');
     });
 
-    // cleanup: Socket 연결 해제
     return () => {
       socket.removeAllListeners();
       if (socket.connected) {
         socket.disconnect();
       }
     };
-    */
   }, [currentUser]);
 
   // *[1_공통] 건의사항 데이터 DB에서 로드*
@@ -5965,20 +5980,56 @@ const HRManagementSystem = () => {
     window.location.reload();
   };
 
-  // *[1_공통] 일반직원 모드 자동 새로고침 (10분마다)*
-  React.useEffect(() => {
-    // 일반직원 모드일 때만 작동
-    if (currentUser && !currentUser.isAdmin) {
-      const autoRefreshInterval = setInterval(() => {
-        console.log('🔄 [자동 새로고침] 10분 경과 - 페이지를 새로고침합니다.');
-        window.location.reload();
-      }, 10 * 60 * 1000); // 10분 = 600,000ms
+  // *[3_일반직원 모드] 직원 자동 새로고침 (20분 주기, 조건부 연기)*
+  const staffIsRefreshingRef = React.useRef(false);  // 중복 실행 방지
+  const staffPendingRefreshRef = React.useRef(false); // 연기된 새로고침 대기
+  const staffEditingRef = React.useRef(false);        // 자식 컴포넌트 편집 중 여부
 
-      // cleanup: 컴포넌트 언마운트 또는 로그아웃 시 interval 정리
-      return () => {
-        clearInterval(autoRefreshInterval);
-      };
-    }
+  const executeStaffRefresh = React.useCallback(() => {
+    if (staffIsRefreshingRef.current) return;
+    staffIsRefreshingRef.current = true;
+    staffPendingRefreshRef.current = false;
+    console.log('🔄 [직원 자동 새로고침] 요청 abort 후 reload');
+    apiClient.abortAll();
+    setTimeout(() => window.location.reload(), 100);
+  }, []);
+
+  // 20분 주기 새로고침
+  React.useEffect(() => {
+    if (!currentUser || currentUser.isAdmin) return;
+
+    const STAFF_REFRESH_INTERVAL = 20 * 60 * 1000; // 20분
+
+    const tryRefresh = () => {
+      if (staffEditingRef.current) {
+        console.log('⏸️ [직원 자동 새로고침] 편집 중 - 연기');
+        staffPendingRefreshRef.current = true;
+        return;
+      }
+      executeStaffRefresh();
+    };
+
+    const intervalId = setInterval(tryRefresh, STAFF_REFRESH_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [currentUser, executeStaffRefresh]);
+
+  // 연기 사유 해제 감지 → 즉시 새로고침
+  React.useEffect(() => {
+    if (!currentUser || currentUser.isAdmin) return;
+    if (!staffPendingRefreshRef.current) return;
+    if (staffEditingRef.current) return;
+
+    console.log('✅ [직원 자동 새로고침] 연기 사유 해제 - 즉시 실행');
+    executeStaffRefresh();
+  }, [currentUser, executeStaffRefresh]);
+
+  // 직원 로그인 시 1회 새로고침
+  React.useEffect(() => {
+    if (!currentUser || currentUser.isAdmin) return;
+    if (sessionStorage.getItem('staffFirstLoad') !== 'true') return;
+    sessionStorage.removeItem('staffFirstLoad');
+    console.log('🔄 [직원 로그인 새로고침] 로그인 직후 1회 실행');
+    window.location.reload();
   }, [currentUser]);
 
   // *[2_관리자 모드] 관리자 자동 새로고침 (30분 주기, 조건부 연기)*
@@ -6779,6 +6830,7 @@ const HRManagementSystem = () => {
                 setLeaveRequests={setLeaveRequests}
                 isHolidayDate={isHolidayDateWithData}
                 send자동알림={send자동알림}
+                onEditingChange={(editing) => { staffEditingRef.current = editing; }}
                 getUsedAnnualLeave={getUsedAnnualLeave}
                 getLeaveDays={getLeaveDays}
                 formatDateByLang={formatDateByLang}
@@ -6800,6 +6852,7 @@ const HRManagementSystem = () => {
                 fontSize={fontSize}
                 suggestionPage={suggestionPage}
                 setSuggestionPage={setSuggestionPage}
+                onEditingChange={(editing) => { staffEditingRef.current = editing; }}
               />
             </div>
             {/* //---3.6_일반직원 모드_급여 내역/직원 평가 (UI)---// */}

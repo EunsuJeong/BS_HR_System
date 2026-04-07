@@ -17,6 +17,7 @@ const StaffSuggestion = ({
   suggestionPage,
   setSuggestionPage,
   fontSize = 'normal',
+  onEditingChange,
 }) => {
   const [applyTitle, setApplyTitle] = useState('');
   const [applyContent, setApplyContent] = useState('');
@@ -52,6 +53,43 @@ const StaffSuggestion = ({
       suggestionScrollRef.current.scrollTop = 0;
     }
   }, [showSuggestionMorePopup, suggestionPage]);
+
+  // 편집 중 상태 → App.js에 전달 (자동 새로고침 연기용)
+  useEffect(() => {
+    const isEditing = !!(applyTitle || applyContent) || showSuggestionApplyPopup || showEditPopup;
+    onEditingChange?.(isEditing);
+  }, [applyTitle, applyContent, showSuggestionApplyPopup, showEditPopup, onEditingChange]);
+
+  // 더보기 팝업 열릴 때 1회 조회 + 10분 polling
+  useEffect(() => {
+    if (!showSuggestionMorePopup || !currentUser?.id) return;
+
+    const load = async () => {
+      try {
+        const dbSuggestions = await SuggestionAPI.list(currentUser.id, null);
+        if (Array.isArray(dbSuggestions) && dbSuggestions.length > 0) {
+          setSuggestions(
+            dbSuggestions.map((s) => ({
+              id: s._id || s.id,
+              employeeId: s.employeeId,
+              title: s.title,
+              content: s.content,
+              category: s.category,
+              status: s.status,
+              remark: s.remark || '',
+              date: s.createdAt?.slice(0, 10) || s.applyDate || '',
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('❌ [건의 더보기] 건의사항 데이터 재조회 실패:', err);
+      }
+    };
+
+    load();
+    const intervalId = setInterval(load, 10 * 60 * 1000); // 10분 polling
+    return () => clearInterval(intervalId);
+  }, [showSuggestionMorePopup, currentUser, setSuggestions]);
 
   // applyContent가 빈 값이 되면 textarea 높이 초기화
   useEffect(() => {
