@@ -15,20 +15,62 @@ const CommonLogin = ({
   handleLanguageSelect,
   rememberUserId,
   setRememberUserId,
+  rememberPassword,
+  setRememberPassword,
 }) => {
   const [skipInFuture, setSkipInFuture] = useState(false);
+  const [isAutoLogging, setIsAutoLogging] = useState(false);
 
   // 로그인 폼 로컬 state (App.js 전체 리렌더 방지)
   const [loginForm, setLoginForm] = useState({ id: '', password: '' });
 
-  // 아이디 저장 기능: localStorage에서 초기값 로드
+  // 아이디/비밀번호 저장 기능: localStorage에서 초기값 로드 + 자동 로그인
   useEffect(() => {
     const savedId = localStorage.getItem('savedUserId');
+    const savedPassword = localStorage.getItem('savedPassword');
+
     if (savedId) {
       setLoginForm((prev) => ({ ...prev, id: savedId }));
       setRememberUserId(true);
     }
+    if (savedPassword) {
+      setLoginForm((prev) => ({ ...prev, password: savedPassword }));
+      setRememberPassword(true);
+    }
+
+    // 아이디 + 비밀번호 둘 다 저장된 경우 자동 로그인 시도
+    // (수동 로그아웃 직후에는 skipAutoLogin 플래그로 재실행 방지)
+    const skipAutoLogin = sessionStorage.getItem('skipAutoLogin');
+    if (savedId && savedPassword && !skipAutoLogin) {
+      setIsAutoLogging(true);
+      handleLogin(
+        { preventDefault: () => {} },
+        { id: savedId, password: savedPassword }
+      ).finally(() => {
+        // handleLogin 내부의 stale closure(rememberUserId/rememberPassword=false)로 인해
+        // localStorage가 지워지는 문제 방지 → 자동 로그인 후 저장값 복원
+        localStorage.setItem('savedUserId', savedId);
+        localStorage.setItem('savedPassword', savedPassword);
+        setIsAutoLogging(false);
+      });
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 자동 로그인 진행 중 로딩 화면
+  if (isAutoLogging) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">부성스틸(주)</h1>
+          <p className="text-2xl text-indigo-600 font-semibold mb-8">AI 인사관리시스템</p>
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+            <p className="text-base text-gray-500">자동 로그인 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 로그인 화면
   if (!currentUser) {
@@ -89,7 +131,7 @@ const CommonLogin = ({
               </div>
             </div>
 
-            <div className="flex items-center">
+            <div className="flex items-center gap-6">
               <label className="flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -98,6 +140,15 @@ const CommonLogin = ({
                   className="mr-2 w-4 h-4 cursor-pointer"
                 />
                 <span className="text-sm text-gray-600">아이디 저장</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberPassword}
+                  onChange={(e) => setRememberPassword(e.target.checked)}
+                  className="mr-2 w-4 h-4 cursor-pointer"
+                />
+                <span className="text-sm text-gray-600">비밀번호 저장</span>
               </label>
             </div>
 
@@ -123,7 +174,7 @@ const CommonLogin = ({
 
           <div className="mt-8 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 text-center">
-              부성스틸 HR 관리 시스템(ver.2.1_260301)
+              부성스틸 HR 관리 시스템(ver.2.2_260401)
             </p>
           </div>
         </div>

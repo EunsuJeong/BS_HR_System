@@ -831,6 +831,7 @@ const HRManagementSystem = () => {
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberUserId, setRememberUserId] = useState(false);
+  const [rememberPassword, setRememberPassword] = useState(false);
 
   // *[1_공통] 1.3.4.2_아이디 저장 기능 - CommonLogin 로컬 useEffect로 이동*
 
@@ -3254,17 +3255,101 @@ const HRManagementSystem = () => {
     setFontSize,
   } = useSystemSettings();
 
-  // *[1_공통] 전역 Socket.io 실시간 업데이트* (성능 이슈로 비활성화)
-  React.useEffect(() => {
-    // Socket.io 비활성화 - Railway 서버 WebSocket 미지원으로 연결 오류 발생
-    return;
+  // *[1_공통] 탭 비활성 중 수신된 연차/건의 이벤트 대기 플래그*
+  const pendingSocketReloadRef = React.useRef({ leave: false, suggestion: false });
 
+  // *[1_공통] 탭 재활성화 시 대기 중인 연차/건의 API 즉시 재조회*
+  React.useEffect(() => {
+    if (!currentUser?.isAdmin) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.hidden) return;
+
+      const pending = pendingSocketReloadRef.current;
+
+      if (pending.leave) {
+        pending.leave = false;
+        devLog('👁️ [탭 재활성화] 연차 데이터 재조회');
+        try {
+          const dbLeaves = await LeaveAPI.list();
+          if (dbLeaves && dbLeaves.length > 0) {
+            const formattedLeaves = dbLeaves.map((leave) => ({
+              id: leave._id,
+              employeeId: leave.employeeId,
+              employeeName: leave.employeeName,
+              name: leave.employeeName || leave.name,
+              department: leave.department,
+              leaveType: leave.leaveType,
+              type: leave.leaveType || leave.type,
+              startDate: leave.startDate,
+              endDate: leave.endDate,
+              days: leave.requestedDays,
+              requestedDays: leave.requestedDays,
+              reason: leave.reason,
+              contact: leave.contact,
+              status: leave.status,
+              requestDate: leave.requestDate || leave.createdAt,
+              approvedAt: leave.approvedAt,
+              approver: leave.approver,
+              approverName: leave.approverName,
+              approvedDays: leave.approvedDays,
+              rejectedAt: leave.rejectedAt,
+              rejectedBy: leave.rejectedBy,
+              rejectedByName: leave.rejectedByName,
+              rejectionReason: leave.rejectionReason,
+              startTime: leave.startTime || null,
+              endTime: leave.endTime || null,
+            }));
+            setLeaveRequests(formattedLeaves);
+          }
+        } catch (error) {
+          console.error('❌ [탭 재활성화] 연차 재조회 실패:', error);
+        }
+      }
+
+      if (pending.suggestion) {
+        pending.suggestion = false;
+        devLog('👁️ [탭 재활성화] 건의사항 데이터 재조회');
+        try {
+          const dbSuggestions = await SuggestionAPI.list(null, 'admin');
+          if (dbSuggestions && dbSuggestions.length > 0) {
+            const formattedSuggestions = dbSuggestions.map((suggestion) => ({
+              id: suggestion._id,
+              _id: suggestion._id,
+              employeeId: suggestion.employeeId,
+              name: suggestion.name || '',
+              department: suggestion.department || '',
+              type: suggestion.type,
+              title: suggestion.title,
+              content: suggestion.content,
+              status: suggestion.status,
+              remark: suggestion.remark || '',
+              approver: suggestion.approver,
+              approvalDate: suggestion.approvalDate,
+              applyDate: suggestion.applyDate || (suggestion.createdAt ? new Date(suggestion.createdAt).toISOString().slice(0, 10) : ''),
+              createdAt: suggestion.createdAt,
+              date: suggestion.applyDate || (suggestion.createdAt ? new Date(suggestion.createdAt).toISOString().slice(0, 10) : ''),
+            }));
+            setSuggestions(formattedSuggestions);
+          }
+        } catch (error) {
+          console.error('❌ [탭 재활성화] 건의사항 재조회 실패:', error);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentUser, setLeaveRequests, setSuggestions, devLog]);
+
+  // *[1_공통] 전역 Socket.io 실시간 업데이트*
+  React.useEffect(() => {
     if (!currentUser) return;
 
     const socket = io(SERVER_URL, {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'],
     });
 
     socket.on('connect', () => {
@@ -3481,6 +3566,10 @@ const HRManagementSystem = () => {
         devLog('⚠️ currentUser 정보 없음 - 건의사항 업데이트 스킵');
         return;
       }
+      if (document.hidden) {
+        pendingSocketReloadRef.current.suggestion = true;
+        return;
+      }
       try {
         const isAdmin =
           currentUser.isAdmin === true || currentUser.role === 'admin';
@@ -3525,6 +3614,10 @@ const HRManagementSystem = () => {
       devLog(`✏️ [실시간] 건의사항 수정됨: ${data.title}`);
       if (!currentUser || !currentUser.id) {
         devLog('⚠️ currentUser 정보 없음 - 건의사항 업데이트 스킵');
+        return;
+      }
+      if (document.hidden) {
+        pendingSocketReloadRef.current.suggestion = true;
         return;
       }
       try {
@@ -3620,6 +3713,11 @@ const HRManagementSystem = () => {
       devLog(
         `✨ [실시간] 연차 신청됨: ${data.employeeName} - ${data.leaveType}`
       );
+      // 탭 비활성 상태이면 재활성화 시 처리하도록 플래그만 세움
+      if (document.hidden) {
+        pendingSocketReloadRef.current.leave = true;
+        return;
+      }
       try {
         const dbLeaves = await LeaveAPI.list();
         if (dbLeaves && dbLeaves.length > 0) {
@@ -3661,6 +3759,10 @@ const HRManagementSystem = () => {
       devLog(
         `✏️ [실시간] 연차 수정됨: ${data.employeeName} - ${data.leaveType}`
       );
+      if (document.hidden) {
+        pendingSocketReloadRef.current.leave = true;
+        return;
+      }
       try {
         const dbLeaves = await LeaveAPI.list();
         if (dbLeaves && dbLeaves.length > 0) {
@@ -3702,6 +3804,10 @@ const HRManagementSystem = () => {
       devLog(
         `🔄 [실시간] 연차 상태 변경됨: ${data.employeeName} - ${data.status}`
       );
+      if (document.hidden) {
+        pendingSocketReloadRef.current.leave = true;
+        return;
+      }
       try {
         const dbLeaves = await LeaveAPI.list();
         if (dbLeaves && dbLeaves.length > 0) {
@@ -4226,6 +4332,7 @@ const HRManagementSystem = () => {
     setDashboardSelectedDate,
     formatDateToString,
     rememberUserId,
+    rememberPassword,
   });
 
   // *[2_관리자 모드] 관리자 필터/정렬/검색*
@@ -4517,103 +4624,7 @@ const HRManagementSystem = () => {
     loadEmployeesFromDB();
   }, [leavesLoaded]);
 
-  // *[1_공통] 직원 데이터 6시간 주기 갱신*
-  const lastRefreshRef = React.useRef(0);
-
-  React.useEffect(() => {
-    const REFRESH_INTERVAL = 6 * 60 * 60 * 1000; // 6시간 (밀리초)
-
-    const checkAndRefreshEmployees = async () => {
-      const lastRefresh = lastRefreshRef.current;
-      const now = Date.now();
-
-      if (!lastRefresh || now - lastRefresh >= REFRESH_INTERVAL) {
-        devLog('🔄 직원 데이터 6시간 주기 갱신 실행');
-        try {
-          const dbEmployees = await EmployeeAPI.list();
-          if (dbEmployees && dbEmployees.length > 0) {
-            const formattedEmployees = dbEmployees.map((emp) => {
-              const baseEmp = {
-                id: emp.employeeId,
-                name: emp.name,
-                password: emp.password || emp.phone?.slice(-4) || '0000', // DB password 우선 사용
-                phone: emp.phone,
-                department: emp.department,
-                subDepartment: emp.subDepartment || '',
-                position: emp.position,
-                role: emp.role,
-                joinDate: formatDateToString(emp.joinDate),
-                leaveDate:
-                  emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
-                    ? formatDateToString(emp.leaveDate)
-                    : '', // ✅ 퇴사일 조건부 표시
-                workType: emp.workType,
-                payType: emp.salaryType,
-                contractType: emp.contractType || '정규', // 계약형태
-                status: emp.status,
-                address: emp.address,
-                lastLogin: emp.lastLogin, // 마지막 로그인 시각
-                // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
-                leaveUsed: emp.leaveUsed,
-                // ✅ 호환성을 위한 매핑 필드
-                usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
-                // ✅ 연차 DB 값 유지 (없으면 calculateEmployeeAnnualLeave fallback 사용)
-                annualLeaveStart: emp.annualLeaveStart,
-                annualLeaveEnd: emp.annualLeaveEnd,
-                baseAnnual: emp.baseAnnual,
-                carryOverLeave: emp.carryOverLeave,
-                totalAnnual: emp.totalAnnual,
-              };
-
-              // 연차 정보 계산
-              const annualData = calculateEmployeeAnnualLeaveUtil(
-                baseEmp,
-                leaveRequests
-              );
-
-              // ✅ DB에서 받은 usedLeave 값 우선 사용 (강력 새로고침 시에도 정확한 값 유지)
-              const usedLeaveFromDB =
-                emp.usedLeave !== undefined ? emp.usedLeave : emp.leaveUsed;
-              const finalUsedLeave =
-                usedLeaveFromDB !== undefined && usedLeaveFromDB !== null
-                  ? usedLeaveFromDB
-                  : annualData.usedAnnual;
-
-              return {
-                ...baseEmp,
-                leaveYearStart: annualData.annualStart,
-                leaveYearEnd: annualData.annualEnd,
-                totalAnnualLeave: annualData.totalAnnual,
-                usedAnnualLeave: finalUsedLeave, // DB 값 우선 사용
-                remainingAnnualLeave: annualData.totalAnnual - finalUsedLeave,
-              };
-            });
-            setEmployees(formattedEmployees);
-          } else {
-            setEmployees(generateEmployees());
-          }
-        } catch (error) {
-          console.error('갱신 실패:', error);
-          setEmployees(generateEmployees());
-        }
-        // 관리자 데이터는 DB에서 자동 로드되므로 리프레시 불필요
-        lastRefreshRef.current = now;
-        devLog(
-          `✅ 직원 데이터 갱신 완료 (다음 갱신: ${new Date(
-            now + REFRESH_INTERVAL
-          ).toLocaleString()})`
-        );
-      }
-    };
-
-    // 초기 체크
-    checkAndRefreshEmployees();
-
-    // 6시간마다 체크
-    const intervalId = setInterval(checkAndRefreshEmployees, REFRESH_INTERVAL);
-
-    return () => clearInterval(intervalId);
-  }, []);
+  // *[1_공통] 직원 데이터 6시간 주기 갱신 - 비활성화 (관리자 30분 새로고침으로 대체)*
 
   // *[1_공통] 연차 데이터 DB에서 로드*
   React.useEffect(() => {
@@ -5931,6 +5942,9 @@ const HRManagementSystem = () => {
 
     sessionStorage.removeItem('currentUser');
 
+    // 수동 로그아웃 시 자동 로그인 재실행 방지 (탭 닫으면 풀림)
+    sessionStorage.setItem('skipAutoLogin', 'true');
+
     localStorage.removeItem('activeTab');
 
     clearPopupState();
@@ -5951,7 +5965,7 @@ const HRManagementSystem = () => {
     window.location.reload();
   };
 
-  // *[1_공통] 일반직원 모드 자동 새로고침 (5분마다)*
+  // *[1_공통] 일반직원 모드 자동 새로고침 (10분마다)*
   React.useEffect(() => {
     // 일반직원 모드일 때만 작동
     if (currentUser && !currentUser.isAdmin) {
@@ -5965,6 +5979,115 @@ const HRManagementSystem = () => {
         clearInterval(autoRefreshInterval);
       };
     }
+  }, [currentUser]);
+
+  // *[2_관리자 모드] 관리자 자동 새로고침 (30분 주기, 조건부 연기)*
+  const isRefreshingRef = React.useRef(false);   // 중복 실행 방지
+  const pendingRefreshRef = React.useRef(false);  // 연기된 새로고침 대기
+
+  // 편집/입력/업로드 가능 모달 목록 (열려 있으면 새로고침 차단)
+  const editableModalOpen =
+    showNewEmployeeModal ||
+    showAddEventPopup ||
+    showEditEventPopup ||
+    showUnifiedAddPopup ||
+    showAddRegularNotificationPopup ||
+    showAddRealtimeNotificationPopup ||
+    showAddNotificationPopup ||
+    showEditRegularNotificationPopup ||
+    showEditRealtimeNotificationPopup ||
+    showRecurringSettingsModal ||
+    showHolidayPopup ||
+    showDeletedHolidaysModal ||
+    showLeaveApprovalPopup ||
+    showSuggestionApprovalPopup ||
+    showChangePasswordPopup ||
+    showPermissionModal ||
+    isEditingAttendance;
+
+  // 읽기 전용 모달 목록 (열려 있어도 30분 경과 시 강제 새로고침 허용)
+  const readOnlyModalOpen =
+    showGoalDetailsPopup ||
+    showWorkLifeBalancePopup ||
+    showWorkLifeDetailPopup ||
+    showGoalDetailDataPopup ||
+    showAiHistoryPopup ||
+    showEmployeeListPopup ||
+    showPermissionDeniedModal;
+
+  // 읽기 전용 모달 오픈 시각 추적
+  const readOnlyModalOpenTimeRef = React.useRef(null);
+  React.useEffect(() => {
+    if (readOnlyModalOpen && !editableModalOpen) {
+      if (!readOnlyModalOpenTimeRef.current) {
+        readOnlyModalOpenTimeRef.current = Date.now();
+      }
+    } else {
+      readOnlyModalOpenTimeRef.current = null;
+    }
+  }, [readOnlyModalOpen, editableModalOpen]);
+
+  // 실제 새로고침 실행 함수
+  const executeAdminRefresh = React.useCallback(() => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
+    pendingRefreshRef.current = false;
+    console.log('🔄 [관리자 자동 새로고침] 실행');
+    window.location.reload();
+  }, []);
+
+  // 30분 주기 새로고침
+  React.useEffect(() => {
+    if (!currentUser?.isAdmin) return;
+
+    const ADMIN_REFRESH_INTERVAL = 30 * 60 * 1000; // 30분
+
+    const tryRefresh = () => {
+      // 편집 가능 모달 열린 경우 → 연기
+      if (editableModalOpen) {
+        console.log('⏸️ [관리자 자동 새로고침] 편집 중 - 연기');
+        pendingRefreshRef.current = true;
+        return;
+      }
+
+      // 읽기 전용 모달만 열린 경우 → 30분 이상 경과했으면 강제 실행, 아니면 연기
+      if (readOnlyModalOpen) {
+        const openTime = readOnlyModalOpenTimeRef.current;
+        const elapsed = openTime ? Date.now() - openTime : 0;
+        if (elapsed >= ADMIN_REFRESH_INTERVAL) {
+          console.log('🔄 [관리자 자동 새로고침] 읽기 전용 모달 30분 초과 - 강제 실행');
+          executeAdminRefresh();
+        } else {
+          console.log('⏸️ [관리자 자동 새로고침] 읽기 전용 모달 열림 - 연기');
+          pendingRefreshRef.current = true;
+        }
+        return;
+      }
+
+      executeAdminRefresh();
+    };
+
+    const intervalId = setInterval(tryRefresh, ADMIN_REFRESH_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [currentUser, editableModalOpen, readOnlyModalOpen, executeAdminRefresh]);
+
+  // 연기 사유 해제 감지 → 즉시 새로고침
+  React.useEffect(() => {
+    if (!currentUser?.isAdmin) return;
+    if (!pendingRefreshRef.current) return;
+    if (editableModalOpen) return;
+
+    console.log('✅ [관리자 자동 새로고침] 연기 사유 해제 - 즉시 실행');
+    executeAdminRefresh();
+  }, [currentUser, editableModalOpen, executeAdminRefresh]);
+
+  // 관리자 로그인 시 1회 새로고침 (최신 데이터 보장)
+  React.useEffect(() => {
+    if (!currentUser?.isAdmin) return;
+    if (sessionStorage.getItem('adminFirstLoad') !== 'true') return;
+    sessionStorage.removeItem('adminFirstLoad');
+    console.log('🔄 [관리자 로그인 새로고침] 로그인 직후 1회 실행');
+    window.location.reload();
   }, [currentUser]);
 
   // *[1_공통] 폰트 크기 변경*
@@ -5996,6 +6119,8 @@ const HRManagementSystem = () => {
       handleLanguageSelect={handleLanguageSelect}
       rememberUserId={rememberUserId}
       setRememberUserId={setRememberUserId}
+      rememberPassword={rememberPassword}
+      setRememberPassword={setRememberPassword}
     />
   );
 

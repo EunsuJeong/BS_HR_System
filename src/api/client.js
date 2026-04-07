@@ -6,6 +6,9 @@ const PRODUCTION_API_URL = 'http://bssystem.iptime.org:5000/api';
 const BASE = process.env.REACT_APP_API_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? PRODUCTION_API_URL : 'http://localhost:5000/api');
 
+// 동일 GET 요청 중복 방지 (진행 중인 요청 재사용)
+const pendingRequests = new Map();
+
 // Retry + timeout wrapper
 async function fetchWithRetry(url, init, retries = 3, timeout = 30000) {
   for (let i = 0; i < retries; i++) {
@@ -25,11 +28,34 @@ async function fetchWithRetry(url, init, retries = 3, timeout = 30000) {
 
 async function request(path, options = {}) {
   const url = path.startsWith('http') ? path : `${BASE}${path}`;
+  const method = (options.method || 'GET').toUpperCase();
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
   };
   const init = { ...options, headers };
+
+  // GET 요청 중복 방지: 동일 URL이 진행 중이면 기존 Promise 재사용
+  if (method === 'GET') {
+    if (pendingRequests.has(url)) {
+      return pendingRequests.get(url);
+    }
+    const promise = fetchWithRetry(url, init)
+      .then(async (res) => {
+        const ct = res.headers.get('content-type') || '';
+        const data = ct.includes('application/json') ? await res.json() : await res.text();
+        if (!res.ok) {
+          const error = new Error(data?.error || data?.message || `API ${res.status} ${res.statusText}`);
+          error.response = { data, status: res.status };
+          error.isServerError = res.status >= 500;
+          throw error;
+        }
+        return data;
+      })
+      .finally(() => pendingRequests.delete(url));
+    pendingRequests.set(url, promise);
+    return promise;
+  }
 
   let res;
   try {

@@ -2766,6 +2766,7 @@ export const useAuth = (dependencies = {}) => {
     setDashboardSelectedDate = () => {},
     formatDateToString = (date) => date.toISOString().split('T')[0],
     rememberUserId = false,
+    rememberPassword = false,
   } = dependencies;
 
   // [1_공통] 비밀번호 변경 - 비밀번호 표시/숨김 state
@@ -2810,6 +2811,8 @@ export const useAuth = (dependencies = {}) => {
 
             // ✅ 로그인 직후임을 표시 (AI 추천사항 자동 생성용)
             sessionStorage.setItem('justLoggedIn', 'true');
+            // ✅ 관리자 로그인 시 1회 새로고침 트리거
+            sessionStorage.setItem('adminFirstLoad', 'true');
 
             setLoginError('');
             setSelectedLanguage('ko');
@@ -2840,11 +2843,16 @@ export const useAuth = (dependencies = {}) => {
               console.error('❌ 근무형태 자동 분석 실패:', error);
             }
 
-            // 아이디 저장 처리
+            // 아이디/비밀번호 저장 처리
             if (rememberUserId) {
               localStorage.setItem('savedUserId', formData.id);
             } else {
               localStorage.removeItem('savedUserId');
+            }
+            if (rememberPassword) {
+              localStorage.setItem('savedPassword', formData.password);
+            } else {
+              localStorage.removeItem('savedPassword');
             }
 
             return;
@@ -2919,11 +2927,16 @@ export const useAuth = (dependencies = {}) => {
             console.error('❌ 로그인 시 급여 데이터 불러오기 실패:', error);
           }
 
-          // 아이디 저장 처리
+          // 아이디/비밀번호 저장 처리
           if (rememberUserId) {
             localStorage.setItem('savedUserId', formData.id);
           } else {
             localStorage.removeItem('savedUserId');
+          }
+          if (rememberPassword) {
+            localStorage.setItem('savedPassword', formData.password);
+          } else {
+            localStorage.removeItem('savedPassword');
           }
 
           return;
@@ -2956,6 +2969,8 @@ export const useAuth = (dependencies = {}) => {
       setCurrentMonth,
       getText,
       setPayrollByMonth,
+      rememberUserId,
+      rememberPassword,
     ]
   );
 

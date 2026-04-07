@@ -12,8 +12,7 @@ const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const routes = require('./routes');
 const http = require('http');
-// Socket.io 비활성화 - 폴링 요청 과부하로 성능 저하 발생
-// const { Server } = require('socket.io');
+const { Server } = require('socket.io');
 
 // ================== 시간대 설정 ==================
 // 한국 시간대(KST, UTC+9)로 설정
@@ -27,23 +26,26 @@ console.log(
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io 비활성화 - 폴링 요청 과부하로 성능 저하 발생
-/*
 const socketAllowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:3002',
+  'http://bssystem.iptime.org:3000',
+  'http://bssystem.iptime.org:5000',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 const io = new Server(server, {
   cors: {
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
+      if (!origin || origin === 'null') return callback(null, true);
       if (
         socketAllowedOrigins.includes(origin) ||
         origin.match(/\.vercel\.app$/) ||
-        origin.match(/^https?:\/\/localhost/)
+        origin.match(/\.iptime\.org/) ||
+        origin.match(/^https?:\/\/localhost/) ||
+        origin.match(/^https?:\/\/192\.168\./) ||
+        origin.match(/^https?:\/\/10\./)
       ) {
         callback(null, true);
       } else {
@@ -53,10 +55,8 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
     credentials: true,
   },
+  transports: ['websocket', 'polling'],
 });
-*/
-// 빈 io 객체 생성 (기존 코드 호환성 유지)
-const io = { emit: () => {}, on: () => {} };
 
 const PORT = process.env.PORT || 5000;
 
