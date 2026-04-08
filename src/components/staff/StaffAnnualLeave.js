@@ -230,16 +230,31 @@ const StaffAnnualLeave = ({
         if (Array.isArray(dbLeaves) && dbLeaves.length > 0) {
           setLeaveRequests(
             dbLeaves.map((l) => ({
-              id: l._id || l.id,
+              id: l._id,
               employeeId: l.employeeId,
-              type: l.leaveType,
-              startDate: l.startDate?.slice(0, 10),
-              endDate: l.endDate?.slice(0, 10),
-              days: l.days,
+              employeeName: l.employeeName,
+              name: l.employeeName || l.name,
+              department: l.department,
+              leaveType: l.leaveType,
+              type: l.leaveType || l.type,
+              startDate: formatDateByLang(l.startDate),
+              endDate: formatDateByLang(l.endDate),
+              days: l.requestedDays,
+              requestedDays: l.requestedDays,
               reason: l.reason,
+              contact: l.contact,
               status: l.status,
-              requestDate: l.createdAt?.slice(0, 10),
-              remark: l.remark || '',
+              requestDate: formatDateByLang(l.requestDate || l.createdAt),
+              approvedAt: l.approvedAt,
+              approver: l.approver,
+              approverName: l.approverName,
+              approvedDays: l.approvedDays,
+              rejectedAt: l.rejectedAt,
+              rejectedBy: l.rejectedBy,
+              rejectedByName: l.rejectedByName,
+              rejectionReason: l.rejectionReason,
+              startTime: l.startTime || null,
+              endTime: l.endTime || null,
             }))
           );
         }
@@ -251,7 +266,7 @@ const StaffAnnualLeave = ({
     load();
     const intervalId = setInterval(load, 10 * 60 * 1000); // 10분 polling
     return () => clearInterval(intervalId);
-  }, [showLeaveHistoryPopup, currentUser, setLeaveRequests]);
+  }, [showLeaveHistoryPopup, currentUser, setLeaveRequests, formatDateByLang]);
 
   // fontSize에 따른 공통 클래스 반환 (버튼, input, select 모두 동일)
   const getCommonClass = () => {

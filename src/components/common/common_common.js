@@ -2464,15 +2464,26 @@ export const useLanguage = (dependencies = {}) => {
   // [1_공통] 언어 선택
   const handleLanguageSelect = useCallback(
     async (language, skipInFuture = false) => {
-      if (skipInFuture && currentUser?.employeeId) {
-        try {
-          const { default: api } = await import('../../api/client');
-          await api.put(`/hr/employees/${currentUser.employeeId}/language`, { preferredLanguage: language });
-        } catch (e) {
-          console.warn('언어 설정 저장 실패:', e);
+      if (currentUser?.employeeId) {
+        if (skipInFuture) {
+          try {
+            const { default: api } = await import('../../api/client');
+            await api.put(`/hr/employees/${currentUser.employeeId}/language`, { preferredLanguage: language });
+          } catch (e) {
+            console.warn('언어 설정 저장 실패:', e);
+          }
+        } else if (currentUser.preferredLanguage) {
+          // '이 언어만 보기' 체크 해제 시 DB 설정 초기화
+          try {
+            const { default: api } = await import('../../api/client');
+            await api.put(`/hr/employees/${currentUser.employeeId}/language`, { preferredLanguage: null });
+          } catch (e) {
+            console.warn('언어 설정 초기화 실패:', e);
+          }
         }
       }
       setSelectedLanguage(language);
+      localStorage.setItem('selectedLanguage', language);
       setShowLanguageSelection(false);
 
       const now = new Date();
@@ -2635,8 +2646,17 @@ export const useStorageSync = ({
  */
 export const useSystemSettings = () => {
   // *[1_공통] STATE - 언어/시스템 설정*
-  const [showLanguageSelection, setShowLanguageSelection] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('ko');
+  const [showLanguageSelection, setShowLanguageSelection] = useState(() => {
+    const needs = sessionStorage.getItem('needsLanguageSelection');
+    if (needs) {
+      sessionStorage.removeItem('needsLanguageSelection');
+      return true;
+    }
+    return false;
+  });
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    localStorage.getItem('selectedLanguage') || 'ko'
+  );
   const [showChangePasswordPopup, setShowChangePasswordPopup] = useState(false);
   const [changePasswordForm, setChangePasswordForm] = useState({
     current: '',

@@ -2,12 +2,18 @@
  * PM2 Configuration for BS HR System
  * Windows PC + PM2 기반 사내 서버 배포 설정
  *
+ * ⚠️ 주의: `npm start` 대신 반드시 아래 방법으로 실행하세요.
+ *   npm start는 concurrently + nodemon을 사용하기 때문에
+ *   PM2가 자식 프로세스를 제대로 관리하지 못합니다.
+ *
  * 사용법:
- * - 시작: pm2 start pm2.config.js
- * - 중지: pm2 stop bs-hr-backend
- * - 재시작: pm2 restart bs-hr-backend
- * - 로그 확인: pm2 logs bs-hr-backend
- * - 자동시작 설정: pm2 startup
+ * - 전체 시작: pm2 start pm2.config.js
+ * - 전체 중지: pm2 stop all
+ * - 전체 재시작: pm2 restart all
+ * - 개별 재시작: pm2 restart bs-hr-backend
+ * - 로그 확인: pm2 logs (전체) / pm2 logs bs-hr-backend (개별)
+ * - 자동시작 설정: pm2 startup  →  pm2 save
+ * - 프로세스 목록: pm2 list
  */
 
 module.exports = {
@@ -71,10 +77,43 @@ module.exports = {
       cwd: './', // 작업 디렉토리
       interpreter: 'node', // Node.js 사용
       interpreter_args: '--max-old-space-size=2048', // Node.js 메모리 할당 (2GB)
+      windowsHide: true, // Windows에서 콘솔 창 숨김
 
       // ==================== 환경 변수 파일 ====================
       // PM2가 .env 파일을 자동으로 로드하지 않으므로 dotenv-cli 또는 수동 설정
       // 추천: server.js에서 dotenv.config() 사용 (현재 구현됨)
+    },
+    {
+      // ==================== React 프론트엔드 프로세스 ====================
+      name: 'bs-hr-frontend',
+      script: './node_modules/@craco/craco/dist/bin/craco.js',
+      args: 'start',
+      description: '부성스틸 AI 인사관리 시스템 React 프론트엔드',
+
+      instances: 1,
+      exec_mode: 'fork',
+
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3000,
+        BROWSER: 'none',
+      },
+
+      error_file: './logs/frontend-error.log',
+      out_file: './logs/frontend-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      time: true,
+      merge_logs: true,
+
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '500M',
+      max_restarts: 5,
+      min_uptime: '60s',
+
+      cwd: './',
+      interpreter: 'node',
+      windowsHide: true, // Windows에서 콘솔 창 숨김
     },
     {
       // ==================== 스케줄러 프로세스 ====================
@@ -105,6 +144,7 @@ module.exports = {
       cwd: './',
       interpreter: 'node',
       interpreter_args: '--max-old-space-size=512',
+      windowsHide: true, // Windows에서 콘솔 창 숨김
     },
   ],
 

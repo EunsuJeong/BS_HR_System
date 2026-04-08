@@ -3342,6 +3342,54 @@ const HRManagementSystem = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [currentUser, setLeaveRequests, setSuggestions, devLog]);
 
+  // *[3_일반직원 모드] 탭 재활성화 시 공지/알림 재조회*
+  React.useEffect(() => {
+    if (!currentUser || currentUser.isAdmin) return;
+
+    const handleStaffVisibilityChange = async () => {
+      if (document.hidden) return;
+      devLog('👁️ [직원 탭 재활성화] 공지/알림 재조회');
+      try {
+        const dbNotices = await NoticeAPI.list(false);
+        if (Array.isArray(dbNotices) && dbNotices.length > 0) {
+          setNotices(dbNotices.map((notice) => {
+            let attachments = notice.attachments || [];
+            if (attachments.length > 0 && typeof attachments[0] === 'string') {
+              attachments = attachments.map((fileName) => ({ name: fileName, url: '', size: '' }));
+            }
+            return {
+              id: notice._id, _id: notice._id,
+              title: notice.title, content: notice.content,
+              author: notice.author, authorId: notice.authorId,
+              category: notice.category, priority: notice.priority,
+              files: attachments, attachments,
+              date: notice.createdAt ? new Date(notice.createdAt).toISOString().slice(0, 10) : '',
+              createdAt: notice.createdAt, updatedAt: notice.updatedAt,
+              views: notice.views || 0, viewCount: notice.viewCount || 0,
+              viewedBy: notice.viewedBy || [],
+              isImportant: notice.isImportant || false,
+              isScheduled: notice.isScheduled || false,
+              scheduledDateTime: notice.scheduledDateTime,
+            };
+          }));
+        }
+      } catch (err) {
+        console.error('❌ [직원 탭 재활성화] 공지 재조회 실패:', err);
+      }
+      try {
+        const regularResponse = await NotificationAPI.list('정기');
+        if (regularResponse?.length > 0) setRegularNotifications(regularResponse);
+        const realtimeResponse = await NotificationAPI.list('실시간');
+        if (realtimeResponse?.length > 0) setRealtimeNotifications(realtimeResponse);
+      } catch (err) {
+        console.error('❌ [직원 탭 재활성화] 알림 재조회 실패:', err);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleStaffVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleStaffVisibilityChange);
+  }, [currentUser, setNotices, setRegularNotifications, setRealtimeNotifications]);
+
   // *[1_공통] 전역 Socket.io 실시간 업데이트*
   React.useEffect(() => {
     if (!currentUser) return;
@@ -4642,6 +4690,7 @@ const HRManagementSystem = () => {
 
   // *[1_공통] 연차 데이터 DB에서 로드*
   React.useEffect(() => {
+    if (!currentUser) return;
     const loadLeavesFromDB = async () => {
       try {
         devLog('🔄 DB에서 연차 데이터 로딩 시작...');
@@ -4696,7 +4745,7 @@ const HRManagementSystem = () => {
     };
 
     loadLeavesFromDB();
-  }, []);
+  }, [currentUser]);
 
   // *[1_공통] 공지사항 데이터 DB에서 로드 및 Socket.io 실시간 업데이트*
   React.useEffect(() => {
@@ -5983,7 +6032,7 @@ const HRManagementSystem = () => {
   // *[3_일반직원 모드] 직원 자동 새로고침 (20분 주기, 조건부 연기)*
   const staffIsRefreshingRef = React.useRef(false);  // 중복 실행 방지
   const staffPendingRefreshRef = React.useRef(false); // 연기된 새로고침 대기
-  const staffEditingRef = React.useRef(false);        // 자식 컴포넌트 편집 중 여부
+  const [staffEditing, setStaffEditing] = React.useState(false); // 자식 컴포넌트 편집 중 여부 (state: deps 감지용)
 
   const executeStaffRefresh = React.useCallback(() => {
     if (staffIsRefreshingRef.current) return;
@@ -6001,7 +6050,7 @@ const HRManagementSystem = () => {
     const STAFF_REFRESH_INTERVAL = 20 * 60 * 1000; // 20분
 
     const tryRefresh = () => {
-      if (staffEditingRef.current) {
+      if (staffEditing) {
         console.log('⏸️ [직원 자동 새로고침] 편집 중 - 연기');
         staffPendingRefreshRef.current = true;
         return;
@@ -6011,23 +6060,27 @@ const HRManagementSystem = () => {
 
     const intervalId = setInterval(tryRefresh, STAFF_REFRESH_INTERVAL);
     return () => clearInterval(intervalId);
-  }, [currentUser, executeStaffRefresh]);
+  }, [currentUser, staffEditing, executeStaffRefresh]);
 
   // 연기 사유 해제 감지 → 즉시 새로고침
   React.useEffect(() => {
     if (!currentUser || currentUser.isAdmin) return;
     if (!staffPendingRefreshRef.current) return;
-    if (staffEditingRef.current) return;
+    if (staffEditing) return;
 
     console.log('✅ [직원 자동 새로고침] 연기 사유 해제 - 즉시 실행');
     executeStaffRefresh();
-  }, [currentUser, executeStaffRefresh]);
+  }, [currentUser, staffEditing, executeStaffRefresh]);
 
   // 직원 로그인 시 1회 새로고침
   React.useEffect(() => {
     if (!currentUser || currentUser.isAdmin) return;
     if (sessionStorage.getItem('staffFirstLoad') !== 'true') return;
     sessionStorage.removeItem('staffFirstLoad');
+    // 언어 설정이 없으면 재로드 후 언어 선택 화면을 다시 표시
+    if (!currentUser.preferredLanguage) {
+      sessionStorage.setItem('needsLanguageSelection', 'true');
+    }
     console.log('🔄 [직원 로그인 새로고침] 로그인 직후 1회 실행');
     window.location.reload();
   }, [currentUser]);
@@ -6830,7 +6883,7 @@ const HRManagementSystem = () => {
                 setLeaveRequests={setLeaveRequests}
                 isHolidayDate={isHolidayDateWithData}
                 send자동알림={send자동알림}
-                onEditingChange={(editing) => { staffEditingRef.current = editing; }}
+                onEditingChange={setStaffEditing}
                 getUsedAnnualLeave={getUsedAnnualLeave}
                 getLeaveDays={getLeaveDays}
                 formatDateByLang={formatDateByLang}
@@ -6852,7 +6905,8 @@ const HRManagementSystem = () => {
                 fontSize={fontSize}
                 suggestionPage={suggestionPage}
                 setSuggestionPage={setSuggestionPage}
-                onEditingChange={(editing) => { staffEditingRef.current = editing; }}
+                onEditingChange={setStaffEditing}
+                formatDateByLang={formatDateByLang}
               />
             </div>
             {/* //---3.6_일반직원 모드_급여 내역/직원 평가 (UI)---// */}

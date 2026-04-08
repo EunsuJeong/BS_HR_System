@@ -188,6 +188,11 @@ const AdminEmployeeManagement = ({
                 }
                 명
               </span>
+              <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold mb-4">
+                퇴사{' '}
+                {employees.filter((e) => e.status === '퇴사').length}
+                명
+              </span>
             </div>
             <div className="flex flex-wrap gap-2">
               <button

@@ -108,12 +108,12 @@ router.put('/employees/:employeeId/language', async (req, res) => {
   try {
     const { employeeId } = req.params;
     const { preferredLanguage } = req.body;
-    if (!['ko', 'en'].includes(preferredLanguage)) {
+    if (preferredLanguage !== null && !['ko', 'en'].includes(preferredLanguage)) {
       return res.status(400).json({ success: false, error: '유효하지 않은 언어 코드입니다.' });
     }
     const employee = await Employee.findOneAndUpdate(
       { employeeId },
-      { preferredLanguage },
+      { preferredLanguage: preferredLanguage ?? null },
       { new: true }
     );
     if (!employee) {

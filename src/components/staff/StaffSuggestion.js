@@ -18,6 +18,7 @@ const StaffSuggestion = ({
   setSuggestionPage,
   fontSize = 'normal',
   onEditingChange,
+  formatDateByLang,
 }) => {
   const [applyTitle, setApplyTitle] = useState('');
   const [applyContent, setApplyContent] = useState('');
@@ -70,14 +71,21 @@ const StaffSuggestion = ({
         if (Array.isArray(dbSuggestions) && dbSuggestions.length > 0) {
           setSuggestions(
             dbSuggestions.map((s) => ({
-              id: s._id || s.id,
+              id: s._id,
+              _id: s._id,
               employeeId: s.employeeId,
+              name: s.name || '',
+              department: s.department || '',
+              type: s.type,
               title: s.title,
               content: s.content,
-              category: s.category,
               status: s.status,
               remark: s.remark || '',
-              date: s.createdAt?.slice(0, 10) || s.applyDate || '',
+              approver: s.approver,
+              approvalDate: formatDateByLang ? formatDateByLang(s.approvalDate) : s.approvalDate,
+              applyDate: s.applyDate || (s.createdAt ? new Date(s.createdAt).toISOString().slice(0, 10) : ''),
+              createdAt: s.createdAt,
+              date: s.applyDate || (s.createdAt ? new Date(s.createdAt).toISOString().slice(0, 10) : ''),
             }))
           );
         }
@@ -89,7 +97,7 @@ const StaffSuggestion = ({
     load();
     const intervalId = setInterval(load, 10 * 60 * 1000); // 10분 polling
     return () => clearInterval(intervalId);
-  }, [showSuggestionMorePopup, currentUser, setSuggestions]);
+  }, [showSuggestionMorePopup, currentUser, setSuggestions, formatDateByLang]);
 
   // applyContent가 빈 값이 되면 textarea 높이 초기화
   useEffect(() => {

@@ -40,8 +40,9 @@ const CommonLogin = ({
 
     // 아이디 + 비밀번호 둘 다 저장된 경우 자동 로그인 시도
     // (수동 로그아웃 직후에는 skipAutoLogin 플래그로 재실행 방지)
+    // (이미 로그인된 상태 - 언어변경 등으로 재마운트된 경우 제외)
     const skipAutoLogin = sessionStorage.getItem('skipAutoLogin');
-    if (savedId && savedPassword && !skipAutoLogin) {
+    if (savedId && savedPassword && !skipAutoLogin && !currentUser) {
       setIsAutoLogging(true);
       handleLogin(
         { preventDefault: () => {} },
