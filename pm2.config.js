@@ -63,6 +63,8 @@ module.exports = {
       // ==================== 재시작 정책 ====================
       max_restarts: 10, // 1분 내 최대 재시작 횟수
       min_uptime: '30s', // 최소 가동시간 (이 시간 내 종료되면 에러로 간주)
+      restart_delay: 3000, // 재시작 전 3초 대기 (포트 해제 대기)
+      kill_timeout: 5000, // 종료 신호 후 5초 대기 (graceful shutdown)
 
       // ==================== 로그 통합 ====================
       merge_logs: true, // 여러 워커의 로그를 하나 파일로 통합
@@ -82,38 +84,6 @@ module.exports = {
       // ==================== 환경 변수 파일 ====================
       // PM2가 .env 파일을 자동으로 로드하지 않으므로 dotenv-cli 또는 수동 설정
       // 추천: server.js에서 dotenv.config() 사용 (현재 구현됨)
-    },
-    {
-      // ==================== React 프론트엔드 프로세스 ====================
-      name: 'bs-hr-frontend',
-      script: './node_modules/@craco/craco/dist/bin/craco.js',
-      args: 'start',
-      description: '부성스틸 AI 인사관리 시스템 React 프론트엔드',
-
-      instances: 1,
-      exec_mode: 'fork',
-
-      env: {
-        NODE_ENV: 'development',
-        PORT: 3000,
-        BROWSER: 'none',
-      },
-
-      error_file: './logs/frontend-error.log',
-      out_file: './logs/frontend-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      time: true,
-      merge_logs: true,
-
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '500M',
-      max_restarts: 5,
-      min_uptime: '60s',
-
-      cwd: './',
-      interpreter: 'node',
-      windowsHide: true, // Windows에서 콘솔 창 숨김
     },
     {
       // ==================== 스케줄러 프로세스 ====================

@@ -237,12 +237,16 @@ app.post('/api/admin/excel-backup/run', async (req, res) => {
   }
 });
 
-// 기본 라우트
-app.get('/', (req, res) =>
-  res.send('부성스틸 AI 인사관리 서버 정상 동작 중 ✅')
-);
+// ================== React 프로덕션 정적 파일 서빙 ==================
+const buildPath = path.join(__dirname, '../build');
+if (require('fs').existsSync(buildPath)) {
+  app.use(express.static(buildPath));
+  console.log('📦 React 빌드 파일 서빙 활성화:', buildPath);
+} else {
+  console.warn('⚠️ build/ 폴더 없음 - npm run build 필요');
+}
 
-// Health check 엔드포인트
+// Health check 엔드포인트 (API 라우트보다 앞에 위치)
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -262,6 +266,13 @@ io.on('connection', (socket) => {
   });
 });
 */
+
+// SPA 라우팅: /api, /uploads 외 모든 경로 → index.html (Express 5.x 호환)
+if (require('fs').existsSync(buildPath)) {
+  app.get('/{*path}', (req, res) => {
+    res.sendFile(path.join(buildPath, 'index.html'));
+  });
+}
 
 // ================== 서버 시작 ==================
 server.listen(PORT, () => {
