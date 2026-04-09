@@ -502,10 +502,14 @@ router.post('/attendance/bulk', async (req, res) => {
   }
 });
 
-// ✅ 연차 내역
-router.get('/leaves', async (_, res) =>
-  res.json(await Leave.find().sort({ requestDate: -1 }))
-);
+// ✅ 연차 내역 (관리자: 전체, 일반직원: employeeId 쿼리 파라미터로 본인 것만)
+// [1차 패치] employeeId 쿼리 파라미터 지원 추가 - 일반직원 payload 축소
+// 보안 주의: employeeId는 프론트에서 전달받으므로 추후 JWT 기반 인증으로 개선 권장
+router.get('/leaves', async (req, res) => {
+  const { employeeId } = req.query;
+  const query = employeeId ? { employeeId } : {};
+  res.json(await Leave.find(query).sort({ requestDate: -1 }));
+});
 
 // ✅ 연차 신청
 router.post('/leaves', async (req, res) => {

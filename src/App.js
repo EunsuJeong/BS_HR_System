@@ -641,176 +641,9 @@ const HRManagementSystem = () => {
   }, []);
 
   // *[1_공통] 직원 및 연차 데이터 DB에서 로드*
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        // 1. 직원 데이터 로드
-        const dbEmployees = await EmployeeAPI.list();
-        if (Array.isArray(dbEmployees) && dbEmployees.length > 0) {
-          const formattedEmployees = dbEmployees.map((emp) => {
-            const baseEmp = {
-              id: emp.employeeId,
-              name: emp.name,
-              password: emp.password || emp.phone?.slice(-4) || '0000',
-              phone: emp.phone,
-              department: emp.department,
-              subDepartment: emp.subDepartment || '',
-              position: emp.position,
-              role: emp.role,
-              joinDate: formatDateToString(emp.joinDate),
-              leaveDate:
-                emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
-                  ? formatDateToString(emp.leaveDate)
-                  : '', // ✅ 퇴사일 조건부 표시
-              workType: emp.workType,
-              payType: emp.salaryType,
-              contractType: emp.contractType || '정규', // 계약형태
-              status: emp.status,
-              address: emp.address,
-              lastLogin: emp.lastLogin, // 마지막 로그인 시각
-              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
-              leaveUsed: emp.leaveUsed,
-              // ✅ 호환성을 위한 매핑 필드
-              usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
-            };
-            // 연차 계산은 나중에 leaveRequests 로드 후 다시 계산
-            return baseEmp;
-          });
-          setEmployees(formattedEmployees);
-          devLog(
-            '✅ [초기 로드] 직원 데이터 로드 완료:',
-            dbEmployees.length,
-            '명'
-          );
-        }
-
-        // 2. 연차 데이터 로드
-        const dbLeaves = await LeaveAPI.list();
-        if (Array.isArray(dbLeaves) && dbLeaves.length > 0) {
-          const formattedLeaves = dbLeaves.map((leave) => ({
-            id: leave._id,
-            employeeId: leave.employeeId,
-            employeeName: leave.employeeName,
-            name: leave.employeeName || leave.name,
-            department: leave.department,
-            leaveType: leave.leaveType,
-            type: leave.leaveType || leave.type,
-            startDate: formatDateByLang(leave.startDate),
-            endDate: formatDateByLang(leave.endDate),
-            days: leave.requestedDays,
-            requestedDays: leave.requestedDays,
-            reason: leave.reason,
-            contact: leave.contact,
-            status: leave.status,
-            requestDate: formatDateByLang(leave.requestDate || leave.createdAt),
-            approvedAt: leave.approvedAt,
-            approver: leave.approver,
-            approverName: leave.approverName,
-            approvedDays: leave.approvedDays,
-            rejectedAt: leave.rejectedAt,
-            rejectedBy: leave.rejectedBy,
-            rejectedByName: leave.rejectedByName,
-            rejectionReason: leave.rejectionReason,
-            startTime: leave.startTime || null,
-            endTime: leave.endTime || null,
-          }));
-          setLeaveRequests(formattedLeaves);
-          devLog(
-            '✅ [초기 로드] 연차 데이터 로드 완료:',
-            dbLeaves.length,
-            '건'
-          );
-        } else {
-          setLeaveRequests([]);
-          devLog('✅ [초기 로드] 연차 데이터 로드 완료: 0건');
-        }
-
-        // 3. 직원 데이터 재계산 (연차 정보 포함)
-        if (Array.isArray(dbEmployees) && dbEmployees.length > 0) {
-          const updatedEmployees = dbEmployees.map((emp) => {
-            const baseEmp = {
-              id: emp.employeeId,
-              name: emp.name,
-              password: emp.password || emp.phone?.slice(-4) || '0000',
-              phone: emp.phone,
-              department: emp.department,
-              subDepartment: emp.subDepartment || '',
-              position: emp.position,
-              role: emp.role,
-              joinDate: formatDateToString(emp.joinDate),
-              leaveDate:
-                emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
-                  ? formatDateToString(emp.leaveDate)
-                  : '', // ✅ 퇴사일 조건부 표시
-              workType: emp.workType,
-              payType: emp.salaryType,
-              contractType: emp.contractType || '정규', // 계약형태
-              status: emp.status,
-              address: emp.address,
-              lastLogin: emp.lastLogin, // 마지막 로그인 시각
-              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
-              leaveUsed: emp.leaveUsed,
-              // ✅ 호환성을 위한 매핑 필드
-              usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
-            };
-            const formattedLeaves = Array.isArray(dbLeaves)
-              ? dbLeaves.map((leave) => ({
-                  id: leave._id,
-                  employeeId: leave.employeeId,
-                  employeeName: leave.employeeName,
-                  name: leave.employeeName || leave.name,
-                  department: leave.department,
-                  leaveType: leave.leaveType,
-                  type: leave.leaveType || leave.type,
-                  startDate: formatDateByLang(leave.startDate),
-                  endDate: formatDateByLang(leave.endDate),
-                  days: leave.requestedDays,
-                  requestedDays: leave.requestedDays,
-                  reason: leave.reason,
-                  contact: leave.contact,
-                  status: leave.status,
-                  requestDate: formatDateByLang(
-                    leave.requestDate || leave.createdAt
-                  ),
-                  approvedAt: leave.approvedAt,
-                  approver: leave.approver,
-                  approverName: leave.approverName,
-                  approvedDays: leave.approvedDays,
-                  rejectedAt: leave.rejectedAt,
-                  rejectedBy: leave.rejectedBy,
-                  rejectedByName: leave.rejectedByName,
-                  rejectionReason: leave.rejectionReason,
-                  startTime: leave.startTime || null,
-                  endTime: leave.endTime || null,
-                }))
-              : [];
-            const annualData = calculateEmployeeAnnualLeaveUtil(
-              baseEmp,
-              formattedLeaves
-            );
-            return {
-              ...baseEmp,
-              leaveYearStart: annualData.annualStart,
-              leaveYearEnd: annualData.annualEnd,
-              totalAnnualLeave: annualData.totalAnnual,
-              usedAnnualLeave: annualData.usedAnnual,
-              remainingAnnualLeave: annualData.remainAnnual,
-            };
-          });
-          setEmployees(updatedEmployees);
-          devLog('✅ [초기 로드] 직원 연차 정보 계산 완료');
-        }
-      } catch (error) {
-        console.error('❌ [초기 로드] 데이터 로드 실패:', error);
-        setEmployees([]);
-        setLeaveRequests([]);
-      } finally {
-        setEmployeesLoading(false);
-      }
-    };
-
-    loadInitialData();
-  }, []);
+  // [1차 패치] loadInitialData 제거 - employees/leaves 로딩은 아래 [currentUser] 기반
+  // loadLeavesFromDB + [leavesLoaded] 기반 loadEmployeesFromDB로 일원화됨
+  // 기존 이 useEffect(deps:[])와 [currentUser] useEffect가 동시에 실행되어 중복 호출 발생
 
   // *[2_관리자 모드] 2.2_직원 관리 - 신규 직원 등록 모달*
   // newEmployee → AdminEmployeeManagement 로컬 state로 이동
@@ -4694,7 +4527,9 @@ const HRManagementSystem = () => {
     const loadLeavesFromDB = async () => {
       try {
         devLog('🔄 DB에서 연차 데이터 로딩 시작...');
-        const dbLeaves = await LeaveAPI.list();
+        // [1차 패치] 일반직원은 본인 것만 조회, 관리자는 전체 조회
+        const isAdmin = currentUser.isAdmin === true || currentUser.role === 'admin';
+        const dbLeaves = await LeaveAPI.list(isAdmin ? null : currentUser.id);
 
         // ✅ 배열 응답 검증
         if (Array.isArray(dbLeaves) && dbLeaves.length > 0) {
@@ -6072,18 +5907,9 @@ const HRManagementSystem = () => {
     executeStaffRefresh();
   }, [currentUser, staffEditing, executeStaffRefresh]);
 
-  // 직원 로그인 시 1회 새로고침
-  React.useEffect(() => {
-    if (!currentUser || currentUser.isAdmin) return;
-    if (sessionStorage.getItem('staffFirstLoad') !== 'true') return;
-    sessionStorage.removeItem('staffFirstLoad');
-    // 언어 설정이 없으면 재로드 후 언어 선택 화면을 다시 표시
-    if (!currentUser.preferredLanguage) {
-      sessionStorage.setItem('needsLanguageSelection', 'true');
-    }
-    console.log('🔄 [직원 로그인 새로고침] 로그인 직후 1회 실행');
-    window.location.reload();
-  }, [currentUser]);
+  // [1차 패치] 직원 로그인 시 1회 새로고침 제거
+  // 언어 선택은 로그인 핸들러(common_common.js)에서 setShowLanguageSelection()으로 직접 처리됨
+  // window.location.reload()가 이중 초기화를 유발하여 초기 로딩 3~4초 지연의 주원인이었음
 
   // *[2_관리자 모드] 관리자 자동 새로고침 (30분 주기, 조건부 연기)*
   const isRefreshingRef = React.useRef(false);   // 중복 실행 방지
