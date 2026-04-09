@@ -75,7 +75,9 @@ router.post('/login', async (req, res) => {
       );
     }
 
-    await employee.save();
+    // [7차 패치] save fire-and-forget — Atlas 쓰기 완료를 기다리지 않고 즉시 응답
+    // lastLogin/appVersion 업데이트는 응답 지연에 영향을 줄 필요 없음
+    employee.save().catch((err) => console.error('❌ [로그인] 직원 정보 저장 실패:', err));
 
     // 비밀번호 제외하고 응답 (id 필드를 employeeId로 매핑)
     const { password: _, ...employeeData } = employee.toObject();
@@ -1215,21 +1217,23 @@ router.post('/analyze-work-type', async (req, res) => {
       updates.push({ employeeId, workType });
     }
 
-    // 4. DB 업데이트
-    let updatedCount = 0;
-    for (const update of updates) {
-      const result = await Employee.findOneAndUpdate(
-        { employeeId: update.employeeId },
-        { workType: update.workType },
-        { new: true }
-      );
-      if (result) {
-        updatedCount++;
-        console.log(
-          `✅ [근무형태 분석] ${update.employeeId}: ${update.workType}`
-        );
-      }
-    }
+    // 4. DB 업데이트 - [5차 패치] 순차 await → Promise.all 병렬화
+    // 이유: 직원 수(N)만큼 sequential DB 쿼리 → MongoDB 연결 풀 점유 → /notices 등 다른 API 응답 지연
+    const updateResults = await Promise.all(
+      updates.map((update) =>
+        Employee.findOneAndUpdate(
+          { employeeId: update.employeeId },
+          { workType: update.workType },
+          { new: true }
+        ).then((result) => {
+          if (result) {
+            console.log(`✅ [근무형태 분석] ${update.employeeId}: ${update.workType}`);
+          }
+          return result;
+        })
+      )
+    );
+    const updatedCount = updateResults.filter(Boolean).length;
 
     console.log(
       `✅ [근무형태 분석] 완료: ${updatedCount}명 업데이트 (전체 ${
