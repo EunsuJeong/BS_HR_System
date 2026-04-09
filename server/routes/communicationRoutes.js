@@ -436,7 +436,7 @@ router.get('/notifications', async (req, res) => {
 
     const notifications = await Notification.find(query).sort({
       createdAt: -1,
-    });
+    }).limit(50); // 최근 50건 — 전체 조회 시 63kB+ → 응답 경량화
     console.log(
       `✅ [Notifications API] 조회 완료: type=${
         notificationType || 'ALL'
