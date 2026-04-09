@@ -4641,57 +4641,62 @@ const HRManagementSystem = () => {
       }
     };
 
-    // 즉시 로드
+    // 즉시 로드 (notices 데이터는 바로 요청)
     loadNoticesFromDB();
 
-    // 공지사항 전용 Socket.io 연결
-    const socket = io(SERVER_URL, {
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      transports: ['websocket', 'polling'],
-    });
+    // [2차 패치] 공지 전용 socket 연결을 notices 첫 로드 이후로 지연
+    // 기존: loadNoticesFromDB()와 io() 동시 실행 → notices API가 socket 핸드셰이크와 경합
+    // 수정: 500ms 지연으로 notices 응답이 먼저 처리된 후 socket 연결
+    let noticeSocket = null;
+    const socketTimer = setTimeout(() => {
+      noticeSocket = io(SERVER_URL, {
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        transports: ['websocket', 'polling'],
+      });
 
-    let noticeSocketConnected = false;
-    socket.on('connect', () => {
-      devLog('🔌 [공지 Socket] 연결됨');
-      if (noticeSocketConnected) {
-        // 재연결: 공지사항 API 1회 재조회
-        devLog('🔄 [공지 Socket] 재연결 - 공지사항 재조회');
+      let noticeSocketConnected = false;
+      noticeSocket.on('connect', () => {
+        devLog('🔌 [공지 Socket] 연결됨');
+        if (noticeSocketConnected) {
+          devLog('🔄 [공지 Socket] 재연결 - 공지사항 재조회');
+          loadNoticesFromDB();
+        }
+        noticeSocketConnected = true;
+      });
+
+      noticeSocket.on('notice-published', () => {
+        devLog('📢 예약 공지사항 자동 게시 - 공지사항 재조회');
         loadNoticesFromDB();
-      }
-      noticeSocketConnected = true;
-    });
+      });
 
-    // 예약 공지사항 자동 게시
-    socket.on('notice-published', () => {
-      devLog('📢 예약 공지사항 자동 게시 - 공지사항 재조회');
-      loadNoticesFromDB();
-    });
+      noticeSocket.on('notice-created', (data) => {
+        devLog(`✨ [공지 Socket] 공지사항 등록됨: ${data.title}`);
+        loadNoticesFromDB();
+      });
 
-    // 공지사항 실시간 업데이트
-    socket.on('notice-created', (data) => {
-      devLog(`✨ [공지 Socket] 공지사항 등록됨: ${data.title}`);
-      loadNoticesFromDB();
-    });
+      noticeSocket.on('notice-updated', (data) => {
+        devLog(`✏️ [공지 Socket] 공지사항 수정됨: ${data.title}`);
+        loadNoticesFromDB();
+      });
 
-    socket.on('notice-updated', (data) => {
-      devLog(`✏️ [공지 Socket] 공지사항 수정됨: ${data.title}`);
-      loadNoticesFromDB();
-    });
+      noticeSocket.on('notice-deleted', (data) => {
+        devLog(`🗑️ [공지 Socket] 공지사항 삭제됨: ${data.noticeId}`);
+        loadNoticesFromDB();
+      });
 
-    socket.on('notice-deleted', (data) => {
-      devLog(`🗑️ [공지 Socket] 공지사항 삭제됨: ${data.noticeId}`);
-      loadNoticesFromDB();
-    });
-
-    socket.on('disconnect', () => {
-      devLog('🔌 [공지 Socket] 연결 해제됨');
-    });
+      noticeSocket.on('disconnect', () => {
+        devLog('🔌 [공지 Socket] 연결 해제됨');
+      });
+    }, 500);
 
     return () => {
-      socket.removeAllListeners();
-      if (socket.connected) {
-        socket.disconnect();
+      clearTimeout(socketTimer);
+      if (noticeSocket) {
+        noticeSocket.removeAllListeners();
+        if (noticeSocket.connected) {
+          noticeSocket.disconnect();
+        }
       }
     };
   }, [currentUser]);
@@ -4762,7 +4767,9 @@ const HRManagementSystem = () => {
       }
     };
 
-    loadSuggestionsFromDB();
+    // [2차 패치] notices 로드가 먼저 HTTP 연결을 점유하도록 200ms 지연
+    const suggestionTimer = setTimeout(() => loadSuggestionsFromDB(), 200);
+    return () => clearTimeout(suggestionTimer);
   }, [currentUser]);
 
   // *[1_공통] 일정 데이터 DB에서 로드*
@@ -4823,7 +4830,9 @@ const HRManagementSystem = () => {
       }
     };
 
-    loadSchedulesFromDB();
+    // [2차 패치] notices 로드보다 후순위로 300ms 지연
+    const scheduleTimer = setTimeout(() => loadSchedulesFromDB(), 300);
+    return () => clearTimeout(scheduleTimer);
   }, []);
 
   // *[2_관리자 모드] 2.1_대시보드 AI 추천 자동 분석*

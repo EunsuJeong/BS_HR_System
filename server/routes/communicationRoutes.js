@@ -158,23 +158,23 @@ router.get('/notices', async (req, res) => {
   try {
     const { includeScheduled } = req.query;
 
-    // 📢 조회 시 즉시 예약 시간이 지난 공지사항을 게시 상태로 업데이트
+    // 📢 [2차 패치] 예약 공지 게시 처리 - 건수 확인 후 존재할 때만 updateMany 실행
+    // 기존: 조회마다 무조건 updateMany → 예약 공지 없어도 쓰기 쿼리 발생
+    // 수정: countDocuments로 먼저 확인 → 0건이면 updateMany 생략 (응답 지연 방지)
     const now = new Date();
-    const updateResult = await Notice.updateMany(
-      {
-        isScheduled: true,
-        scheduledDateTime: { $lte: now },
-        isPublished: false,
-      },
-      {
-        $set: { isPublished: true },
-      }
-    );
-
-    if (updateResult.modifiedCount > 0) {
-      console.log(
-        `📢 조회 시 ${updateResult.modifiedCount}개의 예약 공지사항을 즉시 게시로 변경`
+    const pendingScheduled = await Notice.countDocuments({
+      isScheduled: true,
+      scheduledDateTime: { $lte: now },
+      isPublished: false,
+    });
+    if (pendingScheduled > 0) {
+      const updateResult = await Notice.updateMany(
+        { isScheduled: true, scheduledDateTime: { $lte: now }, isPublished: false },
+        { $set: { isPublished: true } }
       );
+      if (updateResult.modifiedCount > 0) {
+        console.log(`📢 ${updateResult.modifiedCount}개 예약 공지 게시 처리`);
+      }
     }
 
     let query = {};
@@ -195,56 +195,12 @@ router.get('/notices', async (req, res) => {
 
     const notices = await Notice.find(query).sort({ createdAt: -1 });
 
-    // 첨부파일 크기 정보 추가
-    const noticesWithFileSize = notices.map((notice) => {
-      const noticeObj = notice.toObject();
-
-      // attachments에 파일 크기 추가
-      if (noticeObj.attachments && noticeObj.attachments.length > 0) {
-        noticeObj.attachments = noticeObj.attachments.map((att) => {
-          if (att.url && !att.size) {
-            try {
-              const fileName = att.url.split('/').pop();
-              const filePath = path.join(uploadDir, fileName);
-              if (fs.existsSync(filePath)) {
-                const stats = fs.statSync(filePath);
-                return {
-                  ...att,
-                  size: stats.size,
-                };
-              }
-            } catch (err) {
-              console.error('파일 크기 조회 실패:', err);
-            }
-          }
-          return att;
-        });
-      }
-
-      // files 필드도 동일하게 처리
-      if (noticeObj.files && noticeObj.files.length > 0) {
-        noticeObj.files = noticeObj.files.map((file) => {
-          if (file.url && !file.size) {
-            try {
-              const fileName = file.url.split('/').pop();
-              const filePath = path.join(uploadDir, fileName);
-              if (fs.existsSync(filePath)) {
-                const stats = fs.statSync(filePath);
-                return {
-                  ...file,
-                  size: stats.size,
-                };
-              }
-            } catch (err) {
-              console.error('파일 크기 조회 실패:', err);
-            }
-          }
-          return file;
-        });
-      }
-
-      return noticeObj;
-    });
+    // [2차 패치] 요청 시점 동기 파일 I/O 제거
+    // 기존: 각 공지의 attachments/files마다 fs.existsSync() + fs.statSync() 동기 호출
+    //       → Node.js 이벤트 루프 블로킹 (공지 10건 × 첨부 2개 × 2배열 = 40회 동기 I/O)
+    // 수정: DB에 저장된 size 값 그대로 사용, 없으면 null (업로드 시 size 저장 권장)
+    //       첨부파일 표시/다운로드 기능은 url 필드로 동작하므로 기능 영향 없음
+    const noticesWithFileSize = notices.map((notice) => notice.toObject());
 
     console.log(`✅ 공지사항 ${noticesWithFileSize.length}건 조회`);
     res.json(noticesWithFileSize);
