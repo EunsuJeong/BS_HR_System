@@ -187,7 +187,9 @@ router.get('/notices', async (req, res) => {
       console.log('📋 모든 공지사항 조회 (예약 포함)');
     }
 
-    const notices = await Notice.find(query).sort({ createdAt: -1 });
+    const notices = await Notice.find(query)
+      .sort({ createdAt: -1 })
+      .limit(30); // 최근 30건 — 155kB+ 전체 조회 → 응답 경량화
 
     // [2차 패치] 요청 시점 동기 파일 I/O 제거
     // 기존: 각 공지의 attachments/files마다 fs.existsSync() + fs.statSync() 동기 호출
@@ -436,7 +438,7 @@ router.get('/notifications', async (req, res) => {
 
     const notifications = await Notification.find(query).sort({
       createdAt: -1,
-    });
+    }).limit(50); // 최근 50건 — 전체 조회 시 63kB+ → 응답 경량화
     console.log(
       `✅ [Notifications API] 조회 완료: type=${
         notificationType || 'ALL'
