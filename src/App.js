@@ -1451,6 +1451,42 @@ const HRManagementSystem = () => {
     };
     loadNotificationsNow();
 
+    // [6차 패치] 공지도 mount 즉시 실행 — currentUser 기다리지 않음
+    // includeScheduled=false: 일반직원 기준으로 먼저 표시, 관리자 로그인 후 notices useEffect가 덮어씀
+    const loadNoticesNow = async () => {
+      try {
+        devLog('🔄 [DB] 공지사항 즉시 로드 시작...');
+        const dbNotices = await NoticeAPI.list(false);
+        if (Array.isArray(dbNotices) && dbNotices.length > 0) {
+          const formattedNotices = dbNotices.map((notice) => {
+            let attachments = notice.attachments || [];
+            if (attachments.length > 0 && typeof attachments[0] === 'string') {
+              attachments = attachments.map((fileName) => ({ name: fileName, url: '', size: '' }));
+            }
+            return {
+              id: notice._id, _id: notice._id,
+              title: notice.title, content: notice.content,
+              author: notice.author, authorId: notice.authorId,
+              category: notice.category, priority: notice.priority,
+              files: attachments, attachments,
+              date: notice.createdAt ? new Date(notice.createdAt).toISOString().slice(0, 10) : '',
+              createdAt: notice.createdAt, updatedAt: notice.updatedAt,
+              views: notice.views || 0, viewCount: notice.viewCount || 0,
+              viewedBy: notice.viewedBy || [],
+              isImportant: notice.isImportant || false,
+              isScheduled: notice.isScheduled || false,
+              scheduledDateTime: notice.scheduledDateTime,
+            };
+          });
+          setNotices(formattedNotices);
+          devLog(`✅ [DB] 공지사항 즉시 로드 완료: ${formattedNotices.length}건`);
+        }
+      } catch (error) {
+        devLog('❌ [DB] 공지사항 즉시 로드 실패:', error);
+      }
+    };
+    loadNoticesNow();
+
     // 1. 먼저 공휴일 데이터 로드 (초기 로드만)
     const loadData = async () => {
       const currentYear = new Date().getFullYear();
