@@ -156,7 +156,7 @@ router.get('/download/:filename', (req, res) => {
 // ✅ 공지사항 전체 조회 (조회 시 즉시 예약 공지사항 체크 및 게시 처리)
 router.get('/notices', async (req, res) => {
   try {
-    const { includeScheduled } = req.query;
+    const { includeScheduled, limit } = req.query;
 
     // [4차 패치] updateMany fire-and-forget — find() 블로킹 제거
     // 이유: updateMany await가 find() 실행을 막아 공지 응답 지연
@@ -187,7 +187,9 @@ router.get('/notices', async (req, res) => {
       console.log('📋 모든 공지사항 조회 (예약 포함)');
     }
 
-    const notices = await Notice.find(query).sort({ createdAt: -1 }).limit(5); // 최근 5건
+    const noticeQuery = Notice.find(query).sort({ createdAt: -1 });
+    if (limit) noticeQuery.limit(parseInt(limit, 10)); // limit 파라미터 있을 때만 제한
+    const notices = await noticeQuery;
 
     // [2차 패치] 요청 시점 동기 파일 I/O 제거
     // 기존: 각 공지의 attachments/files마다 fs.existsSync() + fs.statSync() 동기 호출

@@ -29,6 +29,7 @@ const StaffNotice = ({
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [noticePage, setNoticePage] = useState(1);
   const noticeScrollRef = useRef(null);
+  const [allNotices, setAllNotices] = useState(null); // 더보기용 전체 목록 (null=미로드)
 
   // 조회수가 이미 증가된 공지사항 ID를 추적 (중복 방지)
   const viewedNoticesRef = useRef(new Set());
@@ -120,9 +121,18 @@ const StaffNotice = ({
             )}
           </div>
           <button
-            onClick={() => {
+            onClick={async () => {
               setNoticePage(1);
               setShowNoticePopup(true);
+              // 더보기 클릭 시 전체 공지 조회 (초기 로드는 limit=5)
+              if (!allNotices) {
+                try {
+                  const all = await NoticeAPI.list(false);
+                  if (Array.isArray(all)) setAllNotices(all);
+                } catch (e) {
+                  setAllNotices(notices); // 실패 시 현재 목록으로 폴백
+                }
+              }
             }}
             className="text-blue-500 text-2xs hover:text-blue-600"
           >
@@ -301,9 +311,9 @@ const StaffNotice = ({
             >
               {!selectedNotice ? (
                 <div>
-                  {/* 공지사항 목록 */}
+                  {/* 공지사항 목록 — 더보기 팝업은 전체 목록 사용 */}
                   <div className="space-y-1">
-                    {notices
+                    {(allNotices || notices)
                       .filter(
                         (notice) => !notice.isScheduled || notice.isPublished
                       )
@@ -362,14 +372,14 @@ const StaffNotice = ({
                     <span className="text-xs text-gray-600">
                       {noticePage} /{' '}
                       {Math.ceil(
-                        notices.filter(
+                        (allNotices || notices).filter(
                           (notice) => !notice.isScheduled || notice.isPublished
                         ).length / NOTICE_PAGE_SIZE
                       )}
                     </span>
                     <button
                       onClick={() => {
-                        const filteredNoticesLength = notices.filter(
+                        const filteredNoticesLength = (allNotices || notices).filter(
                           (notice) => !notice.isScheduled || notice.isPublished
                         ).length;
                         setNoticePage(
@@ -382,7 +392,7 @@ const StaffNotice = ({
                       disabled={
                         noticePage >=
                         Math.ceil(
-                          notices.filter(
+                          (allNotices || notices).filter(
                             (notice) =>
                               !notice.isScheduled || notice.isPublished
                           ).length / NOTICE_PAGE_SIZE
