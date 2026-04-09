@@ -1419,6 +1419,36 @@ const HRManagementSystem = () => {
 
   // *[1_공통] 1.3.8.7_공휴일 및 알림 초기화 useEffect* (초기 로드만 수행, 이후에는 캐시 사용)
   useEffect(() => {
+    // [4차 패치] 알림을 loadHolidayData await 이전에 즉시 실행
+    // 이유: await loadHolidayData()가 완료될 때까지 알림 API가 차단됨
+    const loadNotificationsNow = async () => {
+      try {
+        devLog('🔄 [DB] 알림 즉시 로드 시작...');
+        const notifications = await NotificationAPI.list();
+        if (notifications && Array.isArray(notifications)) {
+          const mappedNotifications = notifications.map((n) => ({ ...n, id: n._id || n.id }));
+          const regularList = mappedNotifications.filter((n) => n.notificationType === '정기');
+          const realtimeList = mappedNotifications.filter((n) => n.notificationType === '실시간');
+          const systemList = mappedNotifications.filter((n) => n.notificationType === '시스템');
+          setRegularNotifications(regularList);
+          setRealtimeNotifications(realtimeList);
+          const allLogs = [...regularList, ...realtimeList, ...systemList].map((n) => ({
+            id: n.id, type: n.notificationType, title: n.title, content: n.content,
+            recipients: n.recipients?.value || '전체직원', repeatType: n.repeatCycle,
+            createdAt: n.createdAt, completedAt: n.completedAt,
+          }));
+          setNotificationLogs(allLogs);
+          devLog(`✅ [DB] 알림 즉시 로드 완료: 정기=${regularList.length}, 실시간=${realtimeList.length}`);
+        }
+      } catch (error) {
+        devLog('❌ [DB] 알림 즉시 로드 실패:', error);
+        setRegularNotifications([]);
+        setRealtimeNotifications([]);
+        setNotificationLogs([]);
+      }
+    };
+    loadNotificationsNow();
+
     // 1. 먼저 공휴일 데이터 로드 (초기 로드만)
     const loadData = async () => {
       const currentYear = new Date().getFullYear();
@@ -1446,161 +1476,125 @@ const HRManagementSystem = () => {
         );
       }
 
-      // 3. DB에서 커스텀 공휴일 로드
-      try {
-        devLog('🔄 [DB] 커스텀 공휴일 로드 중...');
+      // 3~7. 커스텀 공휴일 / 평가 / 알림 / 안전사고 / 근태요약 병렬 로드
+      // 순차 await 체인 제거 → 알림이 다른 API 완료를 기다리지 않음
+      const startYear = currentYear - 1;
+      const endYear = currentYear + 1;
+      devLog('🔄 [DB] 공휴일/평가/알림/안전사고/근태요약 병렬 로드 시작...');
 
-        // 현재 년도 ±1년 범위의 커스텀 공휴일 로드
-        const startYear = currentYear - 1;
-        const endYear = currentYear + 1;
-        const response = await HolidayAPI.getYearsHolidays(startYear, endYear);
+      const [
+        customHolidayResult,
+        evaluationResult,
+        notificationResult,
+        accidentResult,
+        summaryResult,
+      ] = await Promise.allSettled([
+        HolidayAPI.getYearsHolidays(startYear, endYear), // 3
+        EvaluationAPI.list(),                            // 4
+        NotificationAPI.list(),                          // 5
+        SafetyAccidentAPI.list(),                        // 6
+        AttendanceSummaryAPI.list(),                     // 7
+      ]);
 
+      // 3. 커스텀 공휴일
+      if (customHolidayResult.status === 'fulfilled') {
+        const response = customHolidayResult.value;
         if (response.success && response.data) {
-          // 모든 년도의 커스텀 공휴일을 합쳐서 단일 객체로 변환
           const allCustomHolidays = {};
           Object.values(response.data).forEach((yearHolidays) => {
             Object.entries(yearHolidays).forEach(([date, name]) => {
-              // YYYY-MM-DD 형식만 추가 (MM-DD 형식은 제외)
               if (date.includes('-') && date.split('-').length === 3) {
                 allCustomHolidays[date] = name;
               }
             });
           });
-
           setCustomHolidays(allCustomHolidays);
-          devLog(
-            `✅ [DB] 커스텀 공휴일 ${
-              Object.keys(allCustomHolidays).length
-            }건 로드 완료`
-          );
+          devLog(`✅ [DB] 커스텀 공휴일 ${Object.keys(allCustomHolidays).length}건 로드 완료`);
         }
-      } catch (error) {
-        devLog('❌ [DB] 커스텀 공휴일 로드 실패:', error);
-
-        // 폴백: localStorage에서 로드
+      } else {
+        devLog('❌ [DB] 커스텀 공휴일 로드 실패:', customHolidayResult.reason);
         const savedCustomHolidays = localStorage.getItem('customHolidays');
         if (savedCustomHolidays) {
           try {
             const parsed = JSON.parse(savedCustomHolidays);
             setCustomHolidays(parsed);
-            devLog(
-              `💾 [localStorage] 커스텀 공휴일 ${
-                Object.keys(parsed).length
-              }건 로드 (폴백)`
-            );
+            devLog(`💾 [localStorage] 커스텀 공휴일 ${Object.keys(parsed).length}건 로드 (폴백)`);
           } catch (e) {
             devLog('⚠️ localStorage 파싱 실패:', e);
           }
         }
       }
 
-      // 4. DB에서 평가 데이터 로드
-      try {
-        devLog('🔄 [DB] 평가 데이터 로드 중...');
-        const evaluations = await EvaluationAPI.list();
+      // 4. 평가 데이터
+      if (evaluationResult.status === 'fulfilled') {
+        const evaluations = evaluationResult.value;
         if (evaluations && Array.isArray(evaluations)) {
           setEvaluationData(evaluations);
           devLog(`✅ [DB] 평가 데이터 ${evaluations.length}건 로드 완료`);
         }
-      } catch (error) {
-        devLog('❌ [DB] 평가 데이터 로드 실패:', error);
+      } else {
+        devLog('❌ [DB] 평가 데이터 로드 실패:', evaluationResult.reason);
         setEvaluationData([]);
       }
 
-      // 5. DB에서 알림 데이터 로드
-      try {
-        devLog('🔄 [DB] 알림 데이터 로드 중...');
-        const notifications = await NotificationAPI.list();
+      // 5. 알림 데이터
+      if (notificationResult.status === 'fulfilled') {
+        const notifications = notificationResult.value;
         if (notifications && Array.isArray(notifications)) {
-          // MongoDB의 _id를 id로 매핑
           const mappedNotifications = notifications.map((n) => ({
             ...n,
             id: n._id || n.id,
           }));
-
-          // 알림 유형별로 분리
-          const regularList = mappedNotifications.filter(
-            (n) => n.notificationType === '정기'
-          );
-          const realtimeList = mappedNotifications.filter(
-            (n) => n.notificationType === '실시간'
-          );
-          const systemList = mappedNotifications.filter(
-            (n) => n.notificationType === '시스템'
-          );
-
+          const regularList = mappedNotifications.filter((n) => n.notificationType === '정기');
+          const realtimeList = mappedNotifications.filter((n) => n.notificationType === '실시간');
+          const systemList = mappedNotifications.filter((n) => n.notificationType === '시스템');
           setRegularNotifications(regularList);
           setRealtimeNotifications(realtimeList);
-
-          // 알림 로그는 정기 + 실시간 + 시스템 모두 포함
-          const allLogs = [...regularList, ...realtimeList, ...systemList].map(
-            (n) => ({
-              id: n.id,
-              type: n.notificationType,
-              title: n.title,
-              content: n.content,
-              recipients: n.recipients?.value || '전체직원',
-              repeatType: n.repeatCycle,
-              createdAt: n.createdAt,
-              completedAt: n.completedAt,
-            })
-          );
+          const allLogs = [...regularList, ...realtimeList, ...systemList].map((n) => ({
+            id: n.id,
+            type: n.notificationType,
+            title: n.title,
+            content: n.content,
+            recipients: n.recipients?.value || '전체직원',
+            repeatType: n.repeatCycle,
+            createdAt: n.createdAt,
+            completedAt: n.completedAt,
+          }));
           setNotificationLogs(allLogs);
-
-          devLog(
-            `✅ [DB] 알림 로드 완료: 정기=${regularList.length}, 실시간=${realtimeList.length}, 시스템=${systemList.length}, 로그=${allLogs.length}`
-          );
+          devLog(`✅ [DB] 알림 로드 완료: 정기=${regularList.length}, 실시간=${realtimeList.length}, 시스템=${systemList.length}, 로그=${allLogs.length}`);
         }
-      } catch (error) {
-        devLog('❌ [DB] 알림 데이터 로드 실패:', error);
+      } else {
+        devLog('❌ [DB] 알림 데이터 로드 실패:', notificationResult.reason);
         setRegularNotifications([]);
         setRealtimeNotifications([]);
         setNotificationLogs([]);
       }
 
-      // 6. DB에서 안전사고 데이터 로드
-      try {
-        devLog('🔄 [DB] 안전사고 데이터 로드 중...');
-        const accidents = await SafetyAccidentAPI.list();
+      // 6. 안전사고 데이터
+      if (accidentResult.status === 'fulfilled') {
+        const accidents = accidentResult.value;
         if (accidents && Array.isArray(accidents)) {
-          // MongoDB의 _id를 id로 매핑
-          const mappedAccidents = accidents.map((a) => ({
-            ...a,
-            id: a._id || a.id,
-          }));
-
+          const mappedAccidents = accidents.map((a) => ({ ...a, id: a._id || a.id }));
           setSafetyAccidents(mappedAccidents);
-          devLog(
-            `✅ [DB] 안전사고 데이터 ${mappedAccidents.length}건 로드 완료`
-          );
+          devLog(`✅ [DB] 안전사고 데이터 ${mappedAccidents.length}건 로드 완료`);
         } else {
           setSafetyAccidents([]);
         }
-      } catch (error) {
-        console.error('❌ [DB] 안전사고 데이터 로드 실패:', error);
-        devLog('❌ [DB] 안전사고 데이터 로드 실패:', error);
+      } else {
+        console.error('❌ [DB] 안전사고 데이터 로드 실패:', accidentResult.reason);
         setSafetyAccidents([]);
       }
 
-      // 7. DB에서 근태 요약 데이터 로드
-      try {
-        devLog('🔄 [DB] 근태 요약 데이터 로드 중...');
-        const summaries = await AttendanceSummaryAPI.list();
-
+      // 7. 근태 요약 데이터
+      if (summaryResult.status === 'fulfilled') {
+        const summaries = summaryResult.value;
         if (summaries && Array.isArray(summaries)) {
-          const mappedSummaries = summaries.map((s) => ({
-            ...s,
-            id: s._id || s.id,
-          }));
-
+          const mappedSummaries = summaries.map((s) => ({ ...s, id: s._id || s.id }));
           setAttendanceSummaries(mappedSummaries);
-          devLog(
-            `✅ [DB] 근태 요약 데이터 ${mappedSummaries.length}건 로드 완료`
-          );
+          devLog(`✅ [DB] 근태 요약 데이터 ${mappedSummaries.length}건 로드 완료`);
         }
-      } catch (error) {
-        console.error('❌ [DB] 근태 요약 데이터 로드 실패:', error);
-        devLog('❌ [DB] 근태 요약 데이터 로드 실패:', error);
+      } else {
+        console.error('❌ [DB] 근태 요약 데이터 로드 실패:', summaryResult.reason);
         setAttendanceSummaries([]);
       }
 
@@ -4585,6 +4579,9 @@ const HRManagementSystem = () => {
 
   // *[1_공통] 공지사항 데이터 DB에서 로드 및 Socket.io 실시간 업데이트*
   React.useEffect(() => {
+    // 로그인 전(currentUser=null)에는 실행하지 않음 - mount 시 불필요한 선행 호출 방지
+    if (!currentUser) return;
+
     const loadNoticesFromDB = async () => {
       try {
         devLog('🔄 DB에서 공지사항 데이터 로딩 시작...');

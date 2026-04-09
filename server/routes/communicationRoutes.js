@@ -158,17 +158,18 @@ router.get('/notices', async (req, res) => {
   try {
     const { includeScheduled } = req.query;
 
-    // [3차 패치] countDocuments 롤백 → 직접 updateMany (2차 패치 회귀 수정)
-    // 이유: countDocuments 0건일 때도 roundtrip이 발생해 오히려 느려짐
-    //       updateMany는 매칭 없으면 즉시 반환되므로 추가 쿼리 불필요
+    // [4차 패치] updateMany fire-and-forget — find() 블로킹 제거
+    // 이유: updateMany await가 find() 실행을 막아 공지 응답 지연
+    //       예약 공지 게시는 백그라운드 처리, 다음 조회 또는 소켓 이벤트로 반영
     const now = new Date();
-    const updateResult = await Notice.updateMany(
+    Notice.updateMany(
       { isScheduled: true, scheduledDateTime: { $lte: now }, isPublished: false },
       { $set: { isPublished: true } }
-    );
-    if (updateResult.modifiedCount > 0) {
-      console.log(`📢 ${updateResult.modifiedCount}개 예약 공지 게시 처리`);
-    }
+    ).then((result) => {
+      if (result.modifiedCount > 0) {
+        console.log(`📢 ${result.modifiedCount}개 예약 공지 게시 처리`);
+      }
+    }).catch((err) => console.error('❌ 예약 공지 게시 오류:', err));
 
     let query = {};
 
