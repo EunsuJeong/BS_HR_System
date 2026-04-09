@@ -165,14 +165,6 @@ mongoose
   .then(async () => {
     console.log('✅ MongoDB 연결 성공');
 
-    // [7차 패치] Atlas 콜드 커넥션 방지 — 4분마다 ping으로 연결 웜업 유지
-    // Atlas idle timeout 5분 전에 선점하여 첫 요청 지연(3~5s) 제거
-    setInterval(async () => {
-      try {
-        await mongoose.connection.db.admin().ping();
-      } catch (e) {}
-    }, 4 * 60 * 1000);
-
     // 서버 시작 시 즉시 체크
     await checkAndPublishScheduledNotices();
     console.log('📢 서버 시작: 예약 공지사항 초기 체크 완료');

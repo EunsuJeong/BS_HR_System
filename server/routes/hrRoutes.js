@@ -75,9 +75,7 @@ router.post('/login', async (req, res) => {
       );
     }
 
-    // [7차 패치] save fire-and-forget — Atlas 쓰기 완료를 기다리지 않고 즉시 응답
-    // lastLogin/appVersion 업데이트는 응답 지연에 영향을 줄 필요 없음
-    employee.save().catch((err) => console.error('❌ [로그인] 직원 정보 저장 실패:', err));
+    await employee.save();
 
     // 비밀번호 제외하고 응답 (id 필드를 employeeId로 매핑)
     const { password: _, ...employeeData } = employee.toObject();
