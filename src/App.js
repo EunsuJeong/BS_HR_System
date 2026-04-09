@@ -3209,14 +3209,15 @@ const HRManagementSystem = () => {
       } catch (err) {
         console.error('❌ [직원 탭 재활성화] 공지 재조회 실패:', err);
       }
-      try {
-        const regularResponse = await NotificationAPI.list('정기');
-        if (regularResponse?.length > 0) setRegularNotifications(regularResponse);
-        const realtimeResponse = await NotificationAPI.list('실시간');
-        if (realtimeResponse?.length > 0) setRealtimeNotifications(realtimeResponse);
-      } catch (err) {
-        console.error('❌ [직원 탭 재활성화] 알림 재조회 실패:', err);
-      }
+      // [3차 패치] 공지와 알림을 병렬 조회 (serial await 제거)
+      const [regularResult, realtimeResult] = await Promise.allSettled([
+        NotificationAPI.list('정기'),
+        NotificationAPI.list('실시간'),
+      ]);
+      if (regularResult.status === 'fulfilled' && regularResult.value?.length > 0)
+        setRegularNotifications(regularResult.value);
+      if (realtimeResult.status === 'fulfilled' && realtimeResult.value?.length > 0)
+        setRealtimeNotifications(realtimeResult.value);
     };
 
     document.addEventListener('visibilitychange', handleStaffVisibilityChange);
@@ -4641,65 +4642,58 @@ const HRManagementSystem = () => {
       }
     };
 
-    // 즉시 로드 (notices 데이터는 바로 요청)
+    // 즉시 로드
     loadNoticesFromDB();
 
-    // [2차 패치] 공지 전용 socket 연결을 notices 첫 로드 이후로 지연
-    // 기존: loadNoticesFromDB()와 io() 동시 실행 → notices API가 socket 핸드셰이크와 경합
-    // 수정: 500ms 지연으로 notices 응답이 먼저 처리된 후 socket 연결
-    let noticeSocket = null;
-    const socketTimer = setTimeout(() => {
-      noticeSocket = io(SERVER_URL, {
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        transports: ['websocket', 'polling'],
-      });
+    // [3차 패치] socket 즉시 연결 (2차 패치의 500ms 지연 롤백)
+    // 이유: currentUser가 2번 변경될 때 500ms timer가 clearTimeout되어 socket이 아예 안 붙는 문제
+    const noticeSocket = io(SERVER_URL, {
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      transports: ['websocket', 'polling'],
+    });
 
-      let noticeSocketConnected = false;
-      noticeSocket.on('connect', () => {
-        devLog('🔌 [공지 Socket] 연결됨');
-        if (noticeSocketConnected) {
-          devLog('🔄 [공지 Socket] 재연결 - 공지사항 재조회');
-          loadNoticesFromDB();
-        }
-        noticeSocketConnected = true;
-      });
-
-      noticeSocket.on('notice-published', () => {
-        devLog('📢 예약 공지사항 자동 게시 - 공지사항 재조회');
+    let noticeSocketConnected = false;
+    noticeSocket.on('connect', () => {
+      devLog('🔌 [공지 Socket] 연결됨');
+      if (noticeSocketConnected) {
+        devLog('🔄 [공지 Socket] 재연결 - 공지사항 재조회');
         loadNoticesFromDB();
-      });
+      }
+      noticeSocketConnected = true;
+    });
 
-      noticeSocket.on('notice-created', (data) => {
-        devLog(`✨ [공지 Socket] 공지사항 등록됨: ${data.title}`);
-        loadNoticesFromDB();
-      });
+    noticeSocket.on('notice-published', () => {
+      devLog('📢 예약 공지사항 자동 게시 - 공지사항 재조회');
+      loadNoticesFromDB();
+    });
 
-      noticeSocket.on('notice-updated', (data) => {
-        devLog(`✏️ [공지 Socket] 공지사항 수정됨: ${data.title}`);
-        loadNoticesFromDB();
-      });
+    noticeSocket.on('notice-created', (data) => {
+      devLog(`✨ [공지 Socket] 공지사항 등록됨: ${data.title}`);
+      loadNoticesFromDB();
+    });
 
-      noticeSocket.on('notice-deleted', (data) => {
-        devLog(`🗑️ [공지 Socket] 공지사항 삭제됨: ${data.noticeId}`);
-        loadNoticesFromDB();
-      });
+    noticeSocket.on('notice-updated', (data) => {
+      devLog(`✏️ [공지 Socket] 공지사항 수정됨: ${data.title}`);
+      loadNoticesFromDB();
+    });
 
-      noticeSocket.on('disconnect', () => {
-        devLog('🔌 [공지 Socket] 연결 해제됨');
-      });
-    }, 500);
+    noticeSocket.on('notice-deleted', (data) => {
+      devLog(`🗑️ [공지 Socket] 공지사항 삭제됨: ${data.noticeId}`);
+      loadNoticesFromDB();
+    });
+
+    noticeSocket.on('disconnect', () => {
+      devLog('🔌 [공지 Socket] 연결 해제됨');
+    });
 
     return () => {
-      clearTimeout(socketTimer);
-      if (noticeSocket) {
-        noticeSocket.removeAllListeners();
-        if (noticeSocket.connected) {
-          noticeSocket.disconnect();
-        }
+      noticeSocket.removeAllListeners();
+      if (noticeSocket.connected) {
+        noticeSocket.disconnect();
       }
     };
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
   // *[1_공통] 건의사항 데이터 DB에서 로드*
   React.useEffect(() => {

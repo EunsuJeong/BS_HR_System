@@ -158,23 +158,16 @@ router.get('/notices', async (req, res) => {
   try {
     const { includeScheduled } = req.query;
 
-    // 📢 [2차 패치] 예약 공지 게시 처리 - 건수 확인 후 존재할 때만 updateMany 실행
-    // 기존: 조회마다 무조건 updateMany → 예약 공지 없어도 쓰기 쿼리 발생
-    // 수정: countDocuments로 먼저 확인 → 0건이면 updateMany 생략 (응답 지연 방지)
+    // [3차 패치] countDocuments 롤백 → 직접 updateMany (2차 패치 회귀 수정)
+    // 이유: countDocuments 0건일 때도 roundtrip이 발생해 오히려 느려짐
+    //       updateMany는 매칭 없으면 즉시 반환되므로 추가 쿼리 불필요
     const now = new Date();
-    const pendingScheduled = await Notice.countDocuments({
-      isScheduled: true,
-      scheduledDateTime: { $lte: now },
-      isPublished: false,
-    });
-    if (pendingScheduled > 0) {
-      const updateResult = await Notice.updateMany(
-        { isScheduled: true, scheduledDateTime: { $lte: now }, isPublished: false },
-        { $set: { isPublished: true } }
-      );
-      if (updateResult.modifiedCount > 0) {
-        console.log(`📢 ${updateResult.modifiedCount}개 예약 공지 게시 처리`);
-      }
+    const updateResult = await Notice.updateMany(
+      { isScheduled: true, scheduledDateTime: { $lte: now }, isPublished: false },
+      { $set: { isPublished: true } }
+    );
+    if (updateResult.modifiedCount > 0) {
+      console.log(`📢 ${updateResult.modifiedCount}개 예약 공지 게시 처리`);
     }
 
     let query = {};
