@@ -1456,7 +1456,7 @@ const HRManagementSystem = () => {
     const loadNoticesNow = async () => {
       try {
         devLog('🔄 [DB] 공지사항 즉시 로드 시작...');
-        const dbNotices = await NoticeAPI.list(false, 5); // 초기 표시용 최근 5건만
+        const dbNotices = await NoticeAPI.list(false);
         if (Array.isArray(dbNotices) && dbNotices.length > 0) {
           const formattedNotices = dbNotices.map((notice) => {
             let attachments = notice.attachments || [];

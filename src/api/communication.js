@@ -1,15 +1,12 @@
 import api from './client';
 
 export const NoticeAPI = {
-  // 전체 공지사항 조회 (limit 없으면 전체)
-  list: async (includeScheduled = false, limit = null) => {
-    const params = new URLSearchParams({ includeScheduled });
-    if (limit) params.append('limit', limit);
-    const url = '/communication/notices?' + params.toString();
+  // 전체 공지사항 조회
+  list: async (includeScheduled = false) => {
     try {
-      return await api.getQuick(url);
+      return await api.getQuick('/communication/notices?includeScheduled=' + includeScheduled);
     } catch (e) {
-      return await api.getQuick(url);
+      return await api.getQuick('/communication/notices?includeScheduled=' + includeScheduled);
     }
   },
 
