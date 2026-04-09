@@ -2,7 +2,7 @@
 // 로컬 서버 배포용 (FBD_One 브랜치)
 // 프로덕션 환경: bssystem.iptime.org:5000 (로컬 PC 서버)
 // 개발 환경: localhost:5000 (로컬 개발)
-const PRODUCTION_API_URL = 'http://bssystem.iptime.org:5000/api';
+const PRODUCTION_API_URL = '/api'; // 백엔드와 동일 서버 서빙 → 상대경로 사용
 const BASE = process.env.REACT_APP_API_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? PRODUCTION_API_URL : 'http://localhost:5000/api');
 

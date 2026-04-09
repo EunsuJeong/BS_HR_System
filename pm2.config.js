@@ -117,17 +117,4 @@ module.exports = {
       windowsHide: true, // Windows에서 콘솔 창 숨김
     },
   ],
-
-  // ==================== PM2 전역 설정 ====================
-  deploy: {
-    // 수동 배포 (Git 기반 배포 필요 시 설정)
-    production: {
-      user: 'node',
-      host: 'your-server-ip',
-      ref: 'origin/main',
-      repo: 'https://github.com/EunsuJeong/BS_HR_System.git',
-      path: '/home/node/bs-hr-system',
-      'post-deploy': 'npm install && pm2 restart bs-hr-backend',
-    },
-  },
 };
