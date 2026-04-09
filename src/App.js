@@ -1421,85 +1421,68 @@ const HRManagementSystem = () => {
 
   // *[1_공통] 1.3.8.7_공휴일 및 알림 초기화 useEffect* (초기 로드만 수행, 이후에는 캐시 사용)
   useEffect(() => {
-    // [8차 패치] client.js 완전 우회 — fetch() 직접 사용
-    // 이유: api.getQuick()은 activeControllers에 등록되어 abortAll() 시 abort됨
-    //       직접 fetch()는 activeControllers/pendingRequests와 무관 → 절대 abort되지 않음
-
+    // [4차 패치] 알림을 loadHolidayData await 이전에 즉시 실행
+    // 이유: await loadHolidayData()가 완료될 때까지 알림 API가 차단됨
     const loadNotificationsNow = async () => {
-      const url = `${API_BASE_URL}/communication/notifications`;
-      let data;
       try {
-        const res = await fetch(url);
-        data = await res.json();
-      } catch (e) {
-        try {
-          const res = await fetch(url);  // 즉시 재시도 (백오프 없음)
-          data = await res.json();
-        } catch (e2) {
-          devLog('❌ [DB] 알림 즉시 로드 실패:', e2);
-          setRegularNotifications([]);
-          setRealtimeNotifications([]);
-          setNotificationLogs([]);
-          return;
+        devLog('🔄 [DB] 알림 즉시 로드 시작...');
+        const notifications = await NotificationAPI.list();
+        if (notifications && Array.isArray(notifications)) {
+          const mappedNotifications = notifications.map((n) => ({ ...n, id: n._id || n.id }));
+          const regularList = mappedNotifications.filter((n) => n.notificationType === '정기');
+          const realtimeList = mappedNotifications.filter((n) => n.notificationType === '실시간');
+          const systemList = mappedNotifications.filter((n) => n.notificationType === '시스템');
+          setRegularNotifications(regularList);
+          setRealtimeNotifications(realtimeList);
+          const allLogs = [...regularList, ...realtimeList, ...systemList].map((n) => ({
+            id: n.id, type: n.notificationType, title: n.title, content: n.content,
+            recipients: n.recipients?.value || '전체직원', repeatType: n.repeatCycle,
+            createdAt: n.createdAt, completedAt: n.completedAt,
+          }));
+          setNotificationLogs(allLogs);
+          devLog(`✅ [DB] 알림 즉시 로드 완료: 정기=${regularList.length}, 실시간=${realtimeList.length}`);
         }
-      }
-      if (data && Array.isArray(data)) {
-        const mappedNotifications = data.map((n) => ({ ...n, id: n._id || n.id }));
-        const regularList = mappedNotifications.filter((n) => n.notificationType === '정기');
-        const realtimeList = mappedNotifications.filter((n) => n.notificationType === '실시간');
-        const systemList = mappedNotifications.filter((n) => n.notificationType === '시스템');
-        setRegularNotifications(regularList);
-        setRealtimeNotifications(realtimeList);
-        const allLogs = [...regularList, ...realtimeList, ...systemList].map((n) => ({
-          id: n.id, type: n.notificationType, title: n.title, content: n.content,
-          recipients: n.recipients?.value || '전체직원', repeatType: n.repeatCycle,
-          createdAt: n.createdAt, completedAt: n.completedAt,
-        }));
-        setNotificationLogs(allLogs);
-        devLog(`✅ [DB] 알림 즉시 로드 완료: 정기=${regularList.length}, 실시간=${realtimeList.length}`);
+      } catch (error) {
+        devLog('❌ [DB] 알림 즉시 로드 실패:', error);
+        setRegularNotifications([]);
+        setRealtimeNotifications([]);
+        setNotificationLogs([]);
       }
     };
     loadNotificationsNow();
 
-    // [8차 패치] 공지도 fetch() 직접 사용 — abortAll() 완전 독립
+    // [6차 패치] 공지도 mount 즉시 실행 — currentUser 기다리지 않음
+    // includeScheduled=false: 일반직원 기준으로 먼저 표시, 관리자 로그인 후 notices useEffect가 덮어씀
     const loadNoticesNow = async () => {
-      const url = `${API_BASE_URL}/communication/notices?includeScheduled=false`;
-      let data;
       try {
-        const res = await fetch(url);
-        data = await res.json();
-      } catch (e) {
-        try {
-          const res = await fetch(url);  // 즉시 재시도 (백오프 없음)
-          data = await res.json();
-        } catch (e2) {
-          devLog('❌ [DB] 공지사항 즉시 로드 실패:', e2);
-          return;
+        devLog('🔄 [DB] 공지사항 즉시 로드 시작...');
+        const dbNotices = await NoticeAPI.list(false);
+        if (Array.isArray(dbNotices) && dbNotices.length > 0) {
+          const formattedNotices = dbNotices.map((notice) => {
+            let attachments = notice.attachments || [];
+            if (attachments.length > 0 && typeof attachments[0] === 'string') {
+              attachments = attachments.map((fileName) => ({ name: fileName, url: '', size: '' }));
+            }
+            return {
+              id: notice._id, _id: notice._id,
+              title: notice.title, content: notice.content,
+              author: notice.author, authorId: notice.authorId,
+              category: notice.category, priority: notice.priority,
+              files: attachments, attachments,
+              date: notice.createdAt ? new Date(notice.createdAt).toISOString().slice(0, 10) : '',
+              createdAt: notice.createdAt, updatedAt: notice.updatedAt,
+              views: notice.views || 0, viewCount: notice.viewCount || 0,
+              viewedBy: notice.viewedBy || [],
+              isImportant: notice.isImportant || false,
+              isScheduled: notice.isScheduled || false,
+              scheduledDateTime: notice.scheduledDateTime,
+            };
+          });
+          setNotices(formattedNotices);
+          devLog(`✅ [DB] 공지사항 즉시 로드 완료: ${formattedNotices.length}건`);
         }
-      }
-      if (Array.isArray(data) && data.length > 0) {
-        const formattedNotices = data.map((notice) => {
-          let attachments = notice.attachments || [];
-          if (attachments.length > 0 && typeof attachments[0] === 'string') {
-            attachments = attachments.map((fileName) => ({ name: fileName, url: '', size: '' }));
-          }
-          return {
-            id: notice._id, _id: notice._id,
-            title: notice.title, content: notice.content,
-            author: notice.author, authorId: notice.authorId,
-            category: notice.category, priority: notice.priority,
-            files: attachments, attachments,
-            date: notice.createdAt ? new Date(notice.createdAt).toISOString().slice(0, 10) : '',
-            createdAt: notice.createdAt, updatedAt: notice.updatedAt,
-            views: notice.views || 0, viewCount: notice.viewCount || 0,
-            viewedBy: notice.viewedBy || [],
-            isImportant: notice.isImportant || false,
-            isScheduled: notice.isScheduled || false,
-            scheduledDateTime: notice.scheduledDateTime,
-          };
-        });
-        setNotices(formattedNotices);
-        devLog(`✅ [DB] 공지사항 즉시 로드 완료: ${formattedNotices.length}건`);
+      } catch (error) {
+        devLog('❌ [DB] 공지사항 즉시 로드 실패:', error);
       }
     };
     loadNoticesNow();
