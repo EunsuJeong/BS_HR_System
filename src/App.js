@@ -469,7 +469,8 @@ const HRManagementSystem = () => {
       }
     };
 
-    initializeHolidaySystem();
+    // [5차 패치] 300ms 지연 — 공지/알림이 먼저 HTTP 슬롯 확보
+    const holidayInitTimer = setTimeout(() => initializeHolidaySystem(), 300);
 
     // 자정 자동 업데이트 이벤트 리스너 등록
     const handleHolidayUpdate = async (event) => {
@@ -490,6 +491,7 @@ const HRManagementSystem = () => {
     window.addEventListener('holidayDataUpdated', handleHolidayUpdate);
 
     return () => {
+      clearTimeout(holidayInitTimer);
       holidayService.stopPeriodicUpdate();
       window.removeEventListener('holidayDataUpdated', handleHolidayUpdate);
     };
@@ -1480,20 +1482,19 @@ const HRManagementSystem = () => {
       // 순차 await 체인 제거 → 알림이 다른 API 완료를 기다리지 않음
       const startYear = currentYear - 1;
       const endYear = currentYear + 1;
-      devLog('🔄 [DB] 공휴일/평가/알림/안전사고/근태요약 병렬 로드 시작...');
+      // [5차 패치] NotificationAPI 제거 — loadNotificationsNow()에서 이미 즉시 처리
+      devLog('🔄 [DB] 공휴일/평가/안전사고/근태요약 병렬 로드 시작...');
 
       const [
         customHolidayResult,
         evaluationResult,
-        notificationResult,
         accidentResult,
         summaryResult,
       ] = await Promise.allSettled([
         HolidayAPI.getYearsHolidays(startYear, endYear), // 3
         EvaluationAPI.list(),                            // 4
-        NotificationAPI.list(),                          // 5
-        SafetyAccidentAPI.list(),                        // 6
-        AttendanceSummaryAPI.list(),                     // 7
+        SafetyAccidentAPI.list(),                        // 5
+        AttendanceSummaryAPI.list(),                     // 6
       ]);
 
       // 3. 커스텀 공휴일
@@ -1537,40 +1538,7 @@ const HRManagementSystem = () => {
         setEvaluationData([]);
       }
 
-      // 5. 알림 데이터
-      if (notificationResult.status === 'fulfilled') {
-        const notifications = notificationResult.value;
-        if (notifications && Array.isArray(notifications)) {
-          const mappedNotifications = notifications.map((n) => ({
-            ...n,
-            id: n._id || n.id,
-          }));
-          const regularList = mappedNotifications.filter((n) => n.notificationType === '정기');
-          const realtimeList = mappedNotifications.filter((n) => n.notificationType === '실시간');
-          const systemList = mappedNotifications.filter((n) => n.notificationType === '시스템');
-          setRegularNotifications(regularList);
-          setRealtimeNotifications(realtimeList);
-          const allLogs = [...regularList, ...realtimeList, ...systemList].map((n) => ({
-            id: n.id,
-            type: n.notificationType,
-            title: n.title,
-            content: n.content,
-            recipients: n.recipients?.value || '전체직원',
-            repeatType: n.repeatCycle,
-            createdAt: n.createdAt,
-            completedAt: n.completedAt,
-          }));
-          setNotificationLogs(allLogs);
-          devLog(`✅ [DB] 알림 로드 완료: 정기=${regularList.length}, 실시간=${realtimeList.length}, 시스템=${systemList.length}, 로그=${allLogs.length}`);
-        }
-      } else {
-        devLog('❌ [DB] 알림 데이터 로드 실패:', notificationResult.reason);
-        setRegularNotifications([]);
-        setRealtimeNotifications([]);
-        setNotificationLogs([]);
-      }
-
-      // 6. 안전사고 데이터
+      // 5. 안전사고 데이터 (알림은 loadNotificationsNow에서 처리됨)
       if (accidentResult.status === 'fulfilled') {
         const accidents = accidentResult.value;
         if (accidents && Array.isArray(accidents)) {
@@ -1602,13 +1570,17 @@ const HRManagementSystem = () => {
       cleanupExpiredNotifications();
     };
 
-    loadData();
+    // [5차 패치] 200ms 지연 — 알림(loadNotificationsNow)이 먼저 HTTP 슬롯 확보
+    const loadDataTimer = setTimeout(() => loadData(), 200);
 
     const cleanupInterval = setInterval(() => {
       cleanupExpiredNotifications();
     }, 6 * 60 * 60 * 1000);
 
-    return () => clearInterval(cleanupInterval);
+    return () => {
+      clearTimeout(loadDataTimer);
+      clearInterval(cleanupInterval);
+    };
   }, []); // currentYear 의존성 제거 - 초기 로드만 수행
 
   // *[1_공통] 1.3.8.8_만료 알림 초기 정리 useEffect*
@@ -3216,7 +3188,7 @@ const HRManagementSystem = () => {
 
     document.addEventListener('visibilitychange', handleStaffVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleStaffVisibilityChange);
-  }, [currentUser, setNotices, setRegularNotifications, setRealtimeNotifications]);
+  }, [currentUser?.id, setNotices, setRegularNotifications, setRealtimeNotifications]); // [4차 패치] [currentUser] → [currentUser?.id]
 
   // *[1_공통] 전역 Socket.io 실시간 업데이트*
   React.useEffect(() => {
@@ -4176,7 +4148,7 @@ const HRManagementSystem = () => {
         socket.disconnect();
       }
     };
-  }, [currentUser]);
+  }, [currentUser?.id]); // [4차 패치] [currentUser] → [currentUser?.id]: employee sync 시 소켓 재생성 방지
 
   // *[1_공통] 언어 및 다국어*
   const { handleLanguageSelect, getText, getLeaveTypeText } = useLanguage({
@@ -4575,7 +4547,7 @@ const HRManagementSystem = () => {
     };
 
     loadLeavesFromDB();
-  }, [currentUser]);
+  }, [currentUser?.id]); // [4차 패치] [currentUser] → [currentUser?.id]: 루프 차단 (employee sync 시 재실행 방지)
 
   // *[1_공통] 공지사항 데이터 DB에서 로드 및 Socket.io 실시간 업데이트*
   React.useEffect(() => {
@@ -4761,7 +4733,7 @@ const HRManagementSystem = () => {
     // [2차 패치] notices 로드가 먼저 HTTP 연결을 점유하도록 200ms 지연
     const suggestionTimer = setTimeout(() => loadSuggestionsFromDB(), 200);
     return () => clearTimeout(suggestionTimer);
-  }, [currentUser]);
+  }, [currentUser?.id]); // [4차 패치] [currentUser] → [currentUser?.id]: 루프 재실행 방지
 
   // *[1_공통] 일정 데이터 DB에서 로드*
   React.useEffect(() => {
@@ -4894,7 +4866,7 @@ const HRManagementSystem = () => {
     };
 
     loadAiHistory();
-  }, [currentUser]);
+  }, [currentUser?.id]); // [4차 패치] [currentUser] → [currentUser?.id]: 루프 재실행 방지
 
   // *[2_관리자 모드] 2.1_대시보드 수동 새로고침 함수*
   const refreshDashboardData = React.useCallback(async () => {

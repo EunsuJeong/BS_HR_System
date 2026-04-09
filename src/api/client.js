@@ -32,7 +32,7 @@ async function fetchWithRetry(url, init, retries = 3, timeout = 30000) {
   }
 }
 
-async function request(path, options = {}) {
+async function request(path, options = {}, retries = 3) {
   const url = path.startsWith('http') ? path : `${BASE}${path}`;
   const method = (options.method || 'GET').toUpperCase();
   const headers = {
@@ -46,7 +46,7 @@ async function request(path, options = {}) {
     if (pendingRequests.has(url)) {
       return pendingRequests.get(url);
     }
-    const promise = fetchWithRetry(url, init)
+    const promise = fetchWithRetry(url, init, retries)
       .then(async (res) => {
         const ct = res.headers.get('content-type') || '';
         const data = ct.includes('application/json') ? await res.json() : await res.text();
@@ -65,7 +65,7 @@ async function request(path, options = {}) {
 
   let res;
   try {
-    res = await fetchWithRetry(url, init);
+    res = await fetchWithRetry(url, init, retries);
   } catch (err) {
     // Network error
     const error = new Error('서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
@@ -97,6 +97,7 @@ async function request(path, options = {}) {
 
 export const api = {
   get: (path) => request(path),
+  getQuick: (path) => request(path, {}, 1), // 재시도 없음 — 공지/알림 초기 로드 전용
   post: (path, body) =>
     request(path, { method: 'POST', body: JSON.stringify(body) }),
   put: (path, body) =>

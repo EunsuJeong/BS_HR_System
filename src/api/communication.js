@@ -3,7 +3,7 @@ import api from './client';
 export const NoticeAPI = {
   // 전체 공지사항 조회
   list: async (includeScheduled = false) =>
-    api.get('/communication/notices?includeScheduled=' + includeScheduled),
+    api.getQuick('/communication/notices?includeScheduled=' + includeScheduled),
 
   // 공지사항 등록
   create: async (noticeData) => api.post('/communication/notices', noticeData),
@@ -100,7 +100,7 @@ export const NotificationAPI = {
     const params = notificationType
       ? `?notificationType=${notificationType}`
       : '';
-    return api.get('/communication/notifications' + params);
+    return api.getQuick('/communication/notifications' + params);
   },
 
   // 알림 등록 (정기/실시간)
