@@ -61,7 +61,7 @@ export const getAttendanceDotColor = (status) => {
 
   if (status === '출근') return 'bg-green-400';
 
-  if (['지각', '조퇴', '지각/조퇴', '결근'].includes(status))
+  if (['지각', '조퇴', '지각/조퇴', '결근', '외출'].includes(status))
     return 'bg-red-500';
 
   if (

@@ -335,7 +335,7 @@ const StaffScheduleAttendance = ({
                   );
 
                   // 공휴일 처리: 출근 시 초록, 미출근 시 회색
-                  const holidayAttended = ['출근', '지각', '조퇴', '기타', '근무중'].includes(attStatus);
+                  const holidayAttended = ['출근', '지각', '조퇴', '외출', '기타', '근무중'].includes(attStatus);
                   const dotColor = isHoliday
                     ? (holidayAttended ? 'bg-green-400' : 'bg-gray-400')
                     : getAttendanceDotColor(attStatus);
@@ -698,53 +698,37 @@ const StaffScheduleAttendance = ({
                       const isHoliday = isSystemHoliday || isCustomHoliday;
 
                       // 출결상태 텍스트 결정
-                      let statusText;
-                      const leaveTypeForStatus =
-                        selectedDateLeave?.type || selectedDateLeave?.leaveType;
-                      if (selectedDateLeave && leaveTypeForStatus !== '기타') {
-                        statusText = leaveTypeForStatus;
-                      } else if (leaveTypeForStatus === '기타') {
-                        // 기타는 '출근'으로 표시
-                        statusText = '출근';
-                      } else if (
-                        !selectedDateAttendance?.checkIn &&
-                        !selectedDateAttendance?.checkOut &&
-                        (isWeekend || isHoliday)
-                      ) {
-                        statusText = '휴일';
-                      } else {
-                        statusText =
-                          selectedDateAttendance?.status ||
-                          getText('미출근', 'Not checked in');
-                      }
+                      // analyzeAttendanceStatus 결과를 그대로 사용 (색점과 동일 로직)
+                      const statusText =
+                        selectedDateAttendance?.status ||
+                        getText('미출근', 'Not checked in');
 
-                      // 출결상태 색상 결정
-                      let colorClass;
-                      if (selectedDateLeave && leaveTypeForStatus !== '기타') {
-                        colorClass =
-                          getLeaveTypeColor(leaveTypeForStatus) +
-                          ' bg-orange-100';
-                      } else if (
-                        leaveTypeForStatus === '기타' ||
-                        statusText === '출근'
-                      ) {
-                        colorClass = 'text-green-600 bg-green-100';
-                      } else if (statusText === '휴일') {
-                        colorClass = 'text-gray-600 bg-gray-200';
-                      } else if (statusText === '근무중') {
-                        colorClass = 'text-blue-600 bg-blue-100';
-                      } else if (statusText === '출근') {
-                        colorClass = 'text-green-600 bg-green-100';
-                      } else if (
-                        statusText === '지각' ||
-                        statusText === '조퇴' ||
-                        statusText === '지각/조퇴' ||
-                        statusText === '결근'
-                      ) {
-                        colorClass = 'text-red-600 bg-red-100';
-                      } else {
-                        colorClass = 'text-gray-600 bg-gray-200';
-                      }
+                      // 출결상태 색상 결정 (우선순위: 주황 > 빨강 > 초록)
+                      const STATUS_COLOR_MAP = {
+                        // 주황 (1순위)
+                        연차: 'text-orange-600 bg-orange-100',
+                        '반차(오전)': 'text-orange-600 bg-orange-100',
+                        '반차(오후)': 'text-orange-600 bg-orange-100',
+                        병가: 'text-orange-600 bg-orange-100',
+                        경조: 'text-orange-600 bg-orange-100',
+                        공가: 'text-orange-600 bg-orange-100',
+                        휴직: 'text-orange-600 bg-orange-100',
+                        // 빨강 (2순위)
+                        지각: 'text-red-600 bg-red-100',
+                        조퇴: 'text-red-600 bg-red-100',
+                        '지각/조퇴': 'text-red-600 bg-red-100',
+                        결근: 'text-red-600 bg-red-100',
+                        외출: 'text-red-600 bg-red-100',
+                        // 초록 (3순위)
+                        출근: 'text-green-600 bg-green-100',
+                        기타: 'text-green-600 bg-green-100',
+                        근무중: 'text-blue-600 bg-blue-100',
+                        휴일: 'text-gray-600 bg-gray-200',
+                        미출근: 'text-gray-600 bg-gray-200',
+                        'Not checked in': 'text-gray-600 bg-gray-200',
+                      };
+                      const colorClass =
+                        STATUS_COLOR_MAP[statusText] || 'text-gray-600 bg-gray-200';
 
                       return (
                         <span

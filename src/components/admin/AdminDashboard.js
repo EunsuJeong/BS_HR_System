@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, FileText, X, Download, Trash2 } from 'lucide-react';
 import { Line, Bar } from 'react-chartjs-2';
 import {
+  getGoalDataByYearUtil,
   getGoalDetailDataUtil,
   getWorkLifeBalanceDataByYearUtil,
   getWorkLifeDetailDataUtil,
@@ -153,78 +154,15 @@ const AdminDashboard = ({
   const [editContent, setEditContent] = useState('');
   const [editSeverity, setEditSeverity] = useState('경미');
 
-  // selectedYear 변경 시 데이터 로드
+  // selectedYear 변경 시 연도별 근태 데이터 사전 로딩 (목표달성률 + 워라밸 공용)
   useEffect(() => {
-    const loadYearlyData = async () => {
-      if (!getGoalDataByYear) return;
-
+    const loadYearData = async () => {
       setIsLoadingYearlyData(true);
-      try {
-        const data = await getGoalDataByYear(selectedYear);
-        setYearlyGoalData(data);
-      } catch (error) {
-        console.error('연도별 데이터 로드 실패:', error);
-        // 에러 시 빈 데이터로 초기화
-        setYearlyGoalData({
-          attendance: Array(12).fill(null),
-          tardiness: Array(12).fill(null),
-          absence: Array(12).fill(null),
-          turnover: Array(12).fill(null),
-        });
-      } finally {
-        setIsLoadingYearlyData(false);
-      }
-    };
-
-    loadYearlyData();
-  }, [selectedYear, getGoalDataByYear, isHolidayDate]);
-
-  // 팝업이 열릴 때 해당 월의 근태 데이터 로드
-  useEffect(() => {
-    const loadPopupData = async () => {
-      if (!showGoalDetailDataPopup) {
-        setPopupMonthData([]);
-        return;
-      }
-
-      try {
-        const BASE_URL =
-          process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
-        const month = goalDetailMonth + 1;
-        const response = await fetch(
-          `${BASE_URL}/attendance/monthly/${selectedYear}/${month}`
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const result = await response.json();
-        const data = result.success
-          ? result.data
-          : Array.isArray(result)
-          ? result
-          : [];
-        setPopupMonthData(data);
-      } catch (error) {
-        console.error('팝업용 데이터 로드 실패:', error);
-        setPopupMonthData([]);
-      }
-    };
-
-    loadPopupData();
-  }, [showGoalDetailDataPopup, selectedYear, goalDetailMonth]);
-
-  // 워라밸 팝업이 열릴 때 연도별 모든 월 데이터 로드 (차트 표시용)
-  useEffect(() => {
-    const loadWorkLifeYearData = async () => {
-      if (!showWorkLifeBalancePopup) {
-        setWorkLifeYearData({});
-        return;
-      }
+      setWorkLifeYearData({});
 
       const BASE_URL =
         process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 
-      // Promise.all로 병렬 처리
       const promises = [];
       for (let month = 1; month <= 12; month++) {
         promises.push(
@@ -251,10 +189,82 @@ const AdminDashboard = ({
       });
 
       setWorkLifeYearData(yearData);
+      setIsLoadingYearlyData(false);
     };
 
-    loadWorkLifeYearData();
-  }, [showWorkLifeBalancePopup, selectedYear]);
+    loadYearData();
+  }, [selectedYear]);
+
+  // workLifeYearData 로드 완료 후 목표달성률 계산 (API 재호출 없이 동기 계산)
+  useEffect(() => {
+    if (Object.keys(workLifeYearData).length === 0) return;
+
+    try {
+      // workLifeYearData가 있으면 getGoalDataByYearUtil 내부에서 자체 함수로 대체되므로
+      // getAttendanceForEmployee는 빈 함수로 전달 (props에 없음)
+      const data = getGoalDataByYearUtil(
+        selectedYear,
+        employees,
+        getFilteredEmployees,
+        () => ({ checkIn: '', checkOut: '' }),
+        analyzeAttendanceStatusForDashboard,
+        isHolidayDate,
+        leaveRequests,
+        workLifeYearData
+      );
+      setYearlyGoalData(data);
+    } catch (error) {
+      console.error('목표달성률 계산 실패:', error);
+      setYearlyGoalData({
+        attendance: Array(12).fill(null),
+        tardiness: Array(12).fill(null),
+        absence: Array(12).fill(null),
+        turnover: Array(12).fill(null),
+      });
+    }
+  }, [
+    workLifeYearData,
+    selectedYear,
+    employees,
+    getFilteredEmployees,
+    analyzeAttendanceStatusForDashboard,
+    isHolidayDate,
+    leaveRequests,
+  ]);
+
+  // 목표달성률 날짜별 상세 팝업 데이터 (workLifeYearData 재활용, API 재호출 없음)
+  useEffect(() => {
+    if (!showGoalDetailDataPopup) {
+      setPopupMonthData([]);
+      return;
+    }
+
+    const month = goalDetailMonth + 1;
+
+    // workLifeYearData에 이미 로드된 데이터 재활용
+    if (workLifeYearData[month] !== undefined) {
+      setPopupMonthData(workLifeYearData[month]);
+      return;
+    }
+
+    // fallback: 직접 API 호출 (workLifeYearData 아직 미로드 시)
+    const BASE_URL =
+      process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+    fetch(`${BASE_URL}/attendance/monthly/${selectedYear}/${month}`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((result) => {
+        const data = result.success
+          ? result.data
+          : Array.isArray(result)
+          ? result
+          : [];
+        setPopupMonthData(data);
+      })
+      .catch(() => setPopupMonthData([]));
+  }, [showGoalDetailDataPopup, selectedYear, goalDetailMonth, workLifeYearData]);
 
   return (
     <div className="space-y-4">
@@ -667,7 +677,28 @@ const AdminDashboard = ({
         {/* 안전 현황 */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-lg font-semibold">안전 현황</h4>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-lg font-semibold">안전 현황</h4>
+              <span className="text-xs text-gray-500">
+                {(() => {
+                  const defaultBase = new Date('2025-12-02');
+                  let base = defaultBase;
+                  if (safetyAccidents && safetyAccidents.length > 0) {
+                    const dates = safetyAccidents
+                      .map((a) => new Date(a.date))
+                      .filter((d) => !isNaN(d));
+                    if (dates.length > 0) {
+                      const maxDate = new Date(Math.max(...dates));
+                      if (maxDate >= defaultBase) base = maxDate;
+                    }
+                  }
+                  const y = base.getFullYear();
+                  const m = String(base.getMonth() + 1).padStart(2, '0');
+                  const d = String(base.getDate()).padStart(2, '0');
+                  return `무사고 시작일 : ${y}-${m}-${d}`;
+                })()}
+              </span>
+            </div>
             <button
               className="font-bold text-blue-500 text-xs hover:text-blue-600"
               onClick={() => setShowSafetyAccidentInput(true)}
@@ -3763,7 +3794,28 @@ const AdminDashboard = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">안전사고 목록/입력</h3>
+              <div className="flex items-center gap-4">
+                <h3 className="text-lg font-semibold">안전사고 목록/입력</h3>
+                <span className="text-sm text-gray-500">
+                  {(() => {
+                    const defaultBase = new Date('2025-12-02');
+                    let base = defaultBase;
+                    if (safetyAccidents && safetyAccidents.length > 0) {
+                      const dates = safetyAccidents
+                        .map((a) => new Date(a.date))
+                        .filter((d) => !isNaN(d));
+                      if (dates.length > 0) {
+                        const maxDate = new Date(Math.max(...dates));
+                        if (maxDate >= defaultBase) base = maxDate;
+                      }
+                    }
+                    const y = base.getFullYear();
+                    const m = String(base.getMonth() + 1).padStart(2, '0');
+                    const d = String(base.getDate()).padStart(2, '0');
+                    return `무사고 시작일 : ${y}-${m}-${d}`;
+                  })()}
+                </span>
+              </div>
               <button
                 onClick={() => setShowSafetyAccidentInput(false)}
                 className="text-gray-500 hover:text-gray-700"

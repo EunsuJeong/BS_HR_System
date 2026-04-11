@@ -471,21 +471,21 @@ export const useSafetyManagement = (dependencies = {}) => {
 
   // [2_관리자 모드] 2.1_안전관리 - 무사고 일수 계산
   const getAccidentFreeDays = useCallback(() => {
-    // 최근 사고 일자: 2025년 12월 2일 (기준일)
+    // 최근 사고 일자: 2025년 12월 2일 (무사고 시작일)
     const defaultLastAccidentDate = new Date('2025-12-02');
-    
+
     let lastAccidentDate;
-    
+
     if (safetyAccidents.length === 0) {
-      // 사고 기록이 없으면 기준일부터 계산
+      // 사고 기록이 없으면 무사고 시작일부터 계산
       lastAccidentDate = defaultLastAccidentDate;
     } else {
       // 사고 기록이 있으면 가장 최근 사고 날짜 찾기
       lastAccidentDate = new Date(
         Math.max(...safetyAccidents.map((acc) => new Date(acc.date)))
       );
-      
-      // 기준일보다 이전 사고만 있다면 기준일 사용
+
+      // 무사고 시작일보다 이전 사고만 있다면 무사고 시작일 사용
       if (lastAccidentDate < defaultLastAccidentDate) {
         lastAccidentDate = defaultLastAccidentDate;
       }
@@ -4197,24 +4197,26 @@ function calculateMonthlyRate(
       day
     ).padStart(2, '0')}`;
 
-    // 해당 일자 연차자 찾기
-    const onLeaveToday = leaveRequests
+    // 완전 제외 휴가: 연차·반차(오전)·휴직 → 출근 자체가 없으므로 집계 제외
+    const fullExcludeLeaveTypes = ['연차', '반차(오전)', '휴직'];
+    const onFullLeaveToday = leaveRequests
       .filter((lr) => {
         if (lr.status !== '승인') return false;
         const leaveType = lr.leaveType || lr.type;
-        if (
-          ![
-            '연차',
-            '반차(오전)',
-            '반차(오후)',
-            '공가',
-            '경조',
-            '휴직',
-            '기타',
-          ].includes(leaveType)
-        ) {
-          return false;
-        }
+        if (!fullExcludeLeaveTypes.includes(leaveType)) return false;
+        const startDate = lr.startDate.split('T')[0];
+        const endDate = lr.endDate.split('T')[0];
+        return dateStr >= startDate && dateStr <= endDate;
+      })
+      .map((lr) => lr.employeeId);
+
+    // 부분 휴가: 경조·공가·반차(오후)·기타 → 결근 면제이나 08:30 이후 출근 시 지각
+    const partialLeaveTypes = ['경조', '공가', '반차(오후)', '기타'];
+    const onPartialLeaveToday = leaveRequests
+      .filter((lr) => {
+        if (lr.status !== '승인') return false;
+        const leaveType = lr.leaveType || lr.type;
+        if (!partialLeaveTypes.includes(leaveType)) return false;
         const startDate = lr.startDate.split('T')[0];
         const endDate = lr.endDate.split('T')[0];
         return dateStr >= startDate && dateStr <= endDate;
@@ -4233,10 +4235,10 @@ function calculateMonthlyRate(
       })
       .map((lr) => lr.employeeId);
 
-    // 출근 대상 직원 (연차자 + 입사 전 직원 제외)
+    // 출근 대상 직원 (완전 제외 휴가자 + 입사 전 직원 제외)
     const targetEmployees = baseFilteredEmployees.filter((emp) => {
-      // 연차자 제외
-      if (onLeaveToday.includes(emp.id)) return false;
+      // 연차·반차(오전)·휴직만 제외 (경조·공가 등은 지각 체크 대상)
+      if (onFullLeaveToday.includes(emp.id)) return false;
 
       // ✅ 입사일 체크: 해당 날짜에 아직 입사하지 않은 직원 제외 (DB 필드 joinDate 우선 사용)
       const joinDateValue = emp.joinDate || emp.hireDate;
@@ -4358,31 +4360,27 @@ function calculateMonthlyRate(
       // 4. 상태 분석 (목표달성률 전용 로직)
       let status = '';
 
-      // 결근 판정: 1) 결근 승인 OR 2) 출근+퇴근 둘 다 없음
+      // 결근 판정: 1) 결근 승인 OR 2) 출근+퇴근 둘 다 없음 (단, 부분 휴가자는 결근 면제)
       const isAbsent =
         absentApprovedToday.includes(emp.id) ||
-        !attendanceData ||
-        (!attendanceData.checkIn && !attendanceData.checkOut);
+        ((!attendanceData || (!attendanceData.checkIn && !attendanceData.checkOut)) &&
+          !onPartialLeaveToday.includes(emp.id));
 
       if (isAbsent) {
         status = '결근';
+      } else if (!attendanceData?.checkIn) {
+        // 부분 휴가자(경조 등)이고 출근 데이터 없으면 집계 제외
+        return;
       } else {
         // 출근 데이터가 있으면 지각 여부 판정
-        const checkInMinutes = attendanceData.checkIn
-          ? timeToMinutes(attendanceData.checkIn)
-          : null;
+        const checkInMinutes = timeToMinutes(attendanceData.checkIn);
 
-        if (checkInMinutes !== null) {
-          // 지각 기준: 주간 08:31 이상, 야간 19:01 이상
-          const isLate =
-            (actualShift === '주간' && checkInMinutes >= 511) || // 08:31 이상 = 지각
-            (actualShift === '야간' && checkInMinutes >= 1141); // 19:01 이상 = 지각
+        // 지각 기준: 주간 08:31 이상, 야간 19:01 이상 (반차(오전)은 이미 제외됨)
+        const isLate =
+          (actualShift === '주간' && checkInMinutes >= 511) || // 08:31 이상 = 지각
+          (actualShift === '야간' && checkInMinutes >= 1141); // 19:01 이상 = 지각
 
-          status = isLate ? '지각' : '출근';
-        } else {
-          // checkIn이 없으면 출근으로 간주 (checkOut만 있는 경우)
-          status = '출근';
-        }
+        status = isLate ? '지각' : '출근';
       }
 
       // 출근률: "출근"만 카운트
@@ -5743,25 +5741,26 @@ export const getGoalDetailDataUtil = (
         day
       ).padStart(2, '0')}`;
 
-      // 해당 일자에 연차/반차/공가/경조/휴직/기타 승인받은 직원 찾기
-      const onLeaveToday = leaveRequests
+      // 완전 제외 휴가: 연차·반차(오전)·휴직 → 출근 자체가 없으므로 집계 제외
+      const fullExcludeLeaveTypes = ['연차', '반차(오전)', '휴직'];
+      const onFullLeaveToday = leaveRequests
         .filter((lr) => {
           if (lr.status !== '승인') return false;
           const leaveType = lr.leaveType || lr.type;
-          if (
-            ![
-              '연차',
-              '반차(오전)',
-              '반차(오후)',
-              '공가',
-              '경조',
-              '휴직',
-              '기타',
-            ].includes(leaveType)
-          ) {
-            return false;
-          }
+          if (!fullExcludeLeaveTypes.includes(leaveType)) return false;
+          const startDate = lr.startDate.split('T')[0];
+          const endDate = lr.endDate.split('T')[0];
+          return dateStr >= startDate && dateStr <= endDate;
+        })
+        .map((lr) => lr.employeeId);
 
+      // 부분 휴가: 경조·공가·반차(오후)·기타 → 결근 면제이나 08:30 이후 출근 시 지각
+      const partialLeaveTypes = ['경조', '공가', '반차(오후)', '기타'];
+      const onPartialLeaveToday = leaveRequests
+        .filter((lr) => {
+          if (lr.status !== '승인') return false;
+          const leaveType = lr.leaveType || lr.type;
+          if (!partialLeaveTypes.includes(leaveType)) return false;
           const startDate = lr.startDate.split('T')[0];
           const endDate = lr.endDate.split('T')[0];
           return dateStr >= startDate && dateStr <= endDate;
@@ -5780,8 +5779,8 @@ export const getGoalDetailDataUtil = (
       });
 
       filteredEmps.forEach((emp) => {
-        // 모든 지표에서 연차자 제외
-        if (onLeaveToday.includes(emp.id)) {
+        // 연차·반차(오전)·휴직만 제외 (경조·공가 등은 지각 체크 대상)
+        if (onFullLeaveToday.includes(emp.id)) {
           return;
         }
 
@@ -5873,34 +5872,30 @@ export const getGoalDetailDataUtil = (
         // 상태 판정 (목표달성률 전용 로직)
         let status = '';
 
-        // 결근 판정: 1) 결근 승인 OR 2) 출근+퇴근 둘 다 없음
+        // 결근 판정: 1) 결근 승인 OR 2) 출근+퇴근 둘 다 없음 (단, 부분 휴가자는 결근 면제)
         const hasAbsentApproval = absentApprovedToday.some(
           (lr) => lr.employeeId === emp.id
         );
         const isAbsent =
           hasAbsentApproval ||
-          !attendanceData ||
-          (!attendanceData.checkIn && !attendanceData.checkOut);
+          ((!attendanceData || (!attendanceData.checkIn && !attendanceData.checkOut)) &&
+            !onPartialLeaveToday.includes(emp.id));
 
         if (isAbsent) {
           status = '결근';
+        } else if (!attendanceData?.checkIn) {
+          // 부분 휴가자(경조 등)이고 출근 데이터 없으면 집계 제외
+          return;
         } else {
           // 출근 데이터가 있으면 지각 여부 판정
-          const checkInMinutes = attendanceData.checkIn
-            ? timeToMinutes(attendanceData.checkIn)
-            : null;
+          const checkInMinutes = timeToMinutes(attendanceData.checkIn);
 
-          if (checkInMinutes !== null) {
-            // 지각 기준: 주간 08:31 이상, 야간 19:01 이상
-            const isLate =
-              (actualShift === '주간' && checkInMinutes >= 511) || // 08:31 이상 = 지각
-              (actualShift === '야간' && checkInMinutes >= 1141); // 19:01 이상 = 지각
+          // 지각 기준: 주간 08:31 이상, 야간 19:01 이상 (반차(오전)은 이미 제외됨)
+          const isLate =
+            (actualShift === '주간' && checkInMinutes >= 511) || // 08:31 이상 = 지각
+            (actualShift === '야간' && checkInMinutes >= 1141); // 19:01 이상 = 지각
 
-            status = isLate ? '지각' : '출근';
-          } else {
-            // checkIn이 없으면 출근으로 간주 (checkOut만 있는 경우)
-            status = '출근';
-          }
+          status = isLate ? '지각' : '출근';
         }
 
         // 지표별 필터링
