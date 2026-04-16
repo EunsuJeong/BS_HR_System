@@ -2,13 +2,18 @@ import api from './client';
 
 export const NoticeAPI = {
   // 전체 공지사항 조회
-  list: async (includeScheduled = false) => {
+  // lite=true: content 제외 (일반직원 목록용, 응답 경량화)
+  list: async (includeScheduled = false, lite = false) => {
+    const url = '/communication/notices?includeScheduled=' + includeScheduled + (lite ? '&lite=true' : '');
     try {
-      return await api.getQuick('/communication/notices?includeScheduled=' + includeScheduled);
+      return await api.getQuick(url);
     } catch (e) {
-      return await api.getQuick('/communication/notices?includeScheduled=' + includeScheduled);
+      return await api.getQuick(url);
     }
   },
+
+  // 공지사항 단건 조회 (상세 내용 포함)
+  get: async (noticeId) => api.get('/communication/notices/' + noticeId),
 
   // 공지사항 등록
   create: async (noticeData) => api.post('/communication/notices', noticeData),
@@ -100,15 +105,20 @@ export const SuggestionAPI = {
 };
 
 export const NotificationAPI = {
-  // 알림 조회 (전체 또는 유형별)
-  list: async (notificationType = null) => {
-    const params = notificationType
-      ? `?notificationType=${notificationType}`
-      : '';
+  // 알림 조회 (전체 또는 유형별, 직원별)
+  list: async (notificationType = null, recipientName = null, department = null, position = null, role = null) => {
+    const params = new URLSearchParams();
+    if (notificationType) params.append('notificationType', notificationType);
+    if (recipientName) params.append('recipientName', recipientName);
+    if (department) params.append('department', department);
+    if (position) params.append('position', position);
+    if (role) params.append('role', role);
+    const queryString = params.toString();
+    const url = '/communication/notifications' + (queryString ? '?' + queryString : '');
     try {
-      return await api.getQuick('/communication/notifications' + params);
+      return await api.getQuick(url);
     } catch (e) {
-      return await api.getQuick('/communication/notifications' + params);
+      return await api.getQuick(url);
     }
   },
 

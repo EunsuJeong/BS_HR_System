@@ -90,7 +90,7 @@ const CommonLogin = ({
           <div className="space-y-6">
             <div>
               <label className="block text-base font-medium text-gray-700 mb-2">
-                아이디 (직원명)
+                아이디 (직원명) <span className="text-sm font-light text-gray-400" style={{ opacity: 0.9 }}>ID (Name)</span>
               </label>
               <input
                 type="text"
@@ -106,7 +106,7 @@ const CommonLogin = ({
 
             <div>
               <label className="block text-base font-medium text-gray-700 mb-2">
-                비밀번호
+                비밀번호 <span className="text-sm font-light text-gray-400" style={{ opacity: 0.9 }}>Password</span>
               </label>
               <div className="relative">
                 <input
@@ -140,7 +140,7 @@ const CommonLogin = ({
                   onChange={(e) => setRememberUserId(e.target.checked)}
                   className="mr-2 w-4 h-4 cursor-pointer"
                 />
-                <span className="text-sm text-gray-600">아이디 저장</span>
+                <span className="text-sm text-gray-600">아이디 저장 <span className="text-xs font-light text-gray-400" style={{ opacity: 0.9 }}>Save ID</span></span>
               </label>
               <label className="flex items-center cursor-pointer">
                 <input
@@ -149,7 +149,7 @@ const CommonLogin = ({
                   onChange={(e) => setRememberPassword(e.target.checked)}
                   className="mr-2 w-4 h-4 cursor-pointer"
                 />
-                <span className="text-sm text-gray-600">비밀번호 저장</span>
+                <span className="text-sm text-gray-600">비밀번호 저장 <span className="text-xs font-light text-gray-400" style={{ opacity: 0.9 }}>Save PW</span></span>
               </label>
             </div>
 
@@ -169,6 +169,9 @@ const CommonLogin = ({
             <div className="text-center">
               <p className="text-base font-semibold text-gray-600">
                 비밀번호는 관리팀에 문의 바랍니다.
+              </p>
+              <p className="text-xs text-gray-400 mt-1" style={{ opacity: 0.9 }}>
+                if you Forget your PW,<br />Please contact the management team.
               </p>
             </div>
           </div>

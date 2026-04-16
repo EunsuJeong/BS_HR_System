@@ -472,7 +472,7 @@ export const useSafetyManagement = (dependencies = {}) => {
   // [2_관리자 모드] 2.1_안전관리 - 무사고 일수 계산
   const getAccidentFreeDays = useCallback(() => {
     // 최근 사고 일자: 2025년 12월 2일 (무사고 시작일)
-    const defaultLastAccidentDate = new Date('2025-12-02');
+    const defaultLastAccidentDate = new Date(2025, 11, 2); // 로컬 시간 기준 (12월=11)
 
     let lastAccidentDate;
 
@@ -492,6 +492,7 @@ export const useSafetyManagement = (dependencies = {}) => {
     }
     
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // 로컬 자정 기준 정규화
     const diffTime = today - lastAccidentDate;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
@@ -499,52 +500,7 @@ export const useSafetyManagement = (dependencies = {}) => {
     return diffDays >= 0 ? diffDays : 0;
   }, [safetyAccidents]);
 
-  // [2_관리자 모드] 2.1_안전관리 - 무사고 달성 알림 확인 및 발송
-  const checkAccidentFreeNotification = useCallback(() => {
-    const accidentFreeDays = getAccidentFreeDays();
-
-    if (accidentFreeDays > 0 && accidentFreeDays % 10 === 0) {
-      const lastNotificationKey = `lastAccidentFreeNotification_${accidentFreeDays}`;
-      const lastNotified = localStorage.getItem(lastNotificationKey);
-      const today = new Date().toISOString().slice(0, 10);
-
-      if (lastNotified !== today) {
-        const celebrationMessage = `🎉 무사고 ${accidentFreeDays}일 달성! 모두의 노력에 감사합니다.`;
-
-        const 축하알림 = {
-          id: Date.now() + Math.random(),
-          title: `무사고 ${accidentFreeDays}일 달성 축하`,
-          content: celebrationMessage,
-          recipients: { type: '전체', value: '전체직원' },
-          createdAt: new Date().toISOString(),
-          status: '진행중',
-        };
-
-        setRealtimeNotifications((prev) => [축하알림, ...prev]);
-
-        const newNotificationLog = {
-          id: Date.now() + Math.random() + 1,
-          type: '안전알림',
-          title: `무사고 ${accidentFreeDays}일 달성`,
-          recipients: '전체직원',
-          content: celebrationMessage,
-          createdAt: new Date().toLocaleString('ko-KR'),
-          completedAt: null,
-        };
-
-        setNotificationLogs((prev) => [newNotificationLog, ...prev]);
-
-        localStorage.setItem(lastNotificationKey, today);
-
-        devLog(`🎉 무사고 ${accidentFreeDays}일 달성 알림 전송 완료`);
-      }
-    }
-  }, [
-    getAccidentFreeDays,
-    setRealtimeNotifications,
-    setNotificationLogs,
-    devLog,
-  ]);
+  // [2_관리자 모드] 2.1_안전관리 - 무사고 달성 알림: 서버 스케줄러가 담당 (클라이언트 로직 제거)
 
   // [2_관리자 모드] 2.1_안전관리 - 안전사고 입력 및 알림 전송
   const handleSafetyAccidentInput = useCallback(
@@ -795,7 +751,6 @@ export const useSafetyManagement = (dependencies = {}) => {
     getThisMonthSafetyAccidents,
     getThisYearSafetyAccidents,
     getAccidentFreeDays,
-    checkAccidentFreeNotification,
     handleSafetyAccidentInput,
     handleEditSafety,
     handleSaveAccidentEdit,

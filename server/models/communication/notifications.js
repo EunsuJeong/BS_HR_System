@@ -60,5 +60,11 @@ const notificationSchema = new mongoose.Schema(
   { collection: 'notifications' }
 );
 
+// 인덱스: 일반직원 수신 대상 필터링 성능 개선
+notificationSchema.index({ 'recipients.type': 1 });
+notificationSchema.index({ 'recipients.selectedEmployees': 1 });
+notificationSchema.index({ 'recipients.value': 1 });
+notificationSchema.index({ createdAt: -1 });
+
 const Notification = mongoose.model('Notification', notificationSchema);
 module.exports = Notification;

@@ -215,10 +215,10 @@ const StaffSalary = ({
         {/* 급여 전체 내역 팝업 */}
         {showSalaryHistoryPopup && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl shadow-xl max-w-6xl w-full mx-4 max-h-[80vh] flex flex-col">
+            <div className="bg-white rounded-2xl shadow-xl max-w-6xl w-full mx-4 max-h-[85vh] flex flex-col">
               <div className="p-6 pb-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <h3 className="text-sm font-bold text-gray-900">
                     {getText('전체 급여 내역', 'Complete Salary History')}
                   </h3>
                   <button
@@ -235,11 +235,7 @@ const StaffSalary = ({
 
               <div
                 ref={salaryScrollRef}
-                style={{
-                  height: '500px',
-                  overflowY: 'auto',
-                  padding: '1.5rem',
-                }}
+                className="flex-1 overflow-y-auto p-6 min-h-0"
               >
                 {!selectedSalaryHistory ? (
                   <div>
@@ -247,19 +243,19 @@ const StaffSalary = ({
                       <table className={`w-full ${textClass}`}>
                         <thead className="bg-gray-100">
                           <tr>
-                            <th className="text-center py-2 px-3 whitespace-nowrap">
+                            <th className="text-center py-2 px-3 text-xs whitespace-nowrap">
                               {getText('지급월', 'Pay Month')}
                             </th>
-                            <th className="text-center py-2 px-3 whitespace-nowrap">
+                            <th className="text-center py-2 px-3 text-xs whitespace-nowrap">
                               {getText('지급내역', 'Gross Pay')}
                             </th>
-                            <th className="text-center py-2 px-3 whitespace-nowrap">
+                            <th className="text-center py-2 px-3 text-xs whitespace-nowrap">
                               {getText('공제내역', 'Deductions')}
                             </th>
-                            <th className="text-center py-2 px-3 whitespace-nowrap">
+                            <th className="text-center py-2 px-3 text-xs whitespace-nowrap">
                               {getText('실수령액', 'Net Pay')}
                             </th>
-                            <th className="text-center py-2 px-3 whitespace-nowrap">
+                            <th className="text-center py-2 px-3 text-xs whitespace-nowrap">
                               {getText('상세보기', 'Details')}
                             </th>
                           </tr>
@@ -272,22 +268,22 @@ const StaffSalary = ({
                             )
                             .map((salary, index) => (
                               <tr key={index} className="hover:bg-gray-50">
-                                <td className="text-center py-2 px-3 font-semibold whitespace-nowrap">
+                                <td className="text-center py-2 px-3 text-xs font-semibold whitespace-nowrap">
                                   {salary.month}
                                 </td>
-                                <td className="text-right py-2 px-3 whitespace-nowrap">
+                                <td className="text-right py-2 px-3 text-xs whitespace-nowrap">
                                   {salary.totalGross.toLocaleString()}
                                   {getText('원', ' KRW')}
                                 </td>
-                                <td className="text-right py-2 px-3 whitespace-nowrap">
+                                <td className="text-right py-2 px-3 text-xs whitespace-nowrap">
                                   {salary.totalDeduction.toLocaleString()}
                                   {getText('원', ' KRW')}
                                 </td>
-                                <td className="text-right py-2 px-3 font-bold text-emerald-600 whitespace-nowrap">
+                                <td className="text-right py-2 px-3 text-xs font-bold text-emerald-600 whitespace-nowrap">
                                   {salary.netPay.toLocaleString()}
                                   {getText('원', ' KRW')}
                                 </td>
-                                <td className="text-center py-2 px-3 whitespace-nowrap">
+                                <td className="text-center py-2 px-3 text-xs whitespace-nowrap">
                                   <button
                                     onClick={() =>
                                       setSelectedSalaryHistory(salary)
@@ -303,50 +299,6 @@ const StaffSalary = ({
                       </table>
                     </div>
 
-                    {/* 페이지네이션 */}
-                    {actualSalaryData.length > 0 && (
-                      <div className="flex justify-center items-center mt-6 space-x-2">
-                        <button
-                          onClick={() =>
-                            setSalaryPage(Math.max(1, salaryPage - 1))
-                          }
-                          disabled={salaryPage === 1}
-                          className={`${btnClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50`}
-                        >
-                          {selectedLanguage === 'en' ? 'Prev' : '이전'}
-                        </button>
-                        <span className={`${textClass} text-gray-600`}>
-                          {salaryPage} /{' '}
-                          {Math.max(
-                            1,
-                            Math.ceil(
-                              actualSalaryData.length / SALARY_PAGE_SIZE
-                            )
-                          )}
-                        </span>
-                        <button
-                          onClick={() =>
-                            setSalaryPage(
-                              Math.min(
-                                Math.ceil(
-                                  actualSalaryData.length / SALARY_PAGE_SIZE
-                                ),
-                                salaryPage + 1
-                              )
-                            )
-                          }
-                          disabled={
-                            salaryPage >=
-                            Math.ceil(
-                              actualSalaryData.length / SALARY_PAGE_SIZE
-                            )
-                          }
-                          className={`${btnClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50`}
-                        >
-                          {selectedLanguage === 'en' ? 'Next' : '다음'}
-                        </button>
-                      </div>
-                    )}
                     {actualSalaryData.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <p className={textClass}>
@@ -367,7 +319,7 @@ const StaffSalary = ({
                     </div>
                     <div className="space-y-4">
                       <div>
-                        <h4 className={`${textClass} font-semibold text-gray-800 mb-2`}>
+                        <h4 className="text-xs font-normal text-gray-700 mb-2">
                           {selectedSalaryHistory.month}{' '}
                           {getText('급여 상세 내역', 'Salary Details')}
                         </h4>
@@ -375,7 +327,7 @@ const StaffSalary = ({
 
                       {/* 지급 내역 */}
                       <div>
-                        <h4 className={`${textClass} font-semibold text-gray-700 mb-2`}>
+                        <h4 className="text-xs font-normal text-gray-700 mb-2">
                           {getText('지급 내역', 'Income Details')}
                         </h4>
                         <div className="overflow-x-auto">
@@ -473,7 +425,7 @@ const StaffSalary = ({
 
                       {/* 공제 내역 */}
                       <div>
-                        <h4 className={`${textClass} font-semibold text-gray-700 mb-2`}>
+                        <h4 className="text-xs font-normal text-gray-700 mb-2">
                           {getText('공제 내역', 'Deduction Details')}
                         </h4>
                         <div className="overflow-x-auto">
@@ -552,6 +504,49 @@ const StaffSalary = ({
                   </div>
                 )}
               </div>
+              {!selectedSalaryHistory && actualSalaryData.length > 0 && (
+                <div className="flex justify-center items-center py-3 space-x-1 shrink-0 border-t border-gray-200 popup-footer-safe">
+                  <button
+                    onClick={() =>
+                      setSalaryPage(Math.max(1, salaryPage - 1))
+                    }
+                    disabled={salaryPage === 1}
+                    className={`${btnClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50`}
+                  >
+                    {selectedLanguage === 'en' ? 'Prev' : '이전'}
+                  </button>
+                  <span className={`${textClass} text-gray-600`}>
+                    {salaryPage} /{' '}
+                    {Math.max(
+                      1,
+                      Math.ceil(
+                        actualSalaryData.length / SALARY_PAGE_SIZE
+                      )
+                    )}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setSalaryPage(
+                        Math.min(
+                          Math.ceil(
+                            actualSalaryData.length / SALARY_PAGE_SIZE
+                          ),
+                          salaryPage + 1
+                        )
+                      )
+                    }
+                    disabled={
+                      salaryPage >=
+                      Math.ceil(
+                        actualSalaryData.length / SALARY_PAGE_SIZE
+                      )
+                    }
+                    className={`${btnClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50`}
+                  >
+                    {selectedLanguage === 'en' ? 'Next' : '다음'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -562,7 +557,7 @@ const StaffSalary = ({
             <div className="bg-white rounded-2xl shadow-xl max-w-xs w-full mx-4 flex flex-col">
               <div className="p-6 pb-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <h3 className="text-sm font-bold text-gray-900">
                     급여 조회 인증
                   </h3>
                   <button
@@ -579,7 +574,7 @@ const StaffSalary = ({
                 </div>
               </div>
               <div className="text-xs p-6 space-y-4">
-                <p className="text-gray-600">
+                <p className="text-xs text-gray-600">
                   {getText(
                     '비밀번호를 입력하세요',
                     'Please enter your password'
@@ -595,7 +590,7 @@ const StaffSalary = ({
                         handleSalaryPasswordConfirmLocal();
                       }
                     }}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg"
+                    className="w-full px-4 py-2 pr-10 text-xs border border-gray-300 rounded-lg"
                     placeholder={getText('비밀번호', 'Password')}
                     autoFocus
                   />

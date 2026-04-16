@@ -1212,23 +1212,23 @@ export const useNotificationHandlers = (deps) => {
 
     const now = new Date();
 
-    // 연차 만료 알림 특별 처리: 새 연차 시작일로부터 30일간 표시
+    // 연차 만료 알림 특별 처리
     if (notification.related?.entity === 'annualLeave') {
-      const nextAnnualStart = notification.related?.nextAnnualStart;
+      const warningDays = notification.related?.warningDays;
+      const annualEnd = notification.related?.annualEnd;
+      const created = new Date(notification.createdAt);
 
-      if (!nextAnnualStart) {
-        // nextAnnualStart 정보가 없으면 생성일 기준 30일 (fallback)
-        const created = new Date(notification.createdAt);
-        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-        return now.getTime() - created.getTime() > thirtyDaysInMs;
+      // 30일/7일 전 알림: 만료일까지만 표시
+      if (warningDays === 30 || warningDays === 7) {
+        if (!annualEnd) return true;
+        const endDate = new Date(annualEnd);
+        endDate.setHours(23, 59, 59, 999);
+        return now > endDate;
       }
 
-      // 새 연차 시작일로부터 30일 경과 확인
-      const annualStart = new Date(nextAnnualStart);
-      const thirtyDaysLater = new Date(annualStart);
-      thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
-
-      return now > thirtyDaysLater;
+      // 180일/90일 전 알림: 생성일로부터 30일간 표시
+      const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+      return now.getTime() - created.getTime() > thirtyDaysInMs;
     }
 
     // 일반 알림: 생성일로부터 5일간 표시

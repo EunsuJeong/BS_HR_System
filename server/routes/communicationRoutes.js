@@ -6,6 +6,27 @@ const fs = require('fs');
 const { Notice, Notification, Suggestion } = require('../models');
 
 // ==========================================
+// 인메모리 캐시 (MongoDB Atlas 네트워크 레이턴시 완화)
+// ==========================================
+const CACHE_TTL_MS = 60 * 1000; // 60초
+const _cache = new Map(); // key → { data, expiresAt }
+
+const cacheGet = (key) => {
+  const entry = _cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { _cache.delete(key); return null; }
+  return entry.data;
+};
+const cacheSet = (key, data) => {
+  _cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+};
+const cacheInvalidate = (prefix) => {
+  for (const key of _cache.keys()) {
+    if (key.startsWith(prefix)) _cache.delete(key);
+  }
+};
+
+// ==========================================
 // 파일 업로드 설정
 // ==========================================
 
@@ -153,10 +174,25 @@ router.get('/download/:filename', (req, res) => {
 // 공지사항 (Notices) API
 // ==========================================
 
+// ✅ 공지사항 단건 조회 (상세 내용 포함)
+router.get('/notices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notice = await Notice.findById(id);
+    if (!notice) {
+      return res.status(404).json({ message: '공지사항을 찾을 수 없습니다.' });
+    }
+    res.json(notice);
+  } catch (error) {
+    console.error('❌ 공지사항 단건 조회 오류:', error);
+    res.status(500).json({ message: '공지사항 조회 중 오류가 발생했습니다.' });
+  }
+});
+
 // ✅ 공지사항 전체 조회 (조회 시 즉시 예약 공지사항 체크 및 게시 처리)
 router.get('/notices', async (req, res) => {
   try {
-    const { includeScheduled } = req.query;
+    const { includeScheduled, lite } = req.query;
 
     // [4차 패치] updateMany fire-and-forget — find() 블로킹 제거
     // 이유: updateMany await가 find() 실행을 막아 공지 응답 지연
@@ -187,17 +223,26 @@ router.get('/notices', async (req, res) => {
       console.log('📋 모든 공지사항 조회 (예약 포함)');
     }
 
-    const notices = await Notice.find(query).sort({ createdAt: -1 });
+    // lite=true: content 제외 (목록 응답 경량화, 일반직원용) + 캐시 적용
+    const noticeCacheKey = `notice:${includeScheduled||'false'}:${lite||'false'}`;
+    const cachedNotices = cacheGet(noticeCacheKey);
+    if (cachedNotices) {
+      console.log(`⚡ 공지사항 캐시 히트: ${noticeCacheKey} (${cachedNotices.length}건)`);
+      return res.json(cachedNotices);
+    }
 
+    const noticeQuery = Notice.find(query).sort({ createdAt: -1 });
+    if (lite === 'true') noticeQuery.select('-content');
+    const notices = await noticeQuery;
+
+    cacheSet(noticeCacheKey, notices);
     // [2차 패치] 요청 시점 동기 파일 I/O 제거
     // 기존: 각 공지의 attachments/files마다 fs.existsSync() + fs.statSync() 동기 호출
     //       → Node.js 이벤트 루프 블로킹 (공지 10건 × 첨부 2개 × 2배열 = 40회 동기 I/O)
     // 수정: DB에 저장된 size 값 그대로 사용, 없으면 null (업로드 시 size 저장 권장)
     //       첨부파일 표시/다운로드 기능은 url 필드로 동작하므로 기능 영향 없음
-    const noticesWithFileSize = notices.map((notice) => notice.toObject());
-
-    console.log(`✅ 공지사항 ${noticesWithFileSize.length}건 조회`);
-    res.json(noticesWithFileSize);
+    console.log(`✅ 공지사항 ${notices.length}건 DB 조회`);
+    res.json(notices);
   } catch (error) {
     console.error('❌ 공지사항 조회 오류:', error);
     res.status(500).json({ message: '공지사항 조회 중 오류가 발생했습니다.' });
@@ -248,6 +293,7 @@ router.post('/notices', async (req, res) => {
     const notice = new Notice(noticeData);
 
     await notice.save();
+    cacheInvalidate('notice:');
     console.log('✅ 공지사항 등록 완료:', notice._id);
 
     // Socket.io 이벤트 발생 (실시간 업데이트)
@@ -314,6 +360,7 @@ router.put('/notices/:id', async (req, res) => {
       return res.status(404).json({ message: '공지사항을 찾을 수 없습니다.' });
     }
 
+    cacheInvalidate('notice:');
     console.log('✅ 공지사항 수정 완료:', id);
 
     // Socket.io 이벤트 발생 (실시간 업데이트)
@@ -343,6 +390,7 @@ router.delete('/notices/:id', async (req, res) => {
       return res.status(404).json({ message: '공지사항을 찾을 수 없습니다.' });
     }
 
+    cacheInvalidate('notice:');
     console.log('✅ 공지사항 삭제 완료:', id);
 
     // Socket.io 이벤트 발생 (실시간 업데이트)
@@ -428,19 +476,43 @@ router.post('/notices/:id/view', async (req, res) => {
 // 알림 (Notifications) API
 // ==========================================
 
-// ✅ 알림 조회 (전체 또는 유형별)
+// ✅ 알림 조회 (전체 또는 유형별, 직원별) — 인메모리 캐시 적용
 router.get('/notifications', async (req, res) => {
   try {
-    const { notificationType } = req.query;
-    const query = notificationType ? { notificationType } : {};
+    const { notificationType, recipientName, department, position, role } = req.query;
 
-    const notifications = await Notification.find(query).sort({
-      createdAt: -1,
-    }).limit(50); // 최근 50건 — 전체 조회 시 63kB+ → 응답 경량화
+    // 캐시 키: 조회 조건 조합
+    const cacheKey = `notif:${notificationType||''}:${recipientName||''}:${department||''}:${position||''}:${role||''}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      console.log(`⚡ [Notifications API] 캐시 히트: ${cacheKey} (${cached.length}건)`);
+      return res.json(cached);
+    }
+
+    const query = {};
+    if (notificationType) query.notificationType = notificationType;
+
+    // 일반직원 서버사이드 필터: 수신 대상에 해당하는 알림만 반환
+    // 관리자(recipientName 없음): 전체 조회
+    if (recipientName) {
+      const orConditions = [
+        { 'recipients.type': '전체' },                                      // 전체 대상
+        { 'recipients.selectedEmployees': { $in: [recipientName] } },       // 개별/개인 지정
+      ];
+      if (department) orConditions.push({ 'recipients.type': '부서', 'recipients.value': department });
+      if (position)   orConditions.push({ 'recipients.type': '직급', 'recipients.value': position });
+      if (role)       orConditions.push({ 'recipients.type': '직책', 'recipients.value': role });
+      query['$or'] = orConditions;
+    }
+
+    // 일반직원: 최근 200건 limit, 관리자: 무제한
+    const notifQuery = Notification.find(query).sort({ createdAt: -1 });
+    if (recipientName) notifQuery.limit(200);
+    const notifications = await notifQuery;
+
+    cacheSet(cacheKey, notifications);
     console.log(
-      `✅ [Notifications API] 조회 완료: type=${
-        notificationType || 'ALL'
-      }, count=${notifications.length}`
+      `✅ [Notifications API] DB 조회 완료: type=${notificationType || 'ALL'}, recipient=${recipientName || 'ALL'}, count=${notifications.length}`
     );
     res.json(notifications);
   } catch (error) {
@@ -507,6 +579,7 @@ router.post('/notifications', async (req, res) => {
     const notification = new Notification(notificationData);
 
     await notification.save();
+    cacheInvalidate('notif:'); // 알림 캐시 전체 무효화
     console.log(
       `✅ [Notifications API] 알림 생성 완료: type=${notificationType}, title=${title}`
     );
@@ -542,6 +615,7 @@ router.put('/notifications/:id', async (req, res) => {
       return res.status(404).json({ message: '알림을 찾을 수 없습니다.' });
     }
 
+    cacheInvalidate('notif:'); // 알림 캐시 전체 무효화
     console.log(`✅ [Notifications API] 알림 수정 완료: id=${id}`);
 
     // Socket.io 이벤트 발생 (실시간 업데이트)
@@ -583,6 +657,7 @@ router.put('/notifications/:id/status', async (req, res) => {
       return res.status(404).json({ message: '알림을 찾을 수 없습니다.' });
     }
 
+    cacheInvalidate('notif:'); // 알림 캐시 전체 무효화
     console.log(
       `✅ [Notifications API] 알림 상태 변경: id=${id}, status=${status}`
     );
@@ -615,6 +690,7 @@ router.delete('/notifications/:id', async (req, res) => {
       return res.status(404).json({ message: '알림을 찾을 수 없습니다.' });
     }
 
+    cacheInvalidate('notif:'); // 알림 캐시 전체 무효화
     console.log(`✅ [Notifications API] 알림 삭제 완료: id=${id}`);
 
     // Socket.io 이벤트 발생 (실시간 업데이트)
@@ -867,4 +943,37 @@ router.post('/notifications/:id/read', async (req, res) => {
   }
 });
 
+// ==========================================
+// 캐시 웜업 (서버 시작 시 호출)
+// ==========================================
+const warmupCache = async () => {
+  try {
+    const now = new Date();
+    // 공지 lite (직원용)
+    const noticesLite = await Notice.find({
+      $or: [
+        { isScheduled: false },
+        { isScheduled: { $exists: false } },
+        { isScheduled: true, isPublished: true },
+      ],
+    }).sort({ createdAt: -1 }).select('-content');
+    cacheSet('notice:false:true', noticesLite);
+
+    // 공지 full (관리자용)
+    const noticesFull = await Notice.find({}).sort({ createdAt: -1 });
+    cacheSet('notice:true:false', noticesFull);
+    cacheSet('notice:false:false', noticesFull);
+
+    // 알림 전체 (관리자용)
+    const allNotifications = await Notification.find({}).sort({ createdAt: -1 });
+    cacheSet('notif:::::', allNotifications);
+
+    console.log(`🔥 캐시 웜업 완료 (공지 ${noticesLite.length}건, 알림 ${allNotifications.length}건)`);
+  } catch (err) {
+    console.warn('⚠️ 캐시 웜업 실패 (무시):', err.message);
+  }
+};
+
 module.exports = router;
+module.exports.warmupCache = warmupCache;
+module.exports.invalidateNotifCache = () => cacheInvalidate('notif:');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Calendar, ChevronUp, ChevronDown } from 'lucide-react';
 import {
   EVENT_TYPE_COLORS,
   DAYS_KO,
@@ -380,7 +380,7 @@ const StaffScheduleAttendance = ({
                             : ''
                         }
                       >
-                        <div className="font-medium">{day}</div>
+                        <div className="text-sm font-medium">{day}</div>
                         {/* 출근/지각,외출,조퇴,결근/연차,반차(오전),반차(오후),경조,공가,휴직,기타/null 색점 */}
                         <div
                           className={`absolute right-1 top-1 w-2 h-2 rounded-full ${dotColor}`}
@@ -758,8 +758,8 @@ const StaffScheduleAttendance = ({
       {/* 일정 상세 팝업 */}
       {showEventDetail && selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="p-6 pb-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-semibold text-gray-800">
                   일정 상세 정보
@@ -769,13 +769,13 @@ const StaffScheduleAttendance = ({
                     setShowEventDetail(false);
                     setSelectedEvent(null);
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-500 hover:text-gray-700 text-sm"
                 >
-                  <X size={20} />
+                  ✕
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto min-h-0">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   날짜

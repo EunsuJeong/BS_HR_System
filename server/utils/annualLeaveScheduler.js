@@ -150,6 +150,7 @@ async function createLeaveExpiryNotification(employee, annualData, daysUntilExpi
     },
     related: {
       entity: 'annualLeave',
+      warningDays: daysUntilExpiry,
       refId: employee.employeeId,
       annualStart: annualData.annualStart,
       annualEnd: annualData.annualEnd,

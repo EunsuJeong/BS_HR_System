@@ -47,6 +47,21 @@ const StaffSuggestion = ({
   const [editingSuggestionRemark, setEditingSuggestionRemark] = useState('');
   const suggestionScrollRef = useRef(null);
   const textareaRef = useRef(null);
+  const selectRef = useRef(null);
+
+  // select 실제 크기 변화 감지 → textarea minHeight 자동 동기화
+  useEffect(() => {
+    if (!selectRef.current || !textareaRef.current) return;
+
+    const observer = new ResizeObserver(() => {
+      if (selectRef.current && textareaRef.current) {
+        textareaRef.current.style.minHeight = selectRef.current.offsetHeight + 'px';
+      }
+    });
+
+    observer.observe(selectRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // 팝업이 열리거나 페이지가 변경될 때 스크롤을 맨 위로
   useEffect(() => {
@@ -178,10 +193,11 @@ const StaffSuggestion = ({
         <div className="space-y-2">
           <div className="flex space-x-1">
             <select
+              ref={selectRef}
               value={suggestionInput}
               onChange={(e) => setSuggestionInput(e.target.value)}
               className={`${commonClass} border rounded flex-1 min-w-[100px]`}
-              style={{ minHeight: '30px' }}
+              style={{ lineHeight: '1.15' }}
             >
               <option value="구매">
                 {selectedLanguage === 'en'
@@ -206,48 +222,46 @@ const StaffSuggestion = ({
             </select>
             <button
               className={`${commonClass} bg-blue-500 hover:bg-blue-600 text-white rounded whitespace-nowrap font-normal`}
+              style={{ paddingLeft: '0.75rem', paddingRight: '0.75rem' }}
               onClick={handleSuggestionSubmit}
               disabled={!suggestionInput || !applyContent.trim()}
             >
               {getText('신청', 'Submit')}
             </button>
           </div>
-          <div>
-            <textarea
-              ref={textareaRef}
-              value={applyContent}
-              onChange={(e) => setApplyContent(e.target.value)}
-              onInput={(e) => {
-                if (e.target.value === '') {
-                  e.target.style.height = '';
-                } else {
-                  e.target.style.height = 'auto';
-                  e.target.style.height = e.target.scrollHeight + 'px';
-                }
-              }}
-              rows={1}
-              className={`${commonClass} ${placeholderClass} placeholder:font-normal w-full border rounded resize-none break-words`}
-              placeholder={getText(
-                '건의 내용을 입력하세요',
-                'Enter suggestion content'
-              )}
-              style={{
-                wordWrap: 'break-word',
-                whiteSpace: 'pre-wrap',
-                overflow: 'hidden',
-                minHeight: '30px',
-              }}
-            />
-          </div>
+          <textarea
+            ref={textareaRef}
+            value={applyContent}
+            onChange={(e) => setApplyContent(e.target.value)}
+            onInput={(e) => {
+              if (e.target.value === '') {
+                e.target.style.height = '';
+              } else {
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+              }
+            }}
+            rows={1}
+            className={`${commonClass} ${placeholderClass} placeholder:font-normal w-full border rounded resize-none break-words`}
+            placeholder={getText(
+              '건의 내용을 입력하세요',
+              'Enter suggestion content'
+            )}
+            style={{
+              wordWrap: 'break-word',
+              whiteSpace: 'pre-wrap',
+              overflow: 'hidden',
+            }}
+          />
         </div>
       </div>
 
       {/* 더보기 팝업 */}
       {showSuggestionMorePopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
-            <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center shrink-0">
-              <h3 className="text-sm font-semibold text-gray-800">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 text-xs">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[90vw] max-h-[85vh] overflow-hidden flex flex-col text-xs">
+            <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center shrink-0 text-xs">
+              <h3 className="text-sm font-bold text-gray-900">
                 {getText('내 건의 사항 전체 내역', 'My Suggestions')}
               </h3>
               <button
@@ -259,59 +273,59 @@ const StaffSuggestion = ({
             </div>
             <div
               ref={suggestionScrollRef}
-              className="flex-1 overflow-y-auto overflow-x-auto p-6 min-h-0"
+              className="flex-1 overflow-y-auto overflow-x-auto p-6 min-h-0 text-xs"
             >
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto text-xs">
                 <table className="min-w-[800px] w-full text-xs border-collapse">
                   <thead className="bg-gray-100 sticky top-0 z-10">
                     <tr>
-                      <th className="text-center py-1 px-2 min-w-[90px] whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs min-w-[90px] whitespace-nowrap">
                         {getText('신청일', 'Request Date')}
                       </th>
-                      <th className="text-center py-1 px-2 min-w-[80px] whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs min-w-[80px] whitespace-nowrap">
                         {getText('유형', 'Division')}
                       </th>
-                      <th className="text-center py-1 px-2 min-w-[200px] whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs min-w-[200px] whitespace-nowrap">
                         {getText('내용', 'Content')}
                       </th>
-                      <th className="text-center py-1 px-2 min-w-[150px] whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs min-w-[150px] whitespace-nowrap">
                         {getText('비고', 'Remark')}
                       </th>
-                      <th className="text-center py-1 px-2 min-w-[80px] whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs min-w-[80px] whitespace-nowrap">
                         {getText('상태', 'Status')}
                       </th>
-                      <th className="text-center py-1 px-2 min-w-[150px] whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs min-w-[150px] whitespace-nowrap">
                         {getText('수정/삭제', 'Edit/Delete')}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-200 text-xs">
                     {suggestions
                       .slice(
                         (suggestionPage - 1) * SUG_PAGE_SIZE,
                         suggestionPage * SUG_PAGE_SIZE
                       )
                       .map((s) => (
-                        <tr key={s.id}>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                        <tr key={s.id} className="text-xs">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             {s.applyDate}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             {getSuggestionCategoryText(
                               s.type,
                               selectedLanguage
                             )}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-pre" style={lineHeightStyle}>
+                          <td className="text-center py-1 px-2 text-xs whitespace-pre" style={lineHeightStyle}>
                             {addLineBreaks(s.content)}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-pre" style={lineHeightStyle}>
+                          <td className="text-center py-1 px-2 text-xs whitespace-pre" style={lineHeightStyle}>
                             {(s.status === '승인' || s.status === '반려') &&
                             s.remark
                               ? addLineBreaks(s.remark)
                               : '-'}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             <span
                               className={`px-1 py-0.5 rounded-full text-xs ${
                                 s.status === '승인'
@@ -326,9 +340,9 @@ const StaffSuggestion = ({
                               {s.status}
                             </span>
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 text-xs">
                             {s.status === '대기' && (
-                              <div className="flex items-center justify-center gap-1">
+                              <div className="flex items-center justify-center gap-1 text-xs">
                                 <button
                                   className={`${commonClass} bg-blue-100 text-blue-700 rounded hover:bg-blue-200 whitespace-nowrap font-normal`}
                                   onClick={() => {
@@ -398,7 +412,7 @@ const StaffSuggestion = ({
                       <tr>
                         <td
                           colSpan={6}
-                          className="text-center text-gray-400 py-8"
+                          className="text-center text-xs text-gray-400 py-8"
                         >
                           {getText(
                             '등록된 건의 사항이 없습니다.',
@@ -412,7 +426,7 @@ const StaffSuggestion = ({
               </div>
             </div>
             {/* 페이지네이션 */}
-            <div className="flex justify-center items-center py-3 space-x-1 shrink-0 border-t border-gray-200">
+            <div className="flex justify-center items-center py-3 space-x-1 shrink-0 border-t border-gray-200 text-xs popup-footer-safe">
               <button
                 onClick={() =>
                   setSuggestionPage(Math.max(1, suggestionPage - 1))
@@ -450,9 +464,9 @@ const StaffSuggestion = ({
       {/* 건의사항 신청 팝업 */}
       {showSuggestionApplyPopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 flex flex-col">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
             <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-gray-800">
+              <h3 className="text-sm font-bold text-gray-900">
                 {getText('건의 사항 신청', 'Suggestion Application')}
               </h3>
               <button
@@ -462,7 +476,7 @@ const StaffSuggestion = ({
                 ✕
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {getText('유형', 'Category')}
@@ -505,10 +519,10 @@ const StaffSuggestion = ({
 
       {/* 건의사항 수정 팝업 */}
       {showEditPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4">
-            <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-gray-800">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 text-xs">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col text-xs">
+            <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center text-xs">
+              <h3 className="text-sm font-bold text-gray-900">
                 {getText('건의 사항 수정', 'Edit Suggestion')}
               </h3>
               <button
@@ -524,7 +538,7 @@ const StaffSuggestion = ({
                 ✕
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-3 text-xs min-h-0">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {getText('유형', 'Category')}
@@ -618,7 +632,7 @@ const StaffSuggestion = ({
                       );
                     }
                   }}
-                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-normal text-xs"
+                  className="flex-1 px-2 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-normal text-xs"
                 >
                   {getText('저장', 'Save')}
                 </button>
@@ -630,7 +644,7 @@ const StaffSuggestion = ({
                     setEditingSuggestionTitle('');
                     setEditingSuggestionRemark('');
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-normal text-xs"
+                  className="flex-1 px-2 py-1 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-normal text-xs"
                 >
                   {getText('취소', 'Cancel')}
                 </button>

@@ -492,14 +492,14 @@ const StaffAnnualLeave = ({
           </button>
         </div>
         <div className="space-y-3 text-xs">
-          <div className="text-center text-gray-700" style={{ lineHeight: '1.15' }}>
-            <div>
+          <div className="text-center text-gray-700 text-xs" style={{ lineHeight: '1.15' }}>
+            <div className="text-xs">
               {getText(
                 `연차기간: ${leaveStartDate}~${leaveEndDate}`,
                 `Leave Period: ${leaveStartDate}~${leaveEndDate}`
               )}
             </div>
-            <div className="mt-2">
+            <div className="mt-2 text-xs">
               {getText(
                 `총연차: ${totalAnnualLeave}, 사용: ${usedAnnualLeave}, 잔여: ${remainAnnualLeave}`,
                 `Total: ${totalAnnualLeave}, Used: ${usedAnnualLeave}, Remaining: ${remainAnnualLeave}`
@@ -620,7 +620,6 @@ const StaffAnnualLeave = ({
                   wordWrap: 'break-word',
                   whiteSpace: 'pre-wrap',
                   overflow: 'hidden',
-                  minHeight: '30px',
                 }}
               />
               <textarea
@@ -642,7 +641,6 @@ const StaffAnnualLeave = ({
                   wordWrap: 'break-word',
                   whiteSpace: 'pre-wrap',
                   overflow: 'hidden',
-                  minHeight: '30px',
                 }}
               />
               <button
@@ -662,10 +660,10 @@ const StaffAnnualLeave = ({
       {/* 연차 신청/내역 더보기 팝업 */}
       {showLeaveHistoryPopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[90vw] max-h-[85vh] overflow-hidden">
-            <div className="p-4 sm:p-6 pb-4 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="p-6 pb-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-semibold text-gray-800">
+                <h3 className="text-sm font-bold text-gray-900">
                   {getText('내 연차 신청 전체 내역', 'All Leave Applications')}
                 </h3>
                 <button
@@ -677,45 +675,45 @@ const StaffAnnualLeave = ({
               </div>
             </div>
 
-            <div ref={leaveScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div ref={leaveScrollRef} className="flex-1 overflow-y-auto p-6">
               <div className="overflow-x-auto">
                 <table className="min-w-[800px] w-full text-xs border-collapse">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('신청일', 'Request Date')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('시작일', 'Start Date')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('종료일', 'End Date')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('사용일수', 'Days Used')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('유형', 'Type')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('시작시간', 'Start Time')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('종료시간', 'End Time')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('사유', 'Reason')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('연락처', 'Contact')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('비고', 'Remark')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('상태', 'Status')}
                       </th>
-                      <th className="text-center py-1 px-2 whitespace-nowrap">
+                      <th className="text-center py-1 px-2 text-xs whitespace-nowrap">
                         {getText('수정/삭제', 'Edit/Delete')}
                       </th>
                     </tr>
@@ -723,19 +721,19 @@ const StaffAnnualLeave = ({
                   <tbody className="divide-y divide-gray-200">
                     {leaveFormPreview && (
                       <tr className="bg-blue-50">
-                        <td className="text-center py-1 px-2 whitespace-nowrap">
+                        <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                           {formatDateByLang(leaveFormPreview.requestDate)}
                         </td>
-                        <td className="text-center py-1 px-2 whitespace-nowrap">
+                        <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                           {formatDateByLang(leaveFormPreview.startDate)}
                         </td>
-                        <td className="text-center py-1 px-2 whitespace-nowrap">
+                        <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                           {formatDateByLang(leaveFormPreview.endDate)}
                         </td>
-                        <td className="text-center py-1 px-2 whitespace-nowrap">
+                        <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                           {getLeaveDays(leaveFormPreview)}
                         </td>
-                        <td className="text-center py-1 px-2 whitespace-nowrap">
+                        <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                           {getLeaveTypeText(leaveFormPreview.type)}
                         </td>
                         <td className="text-center py-1 px-2 whitespace-nowrap text-xs">
@@ -744,17 +742,17 @@ const StaffAnnualLeave = ({
                         <td className="text-center py-1 px-2 whitespace-nowrap text-xs">
                           {(leaveFormPreview.type === '외출' || leaveFormPreview.type === '조퇴') ? (fmt12h(leaveFormPreview.endTime) || <span className="text-gray-300">-</span>) : <span className="text-gray-300">-</span>}
                         </td>
-                        <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>
+                        <td className="text-center py-1 px-2 text-xs whitespace-nowrap" style={{ lineHeight: '1.15' }}>
                           {leaveFormPreview.reason}
                         </td>
-                        <td className="text-center py-1 px-2 whitespace-nowrap">
+                        <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                           {leaveFormPreview.contact}
                         </td>
-                        <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>-</td>
-                        <td className="text-center py-1 px-2 text-purple-600 whitespace-nowrap">
+                        <td className="text-center py-1 px-2 text-xs whitespace-nowrap" style={{ lineHeight: '1.15' }}>-</td>
+                        <td className="text-center py-1 px-2 text-xs text-purple-600 whitespace-nowrap">
                           {leaveFormPreview.status}
                         </td>
-                        <td className="text-center py-1 px-2"></td>
+                        <td className="text-center py-1 px-2 text-xs"></td>
                       </tr>
                     )}
                     {leaveRequests
@@ -765,19 +763,19 @@ const StaffAnnualLeave = ({
                       )
                       .map((lr) => (
                         <tr key={lr.id}>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             {formatDateByLang(lr.requestDate)}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             {formatDateByLang(lr.startDate)}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             {formatDateByLang(lr.endDate)}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             {getLeaveDays(lr)}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             {getLeaveTypeText(lr.type)}
                           </td>
                           <td className="text-center py-1 px-2 whitespace-nowrap text-xs">
@@ -786,16 +784,16 @@ const StaffAnnualLeave = ({
                           <td className="text-center py-1 px-2 whitespace-nowrap text-xs">
                             {(lr.type === '외출' || lr.type === '조퇴') ? (fmt12h(lr.endTime) || <span className="text-gray-300">-</span>) : <span className="text-gray-300">-</span>}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap" style={{ lineHeight: '1.15' }}>
                             {lr.reason}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             {lr.contact}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap" style={{ lineHeight: '1.15' }}>
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap" style={{ lineHeight: '1.15' }}>
                             {lr.remark || '-'}
                           </td>
-                          <td className="text-center py-1 px-2 whitespace-nowrap">
+                          <td className="text-center py-1 px-2 text-xs whitespace-nowrap">
                             <span
                               className={`px-2 py-0.5 rounded-full text-xs ${
                                 lr.status === '승인'
@@ -812,7 +810,7 @@ const StaffAnnualLeave = ({
                               {lr.status}
                             </span>
                           </td>
-                          <td className="text-center py-1 px-2">
+                          <td className="text-center py-1 px-2 text-xs">
                             {lr.status === '대기' ? (
                               <>
                                 <button
@@ -839,7 +837,7 @@ const StaffAnnualLeave = ({
                       <tr>
                         <td
                           colSpan={12}
-                          className="text-center text-gray-400 py-8"
+                          className="text-center text-xs text-gray-400 py-8"
                         >
                           {getText(
                             '등록된 연차 내역이 없습니다.',
@@ -851,52 +849,52 @@ const StaffAnnualLeave = ({
                   </tbody>
                 </table>
               </div>
-              {/* 페이지네이션 */}
-              <div className="flex justify-center items-center py-3 space-x-2">
-                <button
-                  onClick={() => setLeavePage(Math.max(1, leavePage - 1))}
-                  disabled={leavePage === 1}
-                  className={`${commonClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-normal`}
-                >
-                  {selectedLanguage === 'en' ? 'Prev' : '이전'}
-                </button>
-                <span className="text-xs text-gray-600">
-                  {leavePage} /{' '}
-                  {Math.max(
-                    1,
-                    Math.ceil(
-                      leaveRequests.filter(
-                        (lr) => lr.employeeId === currentUser.id
-                      ).length / LEAVE_PAGE_SIZE
+            </div>
+            {/* 페이지네이션 */}
+            <div className="flex justify-center items-center py-3 space-x-1 shrink-0 border-t border-gray-200 popup-footer-safe">
+              <button
+                onClick={() => setLeavePage(Math.max(1, leavePage - 1))}
+                disabled={leavePage === 1}
+                className={`${commonClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-normal`}
+              >
+                {selectedLanguage === 'en' ? 'Prev' : '이전'}
+              </button>
+              <span className="text-xs text-gray-600">
+                {leavePage} /{' '}
+                {Math.max(
+                  1,
+                  Math.ceil(
+                    leaveRequests.filter(
+                      (lr) => lr.employeeId === currentUser.id
+                    ).length / LEAVE_PAGE_SIZE
+                  )
+                )}
+              </span>
+              <button
+                onClick={() =>
+                  setLeavePage(
+                    Math.min(
+                      Math.ceil(
+                        leaveRequests.filter(
+                          (lr) => lr.employeeId === currentUser.id
+                        ).length / LEAVE_PAGE_SIZE
+                      ),
+                      leavePage + 1
                     )
-                  )}
-                </span>
-                <button
-                  onClick={() =>
-                    setLeavePage(
-                      Math.min(
-                        Math.ceil(
-                          leaveRequests.filter(
-                            (lr) => lr.employeeId === currentUser.id
-                          ).length / LEAVE_PAGE_SIZE
-                        ),
-                        leavePage + 1
-                      )
-                    )
-                  }
-                  disabled={
-                    leavePage >=
-                    Math.ceil(
-                      leaveRequests.filter(
-                        (lr) => lr.employeeId === currentUser.id
-                      ).length / LEAVE_PAGE_SIZE
-                    )
-                  }
-                  className={`${commonClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-normal`}
-                >
-                  {selectedLanguage === 'en' ? 'Next' : '다음'}
-                </button>
-              </div>
+                  )
+                }
+                disabled={
+                  leavePage >=
+                  Math.ceil(
+                    leaveRequests.filter(
+                      (lr) => lr.employeeId === currentUser.id
+                    ).length / LEAVE_PAGE_SIZE
+                  )
+                }
+                className={`${commonClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-normal`}
+              >
+                {selectedLanguage === 'en' ? 'Next' : '다음'}
+              </button>
             </div>
           </div>
         </div>
@@ -905,9 +903,9 @@ const StaffAnnualLeave = ({
       {/* 연차 신청 수정 팝업 */}
       {showEditLeavePopup && editingLeave && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 flex flex-col">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
             <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-gray-800">
+              <h3 className="text-sm font-bold text-gray-900">
                 연차 신청 변경
               </h3>
               <button
@@ -917,7 +915,7 @@ const StaffAnnualLeave = ({
                 ✕
               </button>
             </div>
-            <div className="text-xs p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto text-xs p-6 space-y-4 min-h-0">
               <input
                 type="date"
                 value={formatDateForInput(editingLeave.startDate)}
@@ -927,7 +925,7 @@ const StaffAnnualLeave = ({
                     startDate: e.target.value,
                   }))
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2 text-xs border border-gray-300 rounded-lg"
               />
               <input
                 type="date"
@@ -938,7 +936,7 @@ const StaffAnnualLeave = ({
                     endDate: e.target.value,
                   }))
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2 text-xs border border-gray-300 rounded-lg"
               />
               <select
                 value={editingLeave.type || editingLeave.leaveType}
@@ -949,7 +947,7 @@ const StaffAnnualLeave = ({
                     leaveType: e.target.value, // 하위 호환성
                   }))
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2 text-xs border border-gray-300 rounded-lg"
               >
                 <option>연차</option>
                 <option>반차(오전)</option>
@@ -979,7 +977,7 @@ const StaffAnnualLeave = ({
                   }
                 }}
                 rows={1}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none"
+                className="w-full px-4 py-2 text-xs border border-gray-300 rounded-lg resize-none"
                 style={{
                   wordWrap: 'break-word',
                   whiteSpace: 'pre-wrap',
@@ -1004,7 +1002,7 @@ const StaffAnnualLeave = ({
                   }
                 }}
                 rows={1}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none"
+                className="w-full px-4 py-2 text-xs border border-gray-300 rounded-lg resize-none"
                 style={{
                   wordWrap: 'break-word',
                   whiteSpace: 'pre-wrap',

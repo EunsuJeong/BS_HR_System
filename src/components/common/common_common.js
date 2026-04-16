@@ -1042,42 +1042,63 @@ export const analyzeAttendanceStatus = (
     day
   ).padStart(2, '0')}`;
 
-  const leaveRecord = leaveRequests.find(
-    (leave) =>
-      leave.employeeId === currentUserId &&
-      leave.startDate <= dateStr &&
-      leave.endDate >= dateStr &&
-      leave.status === '승인'
-  );
+  // 우선순위: 주황(1) > 빨강(2) > 초록(3)
+  const LEAVE_TYPE_PRIORITY = {
+    연차: 1, '반차(오전)': 1, '반차(오후)': 1, 병가: 1, 경조: 1, 공가: 1, 출산휴가: 1, 육아휴직: 1,
+    조퇴: 2, 결근: 2, 외출: 2,
+  };
 
+  // ISO 날짜(2026-04-10T00:00:00.000Z)도 정상 비교되도록 날짜만 추출
+  const matchingLeaves = leaveRequests.filter((leave) => {
+    const startDate = (leave.startDate || '').split('T')[0];
+    const endDate = (leave.endDate || '').split('T')[0];
+    return (
+      leave.employeeId === currentUserId &&
+      startDate <= dateStr &&
+      endDate >= dateStr &&
+      leave.status === '승인'
+    );
+  });
+
+  // 동일 날짜에 복수 휴가 시 우선순위 높은 것 선택 (주황 > 빨강 > 초록)
+  matchingLeaves.sort(
+    (a, b) => (LEAVE_TYPE_PRIORITY[a.type] ?? 3) - (LEAVE_TYPE_PRIORITY[b.type] ?? 3)
+  );
+  const leaveRecord = matchingLeaves[0];
+
+  // 우선순위 맵: 낮은 숫자가 더 높은 우선순위 (주황 > 빨강 > 초록)
+  const STATUS_PRIORITY = {
+    연차: 1, '반차(오전)': 1, '반차(오후)': 1, 병가: 1, 경조: 1, 공가: 1, 휴직: 1,
+    지각: 2, 조퇴: 2, '지각/조퇴': 2, 결근: 2, 외출: 2,
+    출근: 3, 기타: 3, 근무중: 3,
+  };
+
+  // leave 레코드 → leaveStatus 변환
+  let leaveStatus = null;
   if (leaveRecord) {
     switch (leaveRecord.type) {
-      case '연차':
-        return '연차';
-      case '반차(오전)':
-        return '반차(오전)';
-      case '반차(오후)':
-        return '반차(오후)';
-      case '병가':
-        return '병가';
-      case '경조':
-        return '경조';
-      case '공가':
-        return '공가';
-      case '출산휴가':
-        return '경조';
-      case '육아휴직':
-        return '휴직';
-      case '외출':
-        return '외출';
-      case '조퇴':
-        return '조퇴';
-      case '결근':
-        return '결근';
-      default:
-        return '기타';
+      case '연차': leaveStatus = '연차'; break;
+      case '반차(오전)': leaveStatus = '반차(오전)'; break;
+      case '반차(오후)': leaveStatus = '반차(오후)'; break;
+      case '병가': leaveStatus = '병가'; break;
+      case '경조': leaveStatus = '경조'; break;
+      case '공가': leaveStatus = '공가'; break;
+      case '출산휴가': leaveStatus = '경조'; break;
+      case '육아휴직': leaveStatus = '휴직'; break;
+      case '외출': leaveStatus = '외출'; break;
+      case '조퇴': leaveStatus = '조퇴'; break;
+      case '결근': leaveStatus = '결근'; break;
+      default: leaveStatus = '기타'; break;
+    }
+
+    // 주황(1순위) leave는 무조건 즉시 반환 (출근 데이터 불필요)
+    if ((STATUS_PRIORITY[leaveStatus] ?? 99) === 1) {
+      return leaveStatus;
     }
   }
+
+  // 출근 데이터로 attendance status 계산
+  let attStatus = null;
 
   if (!attendance || (!attendance.checkIn && !attendance.checkOut)) {
     const dayOfWeek = new Date(year, month - 1, day).getDay();
@@ -1085,16 +1106,13 @@ export const analyzeAttendanceStatus = (
     const isHoliday = isHolidayDateFn(year, month, day);
 
     if (isWeekend || isHoliday) {
-      return '휴일';
+      attStatus = '휴일';
+    } else {
+      attStatus = '결근';
     }
-    return '결근';
-  }
-
-  if (attendance.checkIn && !attendance.checkOut) {
-    return '근무중';
-  }
-
-  if (attendance.checkIn && attendance.checkOut) {
+  } else if (attendance.checkIn && !attendance.checkOut) {
+    attStatus = '근무중';
+  } else if (attendance.checkIn && attendance.checkOut) {
     const checkInTime = parseTime(attendance.checkIn);
     const checkOutTime = parseTime(attendance.checkOut);
 
@@ -1103,53 +1121,50 @@ export const analyzeAttendanceStatus = (
     const isHolidayDay = isHolidayDateFn(year, month, day);
     const isHolidayWork = isWeekend || isHolidayDay;
 
-    let status = '출근';
+    attStatus = '출근';
 
-    if (isHolidayWork) {
-      status = '출근';
-    } else {
-      // 시프트 판정: 04:00~17:30 사이 출근이면 주간, 그 외는 야간
-      // 주간/야간 판정
+    if (!isHolidayWork) {
       if (
         checkInTime >= parseTime('04:00') &&
         checkInTime <= parseTime('17:30')
       ) {
-        // 주간 근무자: 08:31~15:00 사이 출근 시 지각
         if (
           checkInTime >= parseTime('08:31') &&
           checkInTime <= parseTime('15:00')
         ) {
-          status = '지각';
+          attStatus = '지각';
         }
-        // 조퇴 판정
         if (checkOutTime < parseTime('17:20')) {
-          status = status === '지각' ? '지각/조퇴' : '조퇴';
+          attStatus = attStatus === '지각' ? '지각/조퇴' : '조퇴';
         }
       } else {
-        // 야간 근무자: 19:01~다음날 03:00 사이 출근 시 지각
-        // 19:01~23:59 (1141분~1439분) 또는 00:00~03:00 (0분~180분)
         const isLateForNight =
           (checkInTime >= parseTime('19:01') &&
             checkInTime <= parseTime('23:59')) ||
           (checkInTime >= parseTime('00:00') &&
             checkInTime <= parseTime('03:00'));
         if (isLateForNight) {
-          status = '지각';
+          attStatus = '지각';
         }
-        // 조퇴 판정
         if (
           checkOutTime >= parseTime('00:00') &&
           checkOutTime < parseTime('03:50')
         ) {
-          status = status === '지각' ? '지각/조퇴' : '조퇴';
+          attStatus = attStatus === '지각' ? '지각/조퇴' : '조퇴';
         }
       }
     }
-
-    return status;
+  } else {
+    attStatus = '기타';
   }
 
-  return '기타';
+  // leave 없으면 attendance status 그대로 반환
+  if (!leaveStatus) return attStatus;
+
+  // 우선순위 비교: 더 높은 우선순위(낮은 숫자) 반환 (주황 > 빨강 > 초록)
+  const leavePrio = STATUS_PRIORITY[leaveStatus] ?? 99;
+  const attPrio = STATUS_PRIORITY[attStatus] ?? 99;
+  return leavePrio <= attPrio ? leaveStatus : attStatus;
 };
 
 // ============================================================
@@ -2831,8 +2846,6 @@ export const useAuth = (dependencies = {}) => {
 
             // ✅ 로그인 직후임을 표시 (AI 추천사항 자동 생성용)
             sessionStorage.setItem('justLoggedIn', 'true');
-            // ✅ 관리자 로그인 시 1회 새로고침 트리거
-            sessionStorage.setItem('adminFirstLoad', 'true');
 
             setLoginError('');
             setSelectedLanguage('ko');
@@ -2849,19 +2862,16 @@ export const useAuth = (dependencies = {}) => {
             setCurrentYear(now.getFullYear());
             setCurrentMonth(now.getMonth() + 1);
 
-            // 관리자 로그인 시 근무형태 자동 분석
-            try {
-              await fetch(`${API_BASE_URL}/hr/analyze-work-type`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  year: now.getFullYear(),
-                  month: now.getMonth() + 1,
-                }),
-              });
-            } catch (error) {
-              console.error('❌ 근무형태 자동 분석 실패:', error);
-            }
+            // [5차 패치] 관리자 로그인 시 근무형태 자동 분석 - fire-and-forget
+            // 이유: await 시 React flush 전에 MongoDB 연결 풀 점유 → /notices 응답 지연
+            fetch(`${API_BASE_URL}/hr/analyze-work-type`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                year: now.getFullYear(),
+                month: now.getMonth() + 1,
+              }),
+            }).catch((error) => console.error('❌ 근무형태 자동 분석 실패:', error));
 
             // 아이디/비밀번호 저장 처리
             if (rememberUserId) {
@@ -2908,45 +2918,33 @@ export const useAuth = (dependencies = {}) => {
           setCurrentYear(now.getFullYear());
           setCurrentMonth(now.getMonth() + 1);
 
-          // 일반직원 로그인 시 해당 직원만 근무형태 자동 분석
-          try {
-            await fetch(`${API_BASE_URL}/hr/analyze-work-type`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                year: now.getFullYear(),
-                month: now.getMonth() + 1,
-                employeeId: employeeUser.employeeId || employeeUser.id, // 해당 직원만
-              }),
-            });
-          } catch (error) {
-            console.error('❌ 근무형태 자동 분석 실패:', error);
-          }
+          // [5차 패치] 일반직원 로그인 시 해당 직원만 근무형태 자동 분석 - fire-and-forget
+          // 이유: await 시 로그인 핸들러가 불필요하게 대기 → React flush 지연 가능성
+          fetch(`${API_BASE_URL}/hr/analyze-work-type`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              year: now.getFullYear(),
+              month: now.getMonth() + 1,
+              employeeId: employeeUser.employeeId || employeeUser.id,
+            }),
+          }).catch((error) => console.error('❌ 근무형태 자동 분석 실패:', error));
 
-          // 일반직원 로그인 시 급여 데이터 불러오기
-          try {
-            const employeeId = employeeUser.employeeId || employeeUser.id;
-            const payrollResponse = await PayrollAPI.getEmployeePayroll(
-              employeeId,
-              null,
-              12
-            );
-
-            if (payrollResponse && payrollResponse.data) {
-              // payrollByMonth 형식으로 변환하여 저장
-              const payrollData = {};
-              payrollResponse.data.forEach((item) => {
-                const yearMonth = `${item.year}-${String(item.month).padStart(
-                  2,
-                  '0'
-                )}`;
-                payrollData[yearMonth] = item;
-              });
-              setPayrollByMonth(payrollData);
-            }
-          } catch (error) {
-            console.error('❌ 로그인 시 급여 데이터 불러오기 실패:', error);
-          }
+          // [5차 패치] 일반직원 로그인 시 급여 데이터 - fire-and-forget
+          // 이유: await 시 PayrollAPI(~2s)가 완료될 때까지 login 핸들러 지연
+          const employeeId = employeeUser.employeeId || employeeUser.id;
+          PayrollAPI.getEmployeePayroll(employeeId, null, 12)
+            .then((payrollResponse) => {
+              if (payrollResponse && payrollResponse.data) {
+                const payrollData = {};
+                payrollResponse.data.forEach((item) => {
+                  const yearMonth = `${item.year}-${String(item.month).padStart(2, '0')}`;
+                  payrollData[yearMonth] = item;
+                });
+                setPayrollByMonth(payrollData);
+              }
+            })
+            .catch((error) => console.error('❌ 로그인 시 급여 데이터 불러오기 실패:', error));
 
           // 아이디/비밀번호 저장 처리
           if (rememberUserId) {

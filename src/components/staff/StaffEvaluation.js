@@ -75,9 +75,9 @@ const StaffEvaluation = ({
         {/* 직원 평가 더보기 팝업 */}
         {showEvaluationMorePopup && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 max-h-[80vh] flex flex-col">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 max-h-[85vh] flex flex-col overflow-hidden">
               <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 className="text-sm font-semibold text-gray-800">
+                <h3 className="text-sm font-bold text-gray-900">
                   {getText(
                     '직원 평가 내역',
                     'Employee Evaluation History'
@@ -160,56 +160,56 @@ const StaffEvaluation = ({
                     )}
                   </tbody>
                 </table>
-                {/* 페이지네이션 */}
-                <div className="flex justify-center items-center py-3 space-x-2">
-                  <button
-                    onClick={() =>
-                      setEvaluationPage(Math.max(1, evaluationPage - 1))
-                    }
-                    disabled={evaluationPage === 1}
-                    className={`${commonClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-normal`}
-                  >
-                    {selectedLanguage === 'en' ? 'Prev' : '이전'}
-                  </button>
-                  <span className={`${tableTextClass} text-gray-600`}>
-                    {evaluationPage} /{' '}
-                    {Math.max(
-                      1,
-                      Math.ceil(
-                        evaluationData.filter(
-                          (perf) => perf.employeeId === currentUser.id
-                        ).length / EVALUATION_PAGE_SIZE
-                      )
-                    )}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setEvaluationPage(
-                        Math.min(
-                          Math.ceil(
-                            evaluationData.filter(
-                              (perf) =>
-                                perf.employeeId === currentUser.id
-                            ).length / EVALUATION_PAGE_SIZE
-                          ),
-                          evaluationPage + 1
-                        )
-                      )
-                    }
-                    disabled={
-                      evaluationPage >=
-                      Math.ceil(
-                        evaluationData.filter(
-                          (perf) => perf.employeeId === currentUser.id
-                        ).length / EVALUATION_PAGE_SIZE
-                      )
-                    }
-                    className={`${commonClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-normal`}
-                  >
-                    {selectedLanguage === 'en' ? 'Next' : '다음'}
-                  </button>
-                </div>
               </div>
+            {/* 페이지네이션 */}
+            <div className="flex justify-center items-center py-3 space-x-1 shrink-0 border-t border-gray-200 popup-footer-safe">
+              <button
+                onClick={() =>
+                  setEvaluationPage(Math.max(1, evaluationPage - 1))
+                }
+                disabled={evaluationPage === 1}
+                className={`${commonClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-normal`}
+              >
+                {selectedLanguage === 'en' ? 'Prev' : '이전'}
+              </button>
+              <span className={`${tableTextClass} text-gray-600`}>
+                {evaluationPage} /{' '}
+                {Math.max(
+                  1,
+                  Math.ceil(
+                    evaluationData.filter(
+                      (perf) => perf.employeeId === currentUser.id
+                    ).length / EVALUATION_PAGE_SIZE
+                  )
+                )}
+              </span>
+              <button
+                onClick={() =>
+                  setEvaluationPage(
+                    Math.min(
+                      Math.ceil(
+                        evaluationData.filter(
+                          (perf) =>
+                            perf.employeeId === currentUser.id
+                        ).length / EVALUATION_PAGE_SIZE
+                      ),
+                      evaluationPage + 1
+                    )
+                  )
+                }
+                disabled={
+                  evaluationPage >=
+                  Math.ceil(
+                    evaluationData.filter(
+                      (perf) => perf.employeeId === currentUser.id
+                    ).length / EVALUATION_PAGE_SIZE
+                  )
+                }
+                className={`${commonClass} border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-normal`}
+              >
+                {selectedLanguage === 'en' ? 'Next' : '다음'}
+              </button>
+            </div>
             </div>
           </div>
         )}

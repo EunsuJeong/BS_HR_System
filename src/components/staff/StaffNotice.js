@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { FileText } from 'lucide-react';
 import {
   NOTICE_PAGE_SIZE,
@@ -23,15 +23,67 @@ const StaffNotice = ({
   markNoticeAsRead,
   getUnreadNoticeCount,
   selectedLanguage,
+  accidentFreeDays = 0,
 }) => {
   const { expandedNotices, toggleNotice } = useNoticeToggle();
   const [showNoticePopup, setShowNoticePopup] = useState(false);
-  const [selectedNotice, setSelectedNotice] = useState(null);
+  const [selectedNoticeId, setSelectedNoticeId] = useState(null);
+  // selectedNotice는 notices prop에서 항상 최신 데이터 파생 (content lazy-load 반영)
+  const selectedNotice = selectedNoticeId
+    ? notices.find((n) => n.id === selectedNoticeId || n._id === selectedNoticeId) || null
+    : null;
   const [noticePage, setNoticePage] = useState(1);
   const noticeScrollRef = useRef(null);
 
   // 조회수가 이미 증가된 공지사항 ID를 추적 (중복 방지)
   const viewedNoticesRef = useRef(new Set());
+
+  // content lazy-load: 상세 내용 요청 중 중복 방지
+  const contentLoadingRef = useRef(new Set());
+
+  // [성능] 파생값 memoization — notices 변경 시에만 재계산
+  const filteredNotices = useMemo(
+    () => notices.filter((n) => !n.isScheduled || n.isPublished),
+    [notices]
+  );
+  const totalPage = useMemo(
+    () => Math.ceil(filteredNotices.length / NOTICE_PAGE_SIZE) || 1,
+    [filteredNotices]
+  );
+  const pagedNotices = useMemo(() => {
+    const start = (noticePage - 1) * NOTICE_PAGE_SIZE;
+    return filteredNotices.slice(start, start + NOTICE_PAGE_SIZE);
+  }, [filteredNotices, noticePage]);
+
+  // [성능] linkifyText memoization — content 변경 시에만 재계산
+  const linkedContent = useMemo(
+    () => linkifyText(selectedNotice?.content || ''),
+    [selectedNotice?.content]
+  );
+
+  // notice.content가 없을 때 서버에서 상세 조회 후 setNotices로 업데이트
+  const ensureContent = async (notice) => {
+    const noticeId = notice.id || notice._id;
+    if (notice.content !== undefined || contentLoadingRef.current.has(noticeId)) return;
+    contentLoadingRef.current.add(noticeId);
+    try {
+      const detail = await NoticeAPI.get(noticeId);
+      if (detail?.content !== undefined && setNotices) {
+        setNotices((prev) =>
+          prev.map((n) =>
+            (n.id === noticeId || n._id === noticeId)
+              ? { ...n, content: detail.content }
+              : n
+          )
+        );
+      }
+    } catch (e) {
+      // 에러 무시
+    } finally {
+      // fetch 완료(성공/실패) 후 ref에서 제거 → 공지 재조회 후 재로드 가능
+      contentLoadingRef.current.delete(noticeId);
+    }
+  };
 
   // 날짜 형식 변환 함수 (YYYY-MM-DD → YYYY\nMM-DD)
   const formatDateMultiLine = (dateStr) => {
@@ -102,8 +154,8 @@ const StaffNotice = ({
   return (
     <>
       <style>{`
-        .notice-content { font-size: 14px; }
-        .notice-content * { font-size: 14px !important; }
+        .notice-content { font-size: 14px; line-height: 1.3; }
+        .notice-content * { font-size: 14px !important; line-height: 1.3 !important; }
       `}</style>
       {/* 공지사항 카드 */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
@@ -119,15 +171,24 @@ const StaffNotice = ({
               </span>
             )}
           </div>
-          <button
-            onClick={() => {
-              setNoticePage(1);
-              setShowNoticePopup(true);
-            }}
-            className="text-blue-500 text-2xs hover:text-blue-600"
-          >
-            {getText('더보기', 'More')} &gt;
-          </button>
+          <div className="flex items-center gap-2">
+            {accidentFreeDays > 0 && (
+              <span className="text-xs text-green-700 font-semibold px-2.5 py-1 rounded-full bg-green-100">
+                {getText(`무사고 ${accidentFreeDays}일 달성중`, `${accidentFreeDays} accident-free days`)}
+              </span>
+            )}
+            <button
+              onClick={() => {
+                console.time('notice-popup-open');
+                setNoticePage(1);
+                setShowNoticePopup(true);
+                requestAnimationFrame(() => console.timeEnd('notice-popup-open'));
+              }}
+              className="text-blue-500 text-2xs hover:text-blue-600"
+            >
+              {getText('더보기', 'More')} &gt;
+            </button>
+          </div>
         </div>
         <div className="space-y-0.5">
           {notices
@@ -148,6 +209,7 @@ const StaffNotice = ({
                       // 조회수 증가 (첫 펼침 시에만)
                       if (!expandedNotices.has(notice.id)) {
                         handleIncrementViewCount(notice.id);
+                        ensureContent(notice); // content lazy-load
                       }
                       toggleNotice(notice.id);
                     }}
@@ -187,7 +249,7 @@ const StaffNotice = ({
                     <div className="mt-1 p-2 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                       <div
                         className="notice-content text-xs text-gray-700"
-                        style={{ lineHeight: '1.15' }}
+                        style={{ lineHeight: '1.3' }}
                         dangerouslySetInnerHTML={{
                           __html: linkifyText(notice.content || ''),
                         }}
@@ -272,16 +334,16 @@ const StaffNotice = ({
       {/* 공지사항 전체 팝업 */}
       {showNoticePopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col">
+          <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full mx-4 max-h-[85vh] flex flex-col">
             <div className="p-6 pb-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-semibold text-gray-800">
+                <h3 className="text-sm font-bold text-gray-900">
                   {getText('전체 공지사항', 'All Announcements')}
                 </h3>
                 <button
                   onClick={() => {
                     setShowNoticePopup(false);
-                    setSelectedNotice(null);
+                    setSelectedNoticeId(null);
                     // 팝업 상태는 React state로만 관리
                   }}
                   className="text-gray-500 hover:text-gray-700 text-sm"
@@ -293,24 +355,13 @@ const StaffNotice = ({
 
             <div
               ref={noticeScrollRef}
-              style={{
-                height: '500px',
-                overflowY: 'auto',
-                padding: '1.5rem',
-              }}
+              className="flex-1 overflow-y-auto p-6 min-h-0"
             >
               {!selectedNotice ? (
                 <div>
                   {/* 공지사항 목록 */}
                   <div className="space-y-1">
-                    {notices
-                      .filter(
-                        (notice) => !notice.isScheduled || notice.isPublished
-                      )
-                      .slice(
-                        (noticePage - 1) * NOTICE_PAGE_SIZE,
-                        noticePage * NOTICE_PAGE_SIZE
-                      )
+                    {pagedNotices
                       .map((notice) => (
                         <div
                           key={notice.id}
@@ -318,15 +369,27 @@ const StaffNotice = ({
                             if (!readAnnouncements.has(notice.id)) {
                               markNoticeAsRead(notice.id);
                             }
-                            // 조회수 증가 (첫 조회 시에만)
-                            handleIncrementViewCount(notice.id);
-                            setSelectedNotice(notice);
+                            // 조회수 증가 + content lazy-load 병렬 실행
+                            console.time('notice-detail-total');
+                            Promise.allSettled([
+                              (async () => {
+                                console.time('notice-view-post');
+                                await handleIncrementViewCount(notice.id);
+                                console.timeEnd('notice-view-post');
+                              })(),
+                              (async () => {
+                                console.time('notice-detail-get');
+                                await ensureContent(notice);
+                                console.timeEnd('notice-detail-get');
+                              })(),
+                            ]).then(() => console.timeEnd('notice-detail-total'));
+                            setSelectedNoticeId(notice.id || notice._id);
                           }}
                           className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
                         >
                           <div className="flex items-center flex-1">
                             <span
-                              className={`text-xs font-medium ${
+                              className={`text-xs font-normal ${
                                 !readAnnouncements.has(notice.id)
                                   ? 'text-gray-900 font-semibold'
                                   : 'text-gray-700'
@@ -340,66 +403,23 @@ const StaffNotice = ({
                               </span>
                             )}
                           </div>
-                          <div className="text-2xs flex items-center ml-4">
-                            <span className="text-gray-400 mr-2">
+                          <div className="text-xs text-gray-500 flex items-center ml-4">
+                            <span className="text-xs text-gray-400 mr-2">
                               👁 {notice.viewCount || 0}
                             </span>
-                            <span className="text-gray-500 text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(notice.date)}</span>
+                            <span className="text-xs text-gray-500 text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(notice.date)}</span>
                           </div>
                         </div>
                       ))}
                   </div>
 
-                  {/* 페이지네이션 */}
-                  <div className="flex justify-center items-center mt-6 space-x-2">
-                    <button
-                      onClick={() => setNoticePage(Math.max(1, noticePage - 1))}
-                      disabled={noticePage === 1}
-                      className="px-3 py-1 text-xs border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      {selectedLanguage === 'en' ? 'Prev' : '이전'}
-                    </button>
-                    <span className="text-xs text-gray-600">
-                      {noticePage} /{' '}
-                      {Math.ceil(
-                        notices.filter(
-                          (notice) => !notice.isScheduled || notice.isPublished
-                        ).length / NOTICE_PAGE_SIZE
-                      )}
-                    </span>
-                    <button
-                      onClick={() => {
-                        const filteredNoticesLength = notices.filter(
-                          (notice) => !notice.isScheduled || notice.isPublished
-                        ).length;
-                        setNoticePage(
-                          Math.min(
-                            Math.ceil(filteredNoticesLength / NOTICE_PAGE_SIZE),
-                            noticePage + 1
-                          )
-                        );
-                      }}
-                      disabled={
-                        noticePage >=
-                        Math.ceil(
-                          notices.filter(
-                            (notice) =>
-                              !notice.isScheduled || notice.isPublished
-                          ).length / NOTICE_PAGE_SIZE
-                        )
-                      }
-                      className="px-3 py-1 text-xs border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      {selectedLanguage === 'en' ? 'Next' : '다음'}
-                    </button>
-                  </div>
                 </div>
               ) : (
                 /* 공지사항 상세보기 */
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <button
-                      onClick={() => setSelectedNotice(null)}
+                      onClick={() => setSelectedNoticeId(null)}
                       className="text-blue-500 text-sm hover:text-blue-600"
                     >
                       ← 목록으로
@@ -407,22 +427,22 @@ const StaffNotice = ({
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <h4 className="text-xs font-semibold text-gray-800 mb-2">
+                      <h4 className="text-xs font-normal text-gray-700 mb-2">
                         {selectedNotice.title}
                       </h4>
-                      <div className="text-2xs text-gray-500 mb-4 flex items-center">
-                        <span className="text-gray-400 mr-2">
+                      <div className="text-xs text-gray-500 mb-4 flex items-center">
+                        <span className="text-xs text-gray-400 mr-2">
                           👁 {selectedNotice.viewCount || 0}
                         </span>
-                        <span className="text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(selectedNotice.date)}</span>
+                        <span className="text-xs text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(selectedNotice.date)}</span>
                       </div>
                     </div>
                     <div className="border-t pt-4">
                       <div
                         className="notice-content text-xs text-gray-700"
-                        style={{ lineHeight: '1.15' }}
+                        style={{ lineHeight: '1.3' }}
                         dangerouslySetInnerHTML={{
-                          __html: linkifyText(selectedNotice.content || ''),
+                          __html: linkedContent,
                         }}
                       ></div>
 
@@ -568,6 +588,27 @@ const StaffNotice = ({
                 </div>
               )}
             </div>
+            {!selectedNotice && (
+              <div className="flex justify-center items-center py-3 space-x-1 shrink-0 border-t border-gray-200 popup-footer-safe">
+                <button
+                  onClick={() => setNoticePage(Math.max(1, noticePage - 1))}
+                  disabled={noticePage === 1}
+                  className="px-3 py-1 text-xs border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  {selectedLanguage === 'en' ? 'Prev' : '이전'}
+                </button>
+                <span className="text-xs text-gray-600">
+                  {noticePage} / {totalPage}
+                </span>
+                <button
+                  onClick={() => setNoticePage(Math.min(totalPage, noticePage + 1))}
+                  disabled={noticePage >= totalPage}
+                  className="px-3 py-1 text-xs border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  {selectedLanguage === 'en' ? 'Next' : '다음'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

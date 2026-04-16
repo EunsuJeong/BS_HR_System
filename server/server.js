@@ -154,6 +154,82 @@ async function checkAndPublishScheduledNotices() {
   }
 }
 
+// ================== 무사고 알림 자동 체크 함수 ==================
+async function checkAndSendAccidentFreeNotification() {
+  try {
+    const { SafetyAccident, Notification } = require('./models');
+    const DEFAULT_BASE_DATE = new Date('2025-12-02');
+
+    // 가장 최근 사고일 조회
+    const accidents = await SafetyAccident.find({}, { date: 1 }).sort({ date: -1 });
+
+    let baseDate = DEFAULT_BASE_DATE;
+    if (accidents.length > 0) {
+      const maxDate = new Date(Math.max(...accidents.map((a) => new Date(a.date))));
+      if (maxDate >= DEFAULT_BASE_DATE) baseDate = maxDate;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((today - baseDate) / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0 || diffDays % 10 !== 0) return;
+
+    // 오늘 날짜 범위 (KST 기준)
+    const todayStart = new Date(today);
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const title = `무사고 ${diffDays}일 달성`;
+
+    // 중복 방지: 오늘 동일 제목 알림이 이미 있으면 건너뜀
+    const existing = await Notification.findOne({
+      title,
+      createdAt: { $gte: todayStart, $lte: todayEnd },
+    });
+    if (existing) {
+      console.log(`ℹ️ [무사고 알림] 오늘 이미 발송됨: ${title}`);
+      return;
+    }
+
+    const content = `🎉 무사고 ${diffDays}일 달성! 모두의 노력에 감사합니다.`;
+    const todayStr = today.toISOString().split('T')[0];
+
+    const notification = new Notification({
+      notificationType: '시스템',
+      title,
+      content,
+      status: '진행중',
+      recipients: { type: '전체', value: '전체직원', selectedEmployees: [] },
+      startDate: todayStr,
+      endDate: todayStr,
+      repeatCycle: '즉시',
+      priority: 'HIGH',
+      createdAt: new Date(),
+    });
+    await notification.save();
+
+    console.log(`🎉 [무사고 알림] DB 저장 완료: ${title}`);
+
+    // 알림 캐시 무효화 (communicationRoutes의 캐시)
+    try {
+      const { invalidateNotifCache } = require('./routes/communicationRoutes');
+      if (typeof invalidateNotifCache === 'function') invalidateNotifCache();
+    } catch (_) {}
+
+    // Socket.io로 실시간 전파
+    if (io) {
+      io.emit('notification-created', {
+        notificationId: notification._id,
+        title,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (err) {
+    console.error('❌ [무사고 알림] 체크 중 오류:', err);
+  }
+}
+
 // ================== DB 연결 ==================
 const mongoURI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/busung_hr';
 const { startSelfPingScheduler } = require('./utils/selfPing');
@@ -172,6 +248,28 @@ mongoose
     // 1분마다 주기적으로 체크 (60000ms = 1분)
     setInterval(checkAndPublishScheduledNotices, 60000);
     console.log('⏰ 예약 공지사항 자동 체크 시작 (1분마다)');
+
+    // 무사고 알림: 서버 시작 시 즉시 1회 + 매일 자정 체크
+    await checkAndSendAccidentFreeNotification();
+    console.log('🦺 서버 시작: 무사고 알림 초기 체크 완료');
+    const now = new Date();
+    const msUntilMidnight =
+      new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 30).getTime() - now.getTime();
+    setTimeout(() => {
+      checkAndSendAccidentFreeNotification();
+      setInterval(checkAndSendAccidentFreeNotification, 24 * 60 * 60 * 1000);
+    }, msUntilMidnight);
+    console.log(`⏰ 무사고 알림 자동 체크 예약 (다음 자정까지 ${Math.round(msUntilMidnight / 60000)}분 후)`);
+
+    // ================== 캐시 웜업 (첫 사용자 요청 전 캐시 적재) ==================
+    // 서버 시작 시 공지/알림 데이터를 인메모리 캐시에 미리 로드
+    // → 첫 로그인도 캐시 히트로 처리 (Atlas 레이턴시 0.9s 제거)
+    try {
+      const { warmupCache } = require('./routes/communicationRoutes');
+      await warmupCache();
+    } catch (warmupErr) {
+      console.warn('⚠️ 캐시 웜업 실패 (무시):', warmupErr.message);
+    }
 
     // Self-ping 스케줄러 시작 (Railway sleep 방지 - 매일 오전 5시)
     startSelfPingScheduler();
