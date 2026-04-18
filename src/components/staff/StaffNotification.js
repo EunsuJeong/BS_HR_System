@@ -223,7 +223,7 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage, regularNoti
                     )}
                   </div>
                   <div className="text-2xs flex items-center ml-2">
-                    <span className="text-gray-500 mr-1 text-right" style={{ lineHeight: '1.15' }}>
+                    <span className="text-10px text-gray-500 mr-1 text-right" style={{ lineHeight: '1.15' }}>
                       {formatKoreanTimeMultiLine(notification.createdAt)}
                     </span>
                     <span
@@ -307,7 +307,7 @@ const StaffNotification = ({ currentUser, getText, selectedLanguage, regularNoti
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500 ml-2 text-right" style={{ lineHeight: '1.15' }}>
+                          <span className="text-10px text-gray-500 ml-2 text-right" style={{ lineHeight: '1.15' }}>
                             {formatKoreanTimeMultiLine(notification.createdAt)}
                           </span>
                         </div>

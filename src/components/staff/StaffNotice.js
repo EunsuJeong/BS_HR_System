@@ -232,17 +232,9 @@ const StaffNotice = ({
                       )}
                     </div>
                     <div className="text-2xs flex items-center ml-2">
-                      <span className="text-gray-400 mr-1.5">
-                        👁 {notice.viewCount || 0}
-                      </span>
-                      <span className="text-gray-500 mr-1 text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(notice.date)}</span>
-                      <span
-                        className={`transform transition-transform duration-200 ${
-                          expandedNotices.has(notice.id) ? 'rotate-180' : ''
-                        }`}
-                      >
-                        ▼
-                      </span>
+                      <span className="text-10px text-gray-400">👁 </span><span className="text-10px text-gray-400 mr-1" style={{ letterSpacing: '-0.03em' }}>{notice.viewCount || 0}</span>
+                      <span className="text-10px text-gray-500 mr-1 text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(notice.date)}</span>
+                      <span className={`text-2xs transform transition-transform duration-200 ${expandedNotices.has(notice.id) ? 'rotate-180' : ''}`}>▼</span>
                     </div>
                   </div>
                   {expandedNotices.has(notice.id) && (
@@ -403,11 +395,9 @@ const StaffNotice = ({
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-500 flex items-center ml-4">
-                            <span className="text-xs text-gray-400 mr-2">
-                              👁 {notice.viewCount || 0}
-                            </span>
-                            <span className="text-xs text-gray-500 text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(notice.date)}</span>
+                          <div className="text-gray-500 flex items-center ml-4">
+                            <span className="text-10px text-gray-400">👁 </span><span className="text-10px text-gray-400 mr-1" style={{ letterSpacing: '-0.03em' }}>{notice.viewCount || 0}</span>
+                            <span className="text-10px text-gray-500 text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(notice.date)}</span>
                           </div>
                         </div>
                       ))}
@@ -430,11 +420,9 @@ const StaffNotice = ({
                       <h4 className="text-xs font-normal text-gray-700 mb-2">
                         {selectedNotice.title}
                       </h4>
-                      <div className="text-xs text-gray-500 mb-4 flex items-center">
-                        <span className="text-xs text-gray-400 mr-2">
-                          👁 {selectedNotice.viewCount || 0}
-                        </span>
-                        <span className="text-xs text-right" style={{ lineHeight: '1.15' }}>{formatDateMultiLine(selectedNotice.date)}</span>
+                      <div className="text-gray-500 mb-4 flex items-center">
+                        <span className="text-10px text-gray-400">👁 </span><span className="text-10px text-gray-400 mr-1" style={{ letterSpacing: '-0.03em' }}>{selectedNotice.viewCount || 0}</span>
+                        <span className="text-10px text-gray-500 text-right">{selectedNotice.date}</span>
                       </div>
                     </div>
                     <div className="border-t pt-4">

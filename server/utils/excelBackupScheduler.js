@@ -237,11 +237,16 @@ async function performDailyExcelBackup() {
 async function performMonthlyPayrollBackup() {
   try {
     const now = new Date();
-    const { dir, year, month } = getMonthlyDir(now);
-    const fileName = `${year}_${month}_payroll.xlsx`;
+    const { dir } = getMonthlyDir(now);
+
+    // 4월에 지급되는 급여 = 3월 근무분 = 3월 급여 → 직전 월 기준으로 조회
+    const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth(); // getMonth()는 0-indexed: 4월=3 → 직전월=3(3월)
+    const prevYear  = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const prevMonthStr = String(prevMonth).padStart(2, '0');
+    const fileName = `${prevYear}_${prevMonthStr}_payroll.xlsx`;
     const filePath = path.join(dir, fileName);
 
-    console.log('📊 Excel 급여 백업 시작:', new Date().toLocaleString('ko-KR'));
+    console.log(`📊 Excel 급여 백업 시작 (${prevYear}년 ${prevMonth}월분):`, new Date().toLocaleString('ko-KR'));
 
     const Payroll = require('../models/hr/payrolls');
     const workbook = new ExcelJS.Workbook();
@@ -285,9 +290,9 @@ async function performMonthlyPayrollBackup() {
       { header: '실수령액',  key: 'netSalary',           width: 12 },
     ];
 
-    // 이번 달 데이터 조회 (15일 기준으로 직전 달까지 포함)
-    const payrolls = await Payroll.find({ year: now.getFullYear() })
-      .sort({ month: 1, department: 1, name: 1 })
+    // 직전 월 데이터만 조회 (4월 백업 = 3월 급여분)
+    const payrolls = await Payroll.find({ year: prevYear, month: prevMonth })
+      .sort({ department: 1, name: 1 })
       .lean();
 
     payrolls.forEach((p) => {

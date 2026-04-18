@@ -29,120 +29,159 @@ router.post('/bulk', async (req, res) => {
 
     const yearMonth = `${year}-${String(month).padStart(2, '0')}`;
     const bulkOps = [];
+    const uploadErrors = []; // 파싱 에러 수집
 
+    // alias 기반 안전 필드 읽기: 0도 정상값으로 처리 (|| 연산자 버그 방지)
+    const getField = (record, ...aliases) => {
+      for (const alias of aliases) {
+        if (record[alias] !== undefined) return record[alias];
+      }
+      return undefined;
+    };
+
+    // 숫자 파싱: 실패 시 null 반환 (0과 구분)
+    const parseNumber = (val) => {
+      if (typeof val === 'number') return val;
+      if (typeof val === 'string') {
+        const cleaned = val.replace(/[,원]/g, '').trim();
+        if (cleaned === '' || cleaned === '-') return undefined; // 빈 값/대시 → 미입력
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? null : parsed; // null = 파싱 실패
+      }
+      return undefined; // null/undefined 입력 → 미입력
+    };
+
+    // 필수 컬럼 헤더 검증 (첫 번째 레코드 기준)
+    const REQUIRED_COLUMNS = [
+      { field: 'employeeId', aliases: ['employeeId', '사번'] },
+      { field: 'netSalary',  aliases: ['netSalary',  '차인지급액'] },
+      { field: 'totalSalary', aliases: ['totalSalary', '급여합계'] },
+    ];
+    const firstRecord = records[0];
+    const missingColumns = REQUIRED_COLUMNS.filter(
+      ({ aliases }) => !aliases.some((a) => firstRecord[a] !== undefined)
+    );
+    if (missingColumns.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `필수 컬럼 누락: ${missingColumns.map((c) => c.aliases.join(' 또는 ')).join(', ')}`,
+      });
+    }
+
+    let rowIdx = 0;
     for (const record of records) {
-      if (!record.employeeId) {
-        console.warn('⚠️ employeeId가 없는 레코드 스킵:', record);
+      rowIdx++;
+      const empId = getField(record, 'employeeId', '사번');
+      if (!empId) {
+        console.warn(`⚠️ ${rowIdx}행: employeeId 없음, 스킵`);
         continue;
       }
 
-      // 숫자 필드 안전하게 파싱
-      const parseNumber = (val) => {
-        if (typeof val === 'number') return val;
-        if (typeof val === 'string') {
-          const cleaned = val.replace(/[,원]/g, '');
-          const parsed = parseFloat(cleaned);
-          return isNaN(parsed) ? 0 : parsed;
+      const rowErrors = [];
+
+      // 필드 파싱 헬퍼: aliases 배열로 값을 찾고, 파싱 실패 시 에러 수집
+      // required=true 이면 필드 없음/파싱 실패 모두 에러로 기록 → 해당 행 저장 금지
+      const pf = (aliases, fieldName, required = false) => {
+        const raw = getField(record, ...aliases);
+        if (raw === undefined) {
+          if (required) {
+            rowErrors.push({ field: fieldName, raw: undefined, reason: '필드 없음', required: true });
+          }
+          return 0;
         }
-        return 0;
+        const result = parseNumber(raw);
+        if (result === null) {
+          rowErrors.push({ field: fieldName, raw, reason: 'NaN 변환 실패', required });
+          return 0;
+        }
+        return result ?? 0; // undefined(빈값) → 0
       };
 
       const payrollData = {
-        employeeId: record.employeeId || record.사번,
+        employeeId: empId,
         year: parseInt(year),
         month: parseInt(month),
-        yearMonth: yearMonth,
+        yearMonth,
 
         // 직원 정보
-        name: record.name || record.성명 || '',
-        department: record.department || record.부서 || '',
-        position: record.position || record.직급 || '',
-        joinDate: record.joinDate || record.입사일자 || '',
+        name:       getField(record, 'name', '성명')       || '',
+        department: getField(record, 'department', '부서')  || '',
+        position:   getField(record, 'position', '직급')    || '',
+        joinDate:   getField(record, 'joinDate', '입사일자') || '',
 
         // 기본 급여
-        hourlyWage: parseNumber(record.hourlyWage || record.시급),
-        basicHours: parseNumber(record.basicHours || record.기본시간),
-        basicPay: parseNumber(record.basicPay || record.기본급),
+        hourlyWage: pf(['hourlyWage', '시급'],         'hourlyWage'),
+        basicHours: pf(['basicHours', '기본시간'],      'basicHours'),
+        basicPay:   pf(['basicPay',   '기본급'],        'basicPay', true),
 
         // 근무 시간 및 수당
-        overtimeHours: parseNumber(record.overtimeHours || record.연장시간),
-        overtimePay: parseNumber(record.overtimePay || record.연장수당),
-        holidayWorkHours: parseNumber(
-          record.holidayWorkHours || record.휴일근로시간
-        ),
-        holidayWorkPay: parseNumber(
-          record.holidayWorkPay || record.휴일근로수당
-        ),
-        nightWorkHours: parseNumber(
-          record.nightWorkHours || record.야간근로시간
-        ),
-        nightWorkPay: parseNumber(record.nightWorkPay || record.야간근로수당),
+        overtimeHours:    pf(['overtimeHours',    '연장시간'],   'overtimeHours'),
+        overtimePay:      pf(['overtimePay',      '연장수당'],   'overtimePay'),
+        holidayWorkHours: pf(['holidayWorkHours', '휴일근로시간'], 'holidayWorkHours'),
+        holidayWorkPay:   pf(['holidayWorkPay',   '휴일근로수당'], 'holidayWorkPay'),
+        nightWorkHours:   pf(['nightWorkHours',   '야간근로시간'], 'nightWorkHours'),
+        nightWorkPay:     pf(['nightWorkPay',     '야간근로수당'], 'nightWorkPay'),
 
         // 공제 항목
-        lateEarlyHours: parseNumber(
-          record.lateEarlyHours || record.지각조퇴시간
-        ),
-        lateEarlyDeduction: parseNumber(
-          record.lateEarlyDeduction || record.지각조퇴공제
-        ),
-        absentDays: parseNumber(record.absentDays || record.결근일수),
-        absentDeduction: parseNumber(record.absentDeduction || record.결근공제),
+        lateEarlyHours:      pf(['lateEarlyHours',      '지각조퇴시간'], 'lateEarlyHours'),
+        lateEarlyDeduction:  pf(['lateEarlyDeduction',  '지각조퇴공제'], 'lateEarlyDeduction'),
+        absentDays:          pf(['absentDays',           '결근일수'],     'absentDays'),
+        absentDeduction:     pf(['absentDeduction',      '결근공제'],     'absentDeduction'),
 
         // 수당
-        carAllowance: parseNumber(
-          record.carAllowance || record.차량수당 || record.차량
-        ),
-        transportAllowance: parseNumber(
-          record.transportAllowance || record.교통비
-        ),
-        phoneAllowance: parseNumber(record.phoneAllowance || record.통신비),
-        otherAllowance: parseNumber(record.otherAllowance || record.기타수당),
-        annualLeaveDays: parseNumber(record.annualLeaveDays || record.년차일수),
-        annualLeavePay: parseNumber(record.annualLeavePay || record.년차수당),
-        bonus: parseNumber(record.bonus || record.상여금),
+        carAllowance:       pf(['carAllowance',       '차량수당', '차량'], 'carAllowance'),
+        transportAllowance: pf(['transportAllowance', '교통비'],           'transportAllowance'),
+        phoneAllowance:     pf(['phoneAllowance',     '통신비'],           'phoneAllowance'),
+        otherAllowance:     pf(['otherAllowance',     '기타수당'],         'otherAllowance'),
+        annualLeaveDays:    pf(['annualLeaveDays',    '년차일수'],         'annualLeaveDays'),
+        annualLeavePay:     pf(['annualLeavePay',     '년차수당'],         'annualLeavePay'),
+        bonus:              pf(['bonus',              '상여금'],           'bonus'),
 
         // 급여 합계
-        totalSalary: parseNumber(record.totalSalary || record.급여합계),
+        totalSalary: pf(['totalSalary', '급여합계'], 'totalSalary', true),
 
         // 세금 및 보험
-        incomeTax: parseNumber(record.incomeTax || record.소득세),
-        localTax: parseNumber(record.localTax || record.지방세),
-        nationalPension: parseNumber(record.nationalPension || record.국민연금),
-        healthInsurance: parseNumber(record.healthInsurance || record.건강보험),
-        longTermCare: parseNumber(record.longTermCare || record.장기요양),
-        employmentInsurance: parseNumber(
-          record.employmentInsurance || record.고용보험
-        ),
+        incomeTax:            pf(['incomeTax',            '소득세'],   'incomeTax'),
+        localTax:             pf(['localTax',             '지방세'],   'localTax'),
+        nationalPension:      pf(['nationalPension',      '국민연금'], 'nationalPension'),
+        healthInsurance:      pf(['healthInsurance',      '건강보험'], 'healthInsurance'),
+        longTermCare:         pf(['longTermCare',         '장기요양'], 'longTermCare'),
+        employmentInsurance:  pf(['employmentInsurance',  '고용보험'], 'employmentInsurance'),
 
         // 기타 공제
-        advanceDeduction: parseNumber(
-          record.advanceDeduction || record.가불금과태료
-        ),
-        irpMatching: parseNumber(record.irpMatching || record.매칭IRP적립),
-        otherDeduction: parseNumber(
-          record.otherDeduction || record.경조비기타공제
-        ),
-        dormitory: parseNumber(record.dormitory || record.기숙사),
+        advanceDeduction: pf(['advanceDeduction', '가불금과태료'],    'advanceDeduction'),
+        irpMatching:      pf(['irpMatching',      '매칭IRP적립'],     'irpMatching'),
+        otherDeduction:   pf(['otherDeduction',   '경조비기타공제'],  'otherDeduction'),
+        dormitory:        pf(['dormitory',        '기숙사'],          'dormitory'),
 
         // 연말정산
-        healthYearEnd: parseNumber(
-          record.healthYearEnd || record.건강보험연말정산
-        ),
-        longTermYearEnd: parseNumber(
-          record.longTermYearEnd || record.장기요양연말정산
-        ),
-        taxYearEnd: parseNumber(record.taxYearEnd || record.연말정산징수세액),
+        healthYearEnd:    pf(['healthYearEnd',    '건강보험연말정산'],  'healthYearEnd'),
+        longTermYearEnd:  pf(['longTermYearEnd',  '장기요양연말정산'],  'longTermYearEnd'),
+        taxYearEnd:       pf(['taxYearEnd',       '연말정산징수세액'],  'taxYearEnd'),
 
         // 최종 금액
-        totalDeduction: parseNumber(record.totalDeduction || record.공제합계),
-        netSalary: parseNumber(record.netSalary || record.차인지급액),
+        totalDeduction: pf(['totalDeduction', '공제합계'],  'totalDeduction', true),
+        netSalary:      pf(['netSalary',      '차인지급액'], 'netSalary',      true),
 
         lastModified: new Date(),
       };
 
+      // 필수 필드 파싱 실패 시 해당 행 저장 금지
+      const hasRequiredError = rowErrors.some((e) => e.required);
+      if (rowErrors.length > 0) {
+        uploadErrors.push({
+          row: rowIdx,
+          employeeId: empId,
+          skipped: hasRequiredError,
+          errors: rowErrors,
+        });
+        console.warn(`⚠️ [Payroll] ${rowIdx}행(${empId}) 파싱 오류:`, rowErrors);
+      }
+      if (hasRequiredError) continue; // 필수 필드 실패 → bulkOps 제외
+
       bulkOps.push({
         updateOne: {
-          filter: { employeeId: payrollData.employeeId, yearMonth: yearMonth },
+          filter: { employeeId: payrollData.employeeId, yearMonth },
           update: { $set: payrollData },
           upsert: true,
         },
@@ -183,6 +222,7 @@ router.post('/bulk', async (req, res) => {
         inserted: result.upsertedCount,
         updated: result.modifiedCount,
         total: bulkOps.length,
+        parseErrors: uploadErrors.length > 0 ? uploadErrors : undefined,
       },
     });
   } catch (error) {

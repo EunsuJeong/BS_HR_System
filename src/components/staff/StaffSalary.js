@@ -312,7 +312,7 @@ const StaffSalary = ({
                     <div className="flex items-center justify-between mb-4">
                       <button
                         onClick={() => setSelectedSalaryHistory(null)}
-                        className={`${btnClass} text-blue-500 hover:text-blue-600`}
+                        className="text-sm text-blue-500 hover:text-blue-600"
                       >
                         ← {getText('목록으로', 'Back to List')}
                       </button>

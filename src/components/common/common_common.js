@@ -2721,6 +2721,7 @@ export const useSystemSettings = () => {
       .employee-mode-content * {
         font-size: calc(1em * ${scale}) !important;
       }
+      .employee-mode-content .text-10px { font-size: 10px !important; }
       .employee-mode-content .text-4xs { font-size: calc(0.4375rem * ${scale}) !important; }
       .employee-mode-content .text-3xs { font-size: calc(0.5rem * ${scale}) !important; }
       .employee-mode-content .text-tiny { font-size: calc(0.5625rem * ${scale}) !important; }

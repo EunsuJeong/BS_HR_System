@@ -805,7 +805,7 @@ const StaffScheduleAttendance = ({
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     설명
                   </label>
-                  <div className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg min-h-[60px] whitespace-pre-wrap text-xs">
+                  <div className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg whitespace-pre-wrap text-xs">
                     {selectedEvent.description}
                   </div>
                 </div>
