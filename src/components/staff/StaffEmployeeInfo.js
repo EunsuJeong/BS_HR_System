@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Users } from 'lucide-react';
 import { getWorkPeriodText } from '../common/common_common';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 /**
  * STAFF ① 사원정보 컴포넌트
  * 직원 모드에서 본인의 사원 정보를 확인하는 컴포넌트
  */
-const StaffEmployeeInfo = ({ currentUser, getText }) => {
+const StaffEmployeeInfo = ({ getText }) => {
+  const { currentUser } = useAuthContext();
   const [showEmployeeDetails, setShowEmployeeDetails] = useState(false);
 
   return (

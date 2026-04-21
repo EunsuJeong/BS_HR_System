@@ -3,6 +3,7 @@ import { Download } from 'lucide-react';
 import { exportSuggestionsToXLSX } from '../common/common_admin_suggestion';
 import { getSuggestionCategoryText } from '../common/common_staff_suggestion';
 import { useDebounce } from '../common/common_common';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 const AdminSuggestionManagement = ({
   suggestions,
@@ -24,9 +25,9 @@ const AdminSuggestionManagement = ({
   handleSuggestionApprovalConfirm,
   suggestionPage,
   setSuggestionPage,
-  currentUser,
   handleConfirmSuggestion,
 }) => {
+  const { currentUser } = useAuthContext();
   // 건의사항 편집 로컬 state (App.js 전체 리렌더 방지)
   const [editingSuggestion, setEditingSuggestion] = useState(null);
   const [editingSuggestionRemark, setEditingSuggestionRemark] = useState('');

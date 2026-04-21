@@ -2,19 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DollarSign, Eye, EyeOff } from 'lucide-react';
 import { SALARY_PAGE_SIZE } from '../common/common_staff_payroll';
 import PayrollAPI from '../../api/payroll';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 /**
  * STAFF ⑥ 급여 내역 컴포넌트
  * 직원 모드에서 급여 내역을 확인하는 컴포넌트
  */
 const StaffSalary = ({
-  currentUser,
   generateSalaryHistory,
   getText,
   selectedLanguage,
   fontSize = 'normal',
   payrollByMonth = {},
 }) => {
+  const { currentUser } = useAuthContext();
   const [showSalaryHistoryPopup, setShowSalaryHistoryPopup] = useState(false);
   const [selectedSalaryHistory, setSelectedSalaryHistory] = useState(null);
   const [salaryPage, setSalaryPage] = useState(1);

@@ -8,13 +8,13 @@ import {
 } from '../common/common_staff_notice';
 import { NoticeAPI } from '../../api/communication';
 import { linkifyText } from '../common/common_common';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 /**
  * STAFF ② 공지사항 컴포넌트
  * 직원 모드에서 회사 공지사항을 확인하는 컴포넌트 (카드 + 더보기 팝업 포함)
  */
 const StaffNotice = ({
-  currentUser,
   notices,
   setNotices,
   getText,
@@ -25,6 +25,7 @@ const StaffNotice = ({
   selectedLanguage,
   accidentFreeDays = 0,
 }) => {
+  const { currentUser } = useAuthContext();
   const { expandedNotices, toggleNotice } = useNoticeToggle();
   const [showNoticePopup, setShowNoticePopup] = useState(false);
   const [selectedNoticeId, setSelectedNoticeId] = useState(null);

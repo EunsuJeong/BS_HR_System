@@ -692,6 +692,135 @@ export const useNoticeManagement = (dependencies = {}) => {
 // ============================================================
 
 // ============ notificationService.js ============
+// *[2_관리자 모드] 2.3_알림 만료 판정 (standalone export)*
+/**
+ * 알림 또는 날짜값이 5일(일반) 또는 연차 기준으로 만료됐는지 검사한다.
+ * - 문자열/Date 인수: 생성일이 5일 이상 지났으면 true
+ * - notification 객체: entity='annualLeave' 이면 warningDays/annualEnd 기준, 그 외 5일 기준
+ */
+export const isExpired5Days = (notification) => {
+  // notification이 문자열이나 Date인 경우 (레거시 호환)
+  if (
+    typeof notification === 'string' ||
+    notification instanceof Date ||
+    !notification?.createdAt
+  ) {
+    const createdAt = notification;
+    if (!createdAt) return true;
+
+    try {
+      let timestamp;
+
+      // Date 객체인 경우 직접 처리
+      if (createdAt instanceof Date) {
+        timestamp = createdAt.getTime();
+      }
+      // 문자열인 경우
+      else if (typeof createdAt === 'string') {
+        if (
+          createdAt.includes('T') ||
+          createdAt.match(/^\d{4}-\d{2}-\d{2}$/)
+        ) {
+          timestamp = new Date(createdAt).getTime();
+        } else {
+          const match = createdAt.match(
+            /(\d{4})-(\d{2})-(\d{2})\s*(오전|오후)\s*(\d{1,2}):(\d{2})/
+          );
+          if (!match) {
+            timestamp = new Date(createdAt).getTime();
+          } else {
+            const [, year, month, day, ampm, hour, minute] = match;
+            let hours = parseInt(hour);
+            if (ampm === '오후' && hours !== 12) hours += 12;
+            if (ampm === '오전' && hours === 12) hours = 0;
+            timestamp = new Date(
+              year,
+              month - 1,
+              day,
+              hours,
+              minute
+            ).getTime();
+          }
+        }
+      }
+      // 그 외의 경우 (숫자 등)
+      else {
+        timestamp = new Date(createdAt).getTime();
+      }
+
+      if (isNaN(timestamp)) {
+        return true;
+      }
+
+      const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+      const isExpired = Date.now() - timestamp >= FIVE_DAYS_MS;
+      return isExpired;
+    } catch (error) {
+      return true;
+    }
+  }
+
+  // notification 객체인 경우
+  if (!notification?.createdAt) return true;
+
+  const now = new Date();
+
+  // 연차 만료 알림 특별 처리
+  if (notification.related?.entity === 'annualLeave') {
+    const warningDays = notification.related?.warningDays;
+    const annualEnd = notification.related?.annualEnd;
+    const created = new Date(notification.createdAt);
+
+    // 30일/7일 전 알림: 만료일까지만 표시
+    if (warningDays === 30 || warningDays === 7) {
+      if (!annualEnd) return true;
+      const endDate = new Date(annualEnd);
+      endDate.setHours(23, 59, 59, 999);
+      return now > endDate;
+    }
+
+    // 180일/90일 전 알림: 생성일로부터 30일간 표시
+    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+    return now.getTime() - created.getTime() > thirtyDaysInMs;
+  }
+
+  // 일반 알림: 생성일로부터 5일간 표시
+  try {
+    const createdAt = notification.createdAt;
+    let timestamp;
+
+    if (createdAt instanceof Date) {
+      timestamp = createdAt.getTime();
+    } else if (typeof createdAt === 'string') {
+      if (createdAt.includes('T') || createdAt.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        timestamp = new Date(createdAt).getTime();
+      } else {
+        const match = createdAt.match(
+          /(\d{4})-(\d{2})-(\d{2})\s*(오전|오후)\s*(\d{1,2}):(\d{2})/
+        );
+        if (!match) {
+          timestamp = new Date(createdAt).getTime();
+        } else {
+          const [, year, month, day, ampm, hour, minute] = match;
+          let hours = parseInt(hour);
+          if (ampm === '오후' && hours !== 12) hours += 12;
+          if (ampm === '오전' && hours === 12) hours = 0;
+          timestamp = new Date(year, month - 1, day, hours, minute).getTime();
+        }
+      }
+    } else {
+      timestamp = new Date(createdAt).getTime();
+    }
+
+    if (isNaN(timestamp)) return true;
+
+    const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+    return Date.now() - timestamp >= FIVE_DAYS_MS;
+  } catch (error) {
+    return true;
+  }
+};
+
 // *[2_관리자 모드] 2.4_알림 관리 서비스*
 
 /**
@@ -1144,129 +1273,7 @@ export const useNotificationHandlers = (deps) => {
     updateEmployeeNotifications();
   };
 
-  // *[2_관리자 모드] 2.4_알림 만료 판정 (연차 만료 알림: 30일, 일반 알림: 5일)*
-  const isExpired5Days = (notification) => {
-    // notification이 문자열이나 Date인 경우 (레거시 호환)
-    if (
-      typeof notification === 'string' ||
-      notification instanceof Date ||
-      !notification?.createdAt
-    ) {
-      const createdAt = notification;
-      if (!createdAt) return true;
-
-      try {
-        let timestamp;
-
-        // Date 객체인 경우 직접 처리
-        if (createdAt instanceof Date) {
-          timestamp = createdAt.getTime();
-        }
-        // 문자열인 경우
-        else if (typeof createdAt === 'string') {
-          if (
-            createdAt.includes('T') ||
-            createdAt.match(/^\d{4}-\d{2}-\d{2}$/)
-          ) {
-            timestamp = new Date(createdAt).getTime();
-          } else {
-            const match = createdAt.match(
-              /(\d{4})-(\d{2})-(\d{2})\s*(오전|오후)\s*(\d{1,2}):(\d{2})/
-            );
-            if (!match) {
-              timestamp = new Date(createdAt).getTime();
-            } else {
-              const [, year, month, day, ampm, hour, minute] = match;
-              let hours = parseInt(hour);
-              if (ampm === '오후' && hours !== 12) hours += 12;
-              if (ampm === '오전' && hours === 12) hours = 0;
-              timestamp = new Date(
-                year,
-                month - 1,
-                day,
-                hours,
-                minute
-              ).getTime();
-            }
-          }
-        }
-        // 그 외의 경우 (숫자 등)
-        else {
-          timestamp = new Date(createdAt).getTime();
-        }
-
-        if (isNaN(timestamp)) {
-          return true;
-        }
-
-        const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
-        const isExpired = Date.now() - timestamp >= FIVE_DAYS_MS;
-        return isExpired;
-      } catch (error) {
-        return true;
-      }
-    }
-
-    // notification 객체인 경우
-    if (!notification?.createdAt) return true;
-
-    const now = new Date();
-
-    // 연차 만료 알림 특별 처리
-    if (notification.related?.entity === 'annualLeave') {
-      const warningDays = notification.related?.warningDays;
-      const annualEnd = notification.related?.annualEnd;
-      const created = new Date(notification.createdAt);
-
-      // 30일/7일 전 알림: 만료일까지만 표시
-      if (warningDays === 30 || warningDays === 7) {
-        if (!annualEnd) return true;
-        const endDate = new Date(annualEnd);
-        endDate.setHours(23, 59, 59, 999);
-        return now > endDate;
-      }
-
-      // 180일/90일 전 알림: 생성일로부터 30일간 표시
-      const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-      return now.getTime() - created.getTime() > thirtyDaysInMs;
-    }
-
-    // 일반 알림: 생성일로부터 5일간 표시
-    try {
-      const createdAt = notification.createdAt;
-      let timestamp;
-
-      if (createdAt instanceof Date) {
-        timestamp = createdAt.getTime();
-      } else if (typeof createdAt === 'string') {
-        if (createdAt.includes('T') || createdAt.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          timestamp = new Date(createdAt).getTime();
-        } else {
-          const match = createdAt.match(
-            /(\d{4})-(\d{2})-(\d{2})\s*(오전|오후)\s*(\d{1,2}):(\d{2})/
-          );
-          if (!match) {
-            timestamp = new Date(createdAt).getTime();
-          } else {
-            const [, year, month, day, ampm, hour, minute] = match;
-            let hours = parseInt(hour);
-            if (ampm === '오후' && hours !== 12) hours += 12;
-            if (ampm === '오전' && hours === 12) hours = 0;
-            timestamp = new Date(year, month - 1, day, hours, minute).getTime();
-          }
-        }
-      } else {
-        timestamp = new Date(createdAt).getTime();
-      }
-
-      if (isNaN(timestamp)) return true;
-
-      const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
-      return Date.now() - timestamp >= FIVE_DAYS_MS;
-    } catch (error) {
-      return true;
-    }
-  };
+  // isExpired5Days: 모듈 상단의 standalone export 사용 (동일 파일이므로 직접 접근 가능)
 
   // *[2_관리자 모드] 2.4_직원 알림 업데이트*
   const updateEmployeeNotifications = useCallback(() => {

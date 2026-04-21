@@ -6,11 +6,11 @@ import {
   useStaffSuggestion,
 } from '../common/common_staff_suggestion';
 import { SuggestionAPI } from '../../api/communication';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 const StaffSuggestion = ({
   suggestions,
   setSuggestions,
-  currentUser,
   getText,
   selectedLanguage,
   send자동알림,
@@ -20,6 +20,7 @@ const StaffSuggestion = ({
   onEditingChange,
   formatDateByLang,
 }) => {
+  const { currentUser } = useAuthContext();
   const [applyTitle, setApplyTitle] = useState('');
   const [applyContent, setApplyContent] = useState('');
   const [suggestionInput, setSuggestionInput] = useState('구매');

@@ -7,9 +7,9 @@ import {
   useEmployeeManagement,
 } from '../common/common_admin_employee';
 import apiClient from '../../api/client';
+import { useEmployeeContext } from '../../contexts/EmployeeContext';
 
 const AdminEmployeeManagement = ({
-  employees,
   setEmployees,
   employeeSearchFilter,
   setEmployeeSearchFilter,
@@ -26,6 +26,7 @@ const AdminEmployeeManagement = ({
   attendanceSheetYear = new Date().getFullYear(),
   attendanceSheetMonth = new Date().getMonth() + 1,
 }) => {
+  const employees = useEmployeeContext();
   // 인라인 수정 state (로컬 — App.js 전체 리렌더 방지)
   const [editingEmpId, setEditingEmpId] = useState(null);
   const [editForm, setEditForm] = useState({

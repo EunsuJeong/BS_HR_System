@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 /**
  * COMMON 공통 - 로그인 및 언어선택 컴포넌트
  * 인증 흐름: 로그인 화면 → 언어 선택 화면 (직원만)
  */
 const CommonLogin = ({
-  currentUser,
   showLanguageSelection,
   loginError,
   showPassword,
@@ -18,6 +18,7 @@ const CommonLogin = ({
   rememberPassword,
   setRememberPassword,
 }) => {
+  const { currentUser } = useAuthContext();
   const [skipInFuture, setSkipInFuture] = useState(false);
   const [isAutoLogging, setIsAutoLogging] = useState(false);
 

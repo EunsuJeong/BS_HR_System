@@ -1,11 +1,11 @@
 import React from 'react';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 /**
  * STAFF 직원 모드 - 상단 헤더 컴포넌트
  * 시스템 제목, 사용자 정보, 글씨 크기 조절, 언어 변경, 비밀번호 변경, 로그아웃 버튼 표시
  */
 const StaffMain = ({
-  currentUser,
   fontSize,
   handleFontSizeChange,
   getText,
@@ -14,6 +14,7 @@ const StaffMain = ({
   handleLogout,
   handleRefresh,
 }) => {
+  const { currentUser } = useAuthContext();
   return (
     <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-6">
       <div className="flex justify-between items-center mb-2 gap-1">

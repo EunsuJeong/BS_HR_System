@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Settings, Eye, EyeOff } from 'lucide-react';
 import Select from 'react-select';
 // import CommonAIService from '../common/CommonAIService'; // 병합됨: common_admin_ai
 import CommonAIService from '../common/common_admin_ai';
 import { AI_MODEL_TYPES, AI_MODELS_LIST } from '../common/common_admin_system';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 const AdminSystemManagement = ({
-  currentUser,
   unifiedApiKey,
   setUnifiedApiKey,
   showUnifiedApiKey,
@@ -21,16 +21,14 @@ const AdminSystemManagement = ({
   setChangePasswordForm,
   changePasswordError,
   changePasswordSuccess,
-  showCurrentPassword,
-  setShowCurrentPassword,
-  showNewPassword,
-  setShowNewPassword,
-  showConfirmPassword,
-  setShowConfirmPassword,
   handleUnifiedAiSave,
   handlePermissionChange,
   handleChangePassword,
 }) => {
+  const { currentUser } = useAuthContext();
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   return (
     <div className="space-y-6">
       {/* 🆕 통합 AI 설정 (권장) - 제한 관리자는 비표시 */}

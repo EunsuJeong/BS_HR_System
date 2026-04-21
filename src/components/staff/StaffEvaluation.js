@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { EVALUATION_PAGE_SIZE } from '../common/common_staff_evaluation';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 /**
  * STAFF ⑧ 직원 평가 컴포넌트
  * 직원 모드에서 자신의 평가 내역을 확인하는 컴포넌트
  */
 const StaffEvaluation = ({
-  currentUser,
   evaluationData,
   getText,
   selectedLanguage,
   fontSize = 'normal',
 }) => {
+  const { currentUser } = useAuthContext();
   const [showEvaluationMorePopup, setShowEvaluationMorePopup] = useState(false);
   const [evaluationPage, setEvaluationPage] = useState(1);
   const evaluationScrollRef = useRef(null);

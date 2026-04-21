@@ -6,9 +6,11 @@ import {
   getRecurringSettingsDisplay,
 } from '../common/common_admin_notification';
 import { useDebounce } from '../common/common_common';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { useEmployeeContext } from '../../contexts/EmployeeContext';
+import { useNavigationContext } from '../../contexts/NavigationContext';
 
 const AdminNotificationManagement = ({
-  currentUser,
   regularNotificationForm,
   setRegularNotificationForm,
   realtimeNotificationForm,
@@ -20,7 +22,6 @@ const AdminNotificationManagement = ({
   getRecipientText,
   handleEditRegularNotification,
   handleDeleteRegularNotification,
-  activeTab,
   notificationLogSearch,
   setNotificationLogSearch,
   visibleLogCount,
@@ -67,8 +68,10 @@ const AdminNotificationManagement = ({
   repeatCycleOptions,
   recipientOptions,
   요일목록,
-  employees,
 }) => {
+  const { currentUser } = useAuthContext();
+  const employees = useEmployeeContext();
+  const { activeTab } = useNavigationContext();
   // 정기/실시간 알림 title/content 로컬 state + debounce (타이핑 렉 방지)
   const [regTitleInput, setRegTitleInput] = useState(regularNotificationForm?.title || '');
   const [regContentInput, setRegContentInput] = useState(regularNotificationForm?.content || '');

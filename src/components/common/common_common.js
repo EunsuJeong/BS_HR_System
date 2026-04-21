@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useSocket } from '../../contexts/SocketContext';
+import { useAuthContext } from '../../contexts/AuthContext';
 import Holidays from 'date-holidays';
 import EmployeeAPI from '../../api/employee';
 import PayrollAPI from '../../api/payroll';
@@ -2779,9 +2780,6 @@ export const useSystemSettings = () => {
 
 export const useAuth = (dependencies = {}) => {
   const {
-    admins = [],
-    employees = [],
-    setCurrentUser = () => {},
     setLoginError = () => {},
     setSelectedLanguage = () => {},
     setShowLanguageSelection = () => {},
@@ -2790,7 +2788,6 @@ export const useAuth = (dependencies = {}) => {
     setCurrentMonth = () => {},
     getText = (ko, en) => ko,
     changePasswordForm = {},
-    currentUser = {},
     setEmployees = () => {},
     setAdmins = () => {},
     setChangePasswordError = () => {},
@@ -2805,10 +2802,8 @@ export const useAuth = (dependencies = {}) => {
     rememberPassword = false,
   } = dependencies;
 
-  // [1_공통] 비밀번호 변경 - 비밀번호 표시/숨김 state
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // currentUser / setCurrentUser → AuthContext에서 직접 소비 (prop-drilling 제거)
+  const { currentUser, setCurrentUser } = useAuthContext();
 
   // [1_공통] 로그인 처리
   const handleLogin = useCallback(
@@ -3133,12 +3128,6 @@ export const useAuth = (dependencies = {}) => {
   return {
     handleLogin,
     handleChangePassword,
-    showCurrentPassword,
-    setShowCurrentPassword,
-    showNewPassword,
-    setShowNewPassword,
-    showConfirmPassword,
-    setShowConfirmPassword,
   };
 };
 

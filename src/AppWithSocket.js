@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SocketProvider } from './contexts/SocketContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { useAttendanceSync } from './components/common/common_common';
 import RealtimeStatus from './components/RealtimeStatus';
 import ConflictResolutionModal from './components/ConflictResolutionModal';
@@ -46,9 +47,11 @@ const AppWithSocket = () => {
   const authToken = localStorage.getItem('hrAuthToken') || 'dev-token';
 
   return (
-    <SocketProvider token={authToken}>
-      <RealtimeSyncWrapper />
-    </SocketProvider>
+    <AuthProvider>
+      <SocketProvider token={authToken}>
+        <RealtimeSyncWrapper />
+      </SocketProvider>
+    </AuthProvider>
   );
 };
 

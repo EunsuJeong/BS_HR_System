@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { FileText, Edit, Upload, Download, Trash2 } from 'lucide-react';
 import { useNoticeManagement } from '../common/common_admin_notice';
 import { useDebounce } from '../common/common_common';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 const AdminNoticeManagement = ({
   notices,
@@ -14,8 +15,8 @@ const AdminNoticeManagement = ({
   setNoticeFiles,
   noticeFilesRef,
   getFilteredNotices,
-  currentUser,
 }) => {
+  const { currentUser } = useAuthContext();
   // 공지 폼 로컬 state (App.js 전체 리렌더 방지)
   const [noticeForm, setNoticeForm] = useState({
     id: null,

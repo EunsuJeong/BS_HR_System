@@ -8,6 +8,7 @@ import {
   History,
 } from 'lucide-react';
 import { getActiveModel, checkApiKeyByModel } from '../common/common_admin_ai';
+import { useNavigationContext } from '../../contexts/NavigationContext';
 
 const AdminAIChatbot = ({
   modelUsageStatus,
@@ -17,10 +18,10 @@ const AdminAIChatbot = ({
   chatbotPermissions,
   chatMessages,
   chatContainerRef,
-  setActiveTab,
   handleSendMessage,
   generateDownloadFile,
 }) => {
+  const { setActiveTab } = useNavigationContext();
   // 채팅 입력 - 비제어 입력으로 메시지 목록 리렌더 완전 제거
   const chatInputRef = useRef(null);
   const getChatInput = () => chatInputRef.current?.value || '';

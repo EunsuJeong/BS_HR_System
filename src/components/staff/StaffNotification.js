@@ -3,12 +3,14 @@ import { Bell } from 'lucide-react';
 import { NOTIFICATION_PAGE_SIZE } from '../common/common_staff_notification';
 import { NotificationAPI } from '../../api/communication';
 import { shouldReceiveNotification } from '../common/common_admin_notification';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 /**
  * STAFF ③ 알림 사항 컴포넌트
  * 직원 모드에서 회사 알림을 확인하는 컴포넌트 (카드 + 더보기 팝업 포함)
  */
-const StaffNotification = ({ currentUser, getText, selectedLanguage, regularNotifications = [], realtimeNotifications = [] }) => {
+const StaffNotification = ({ getText, selectedLanguage, regularNotifications = [], realtimeNotifications = [] }) => {
+  const { currentUser } = useAuthContext();
   const [expandedNotification, setExpandedNotification] = useState(null);
   const [showNotificationMorePopup, setShowNotificationMorePopup] =
     useState(false);

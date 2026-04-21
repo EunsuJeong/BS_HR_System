@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
 import { LEAVE_TYPES, LEAVE_PAGE_SIZE, useStaffLeave } from '../common/common_staff_leave';
 import LeaveAPI from '../../api/leave';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 // ============================================================
 // 시간 셀렉트 피커 (12시간제, 오전/오후 언어 지원)
@@ -130,7 +131,6 @@ const TimePickerSelect = ({ name, value, onChange, disabled, getText, label }) =
  * 직원 모드에서 연차 신청 및 내역을 관리하는 컴포넌트
  */
 const StaffAnnualLeave = ({
-  currentUser,
   leaveRequests,
   setLeaveRequests,
   isHolidayDate,
@@ -145,6 +145,7 @@ const StaffAnnualLeave = ({
   fontSize = 'normal',
   onEditingChange,
 }) => {
+  const { currentUser } = useAuthContext();
   // 연차 폼 로컬 state (App.js 전체 리렌더 방지)
   const [leaveForm, setLeaveForm] = useState({
     startDate: '',

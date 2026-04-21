@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Download } from 'lucide-react';
 import {
   exportEmployeeLeaveStatusToXLSX,
   exportLeaveHistoryToXLSX,
 } from '../common/common_admin_leave';
 import { useDebounce } from '../common/common_common';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { useEmployeeContext } from '../../contexts/EmployeeContext';
 
 const AdminLeaveManagement = ({
   leaveManagementTab,
   setLeaveManagementTab,
-  employees,
   setEmployees,
   leaveSearch,
   setLeaveSearch,
@@ -34,9 +35,16 @@ const AdminLeaveManagement = ({
   leaveApprovalData,
   setLeaveApprovalData,
   handleLeaveApprovalConfirm,
-  currentUser,
   handleConfirmLeave,
 }) => {
+  const { currentUser } = useAuthContext();
+  const allEmployees = useEmployeeContext();
+  // 제한 관리자(allowedDepartments)는 해당 부서 직원만 표시
+  const employees = useMemo(() => {
+    const allowed = currentUser?.allowedDepartments;
+    if (!allowed?.length) return allEmployees;
+    return allEmployees.filter((emp) => allowed.includes(emp.department));
+  }, [allEmployees, currentUser?.allowedDepartments]);
   const [showInactive, setShowInactive] = useState(false);
   const [editingAnnualLeave, setEditingAnnualLeave] = useState(null);
   const [editAnnualData, setEditAnnualData] = useState({});

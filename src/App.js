@@ -58,7 +58,6 @@ import {
 import {
   get건의사항알림대상자,
   useSuggestionApproval,
-  STATUS_COLORS,
 } from './components/common/common_admin_suggestion';
 import {
   useScheduleManagement,
@@ -91,10 +90,7 @@ import {
   isHolidayDate,
   getDaysInMonth,
   getDayOfWeek,
-  getTodayDateWithDay,
-  getYesterdayDateWithDay,
   getStatusTextColor,
-  formatDateWithDay,
   formatDateByLang,
   getDatePlaceholder,
   analyzeAttendanceStatus as analyzeAttendanceStatusBase,
@@ -116,19 +112,11 @@ import CommonDownloadService, {
   exportOrganizationToXLSX,
 } from './components/common/common_common_downloadservice';
 import CommonLogin from './components/common/CommonLogin';
+import { formatDateToString } from './utils/dateUtils';
+import useSocketSync from './hooks/useSocketSync';
+import useDashboardController from './hooks/useDashboardController';
 import AdminMain from './components/admin/AdminMain';
-import AdminDashboard from './components/admin/AdminDashboard';
-import AdminEmployeeManagement from './components/admin/AdminEmployeeManagement';
-import AdminAttendanceManagement from './components/admin/AdminAttendanceManagement';
-import AdminScheduleManagement from './components/admin/AdminScheduleManagement';
-import AdminPayrollManagement from './components/admin/AdminPayrollManagement';
-import AdminLeaveManagement from './components/admin/AdminLeaveManagement';
-import AdminEvaluationManagement from './components/admin/AdminEvaluationManagement';
-import AdminNoticeManagement from './components/admin/AdminNoticeManagement';
-import AdminNotificationManagement from './components/admin/AdminNotificationManagement';
-import AdminSuggestionManagement from './components/admin/AdminSuggestionManagement';
-import AdminSystemManagement from './components/admin/AdminSystemManagement';
-import AdminAIChatbot from './components/admin/AdminAIChatbot';
+import AdminContentRenderer from './components/admin/AdminContentRenderer';
 import StaffMain from './components/staff/StaffMain';
 import StaffEmployeeInfo from './components/staff/StaffEmployeeInfo';
 import StaffAnnualLeave from './components/staff/StaffAnnualLeave';
@@ -138,11 +126,11 @@ import StaffScheduleAttendance from './components/staff/StaffScheduleAttendance'
 import StaffSalary from './components/staff/StaffSalary';
 import StaffSuggestion from './components/staff/StaffSuggestion';
 import StaffEvaluation from './components/staff/StaffEvaluation';
+import StaffChangePasswordPopup from './components/staff/StaffChangePasswordPopup';
 import UpdateNotification from './components/UpdateNotification';
 import {
   createCompanyWageRules,
   EXCLUDE_TIME,
-  COMPANY_STANDARDS,
 } from './components/common/common_common';
 import {
   useEmployeeState,
@@ -156,10 +144,6 @@ import {
 import {
   useNotificationHandlers,
   shouldReceiveNotification,
-  repeatCycleOptions,
-  recipientOptions,
-  getRecipientText,
-  요일목록,
   get관리자알림목록,
   get통합알림리스트,
   calculateRecipientCount,
@@ -180,7 +164,6 @@ import { useAnnualLeaveManager } from './components/common/common_admin_leave';
 import {
   usePayrollManagement,
   usePayrollFilter,
-  exportPayrollXLSX,
 } from './components/common/common_admin_payroll';
 // import { logSystemEvent, getActiveAiKey, getActiveProvider } from './utils/utils_admin_system'; // 병합됨: common_admin_system
 import {
@@ -247,6 +230,11 @@ import {
   onForegroundMessage,
   showLocalNotification,
 } from './firebase';
+import useHolidayData from './hooks/useHolidayData';
+import useCommunicationData from './hooks/useCommunicationData';
+import { useAuthContext } from './contexts/AuthContext';
+import { EmployeeProvider } from './contexts/EmployeeContext';
+import { NavigationProvider } from './contexts/NavigationContext';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -279,17 +267,7 @@ const devLog = (...args) => {
   //  if (__DEV__) console.log(...args);
 };
 
-// *[1_공통] 1.2.2_날짜 변환 유틸* (KST 기준)
-// Date 객체를 YYYY-MM-DD 문자열로 변환 (로컬 시간대 기준)
-const formatDateToString = (date) => {
-  if (!date) return null;
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return null;
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+// *[1_공통] 1.2.2_날짜 변환 유틸* (KST 기준) → ./utils/dateUtils
 
 // *[1_공통] 1.2.2_API 상수*
 const API_BASE_URL =
@@ -315,304 +293,35 @@ const HRManagementSystem = () => {
   };
 
   //---[1_공통] 1.3.2_공휴일 관리 STATE---//
-  // *[1_공통] 1.3.2.1_공휴일 데이터*
-  const [holidayData, setHolidayData] = useState({});
-  const [holidayLoadingStatus, setHolidayLoadingStatus] = useState({});
-  // 로딩 중 여부를 ref로 추적 (함수 재생성 없이 중복 호출 방지)
-  const holidayInFlightRef = React.useRef({});
-
-  // *[1_공통] 1.3.2.2_커스텀 공휴일*
-  const [customHolidays, setCustomHolidays] = useState({});
-  const [showHolidayPopup, setShowHolidayPopup] = useState(false);
-  const [selectedHolidayDate, setSelectedHolidayDate] = useState('');
-  const [holidayForm, setHolidayForm] = useState({
-    date: '',
-    name: '',
-    isEdit: false,
-    originalDate: '',
-  });
-
-  // *[1_공통] 1.3.2.2.1_시스템 공휴일 수정/삭제 관리*
-  const [deletedSystemHolidays, setDeletedSystemHolidays] = useState([]);
-  const [editedSystemHolidays, setEditedSystemHolidays] = useState({});
-  const [showDeletedHolidaysModal, setShowDeletedHolidaysModal] =
-    useState(false);
-  const [
+  // (src/hooks/useHolidayData.js로 분리됨)
+  const {
+    holidayData,
+    setHolidayData,
+    holidayLoadingStatus,
+    setHolidayLoadingStatus,
+    holidayInFlightRef,
+    customHolidays,
+    setCustomHolidays,
+    showHolidayPopup,
+    setShowHolidayPopup,
+    selectedHolidayDate,
+    setSelectedHolidayDate,
+    holidayForm,
+    setHolidayForm,
+    deletedSystemHolidays,
+    setDeletedSystemHolidays,
+    editedSystemHolidays,
+    setEditedSystemHolidays,
+    showDeletedHolidaysModal,
+    setShowDeletedHolidaysModal,
     permanentlyDeletedSystemHolidays,
     setPermanentlyDeletedSystemHolidays,
-  ] = useState([]);
-
-  // *[1_공통] 1.3.2.3_공휴일 데이터 로드 함수 (DB 기반)*
-  const loadHolidayData = React.useCallback(
-    async (year) => {
-      // 방어 코드: year가 유효한 숫자인지 확인
-      if (!year || isNaN(year) || year < 2000 || year > 2100) {
-        return {};
-      }
-
-      // ref 기반 중복 방지: 이미 로드됐거나 로딩 중이면 즉시 반환
-      if (holidayInFlightRef.current[year] === 'loaded') {
-        return holidayData[year];
-      }
-      if (holidayInFlightRef.current[year] === 'loading') {
-        return;
-      }
-
-      holidayInFlightRef.current[year] = 'loading';
-      setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'loading' }));
-
-      try {
-        devLog(`🔄 [DB] ${year}년 공휴일 데이터 로딩 중...`);
-
-        // DB에서 공휴일 데이터 로드
-        const response = await HolidayAPI.getYearHolidays(year);
-        let holidays = response.data || {};
-
-        devLog(
-          `✅ [DB] ${year}년 공휴일 ${
-            Object.keys(holidays).length / 2
-          }일 로드 완료`
-        );
-
-        // 삭제된 시스템 공휴일 제외
-        const deleted = JSON.parse(
-          localStorage.getItem('deletedSystemHolidays') || '[]'
-        );
-        deleted.forEach((date) => {
-          const shortDate = date.substring(5); // MM-DD
-          delete holidays[date];
-          delete holidays[shortDate];
-        });
-
-        // 영구 삭제된 시스템 공휴일도 제외
-        const permanentlyDeleted = JSON.parse(
-          localStorage.getItem('permanentlyDeletedSystemHolidays') || '[]'
-        );
-        permanentlyDeleted.forEach((date) => {
-          const shortDate = date.substring(5); // MM-DD
-          delete holidays[date];
-          delete holidays[shortDate];
-        });
-
-        // 수정된 시스템 공휴일 적용
-        const edited = JSON.parse(
-          localStorage.getItem('editedSystemHolidays') || '{}'
-        );
-        Object.entries(edited).forEach(([date, name]) => {
-          const shortDate = date.substring(5); // MM-DD
-          holidays[date] = name;
-          holidays[shortDate] = name;
-        });
-
-        holidayInFlightRef.current[year] = 'loaded';
-        setHolidayData((prev) => ({ ...prev, [year]: holidays }));
-        setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'loaded' }));
-
-        return holidays;
-      } catch (error) {
-        devLog(
-          `❌ [DB] ${year}년 공휴일 데이터 로드 실패, 로컬 폴백 사용:`,
-          error.message
-        );
-        holidayInFlightRef.current[year] = 'error';
-        setHolidayLoadingStatus((prev) => ({ ...prev, [year]: 'error' }));
-
-        // 폴백: HolidayService의 로컬 데이터 사용
-        const basicHolidays = holidayService.getBasicHolidays(year);
-        setHolidayData((prev) => ({ ...prev, [year]: basicHolidays }));
-        return basicHolidays;
-      }
-    },
-    [] // ref 기반 가드로 함수 참조 안정화 (의존성 제거)
-  );
-
-  // *[1_공통] 1.3.2.4_공휴일 시스템 초기화 useEffect (DB 기반)*
-  useEffect(() => {
-    const initializeHolidaySystem = async () => {
-      try {
-        const currentYear = new Date().getFullYear();
-
-        const priorityYears = [currentYear - 1, currentYear, currentYear + 1];
-        devLog('🚀 [DB] 우선순위 공휴일 데이터 로드 시작:', priorityYears);
-
-        await Promise.all(priorityYears.map((year) => loadHolidayData(year)));
-        devLog('✅ [DB] 우선순위 공휴일 데이터 로드 완료');
-
-        // 확장 연도 범위 로드는 이제 불필요 (DB에 50년치 저장됨)
-        // setTimeout(async () => {
-        //   try {
-        //     devLog('📅 확장 연도 범위 백그라운드 로드 시작...');
-        //     await holidayService.loadExtendedYearRange(currentYear, 30);
-        //     devLog('🎉 확장 연도 범위 로드 완료 (±30년)');
-        //   } catch (error) {
-        //     devLog('⚠️ 확장 연도 범위 로드 실패:', error);
-        //   }
-        // }, 2000);
-
-        // 주기적 업데이트도 DB 기반이므로 불필요
-        // holidayService.startPeriodicUpdate(24);
-
-        // 개발 환경에서 데이터 품질 검증도 이제 불필요
-        // if (process.env.NODE_ENV === 'development') {
-        //   setTimeout(async () => {
-        //     await holidayService.validateDataQuality(
-        //       currentYear - 1,
-        //       currentYear + 1
-        //     );
-        //   }, 5000);
-        // }
-      } catch (error) {
-        devLog('❌ 공휴일 시스템 초기화 실패:', error);
-
-        const currentYear = new Date().getFullYear();
-        await loadHolidayData(currentYear);
-      }
-    };
-
-    // [5차 패치] 300ms 지연 — 공지/알림이 먼저 HTTP 슬롯 확보
-    const holidayInitTimer = setTimeout(() => initializeHolidaySystem(), 300);
-
-    // 자정 자동 업데이트 이벤트 리스너 등록
-    const handleHolidayUpdate = async (event) => {
-      const { years } = event.detail;
-      // devLog(
-      //   '📢 [자정] 공휴일 업데이트 감지, App.js holidayData 재로드 중...',
-      //   years
-      // );
-
-      // 업데이트된 연도들의 데이터를 다시 로드
-      for (const year of years) {
-        await loadHolidayData(year);
-      }
-
-      // devLog('✅ [자정] App.js holidayData 재로드 완료');
-    };
-
-    window.addEventListener('holidayDataUpdated', handleHolidayUpdate);
-
-    return () => {
-      clearTimeout(holidayInitTimer);
-      holidayService.stopPeriodicUpdate();
-      window.removeEventListener('holidayDataUpdated', handleHolidayUpdate);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // *[1_공통] 1.3.2.5_공휴일 데이터 가져오기 (레거시 호환)*
-  const getKoreanHolidays = (year) => {
-    if (holidayData[year] && Object.keys(holidayData[year]).length > 0) {
-      return holidayData[year];
-    }
-
-    try {
-      return holidayService.getBasicHolidays(year) || {};
-    } catch (error) {
-      return {};
-    }
-  };
-
-  // *[1_공통] 1.3.2.6_공휴일 강제 새로고침*
-  const forceRefreshHolidays = async () => {
-    const currentYear = new Date().getFullYear();
-    const yearsToRefresh = [currentYear - 1, currentYear, currentYear + 1];
-
-    try {
-      // devLog('🔄 공휴일 데이터 강제 새로고침 시작...');
-
-      yearsToRefresh.forEach((year) => {
-        holidayService.clearCache(year);
-        setHolidayLoadingStatus((prev) => ({ ...prev, [year]: null }));
-      });
-
-      const refreshPromises = yearsToRefresh.map(async (year) => {
-        const holidays = await loadHolidayData(year);
-        return { year, holidays };
-      });
-
-      await Promise.all(refreshPromises);
-
-      // devLog('✅ 공휴일 데이터 강제 새로고침 완료');
-
-      return true;
-    } catch (error) {
-      // devLog('❌ 공휴일 데이터 강제 새로고침 실패:', error);
-      return false;
-    }
-  };
-
-  // *[1_공통] 1.3.2.7_시스템 공휴일 복구*
-  const restoreSystemHoliday = async (dateToRestore) => {
-    try {
-      // localStorage에서 삭제된 공휴일 목록 가져오기
-      const deleted = JSON.parse(
-        localStorage.getItem('deletedSystemHolidays') || '[]'
-      );
-
-      // 해당 날짜를 삭제 목록에서 제거
-      const updatedDeleted = deleted.filter((date) => date !== dateToRestore);
-      localStorage.setItem(
-        'deletedSystemHolidays',
-        JSON.stringify(updatedDeleted)
-      );
-
-      // 상태 업데이트
-      setDeletedSystemHolidays(updatedDeleted);
-
-      // 해당 연도의 공휴일 데이터 다시 로드
-      const year = parseInt(dateToRestore.split('-')[0]);
-      holidayService.clearCache(year);
-      setHolidayLoadingStatus((prev) => ({ ...prev, [year]: null }));
-      await loadHolidayData(year);
-
-      // devLog(`✅ 시스템 공휴일 복구 완료: ${dateToRestore}`);
-      return true;
-    } catch (error) {
-      // devLog(`❌ 시스템 공휴일 복구 실패:`, error);
-      return false;
-    }
-  };
-
-  // *[1_공통] 1.3.2.8_시스템 공휴일 영구 삭제*
-  const permanentlyDeleteSystemHoliday = async (dateToDelete) => {
-    try {
-      // 1. deletedSystemHolidays에서 제거
-      const deleted = JSON.parse(
-        localStorage.getItem('deletedSystemHolidays') || '[]'
-      );
-      const updatedDeleted = deleted.filter((date) => date !== dateToDelete);
-      localStorage.setItem(
-        'deletedSystemHolidays',
-        JSON.stringify(updatedDeleted)
-      );
-      setDeletedSystemHolidays(updatedDeleted);
-
-      // 2. permanentlyDeletedSystemHolidays에 추가
-      const permanentlyDeleted = JSON.parse(
-        localStorage.getItem('permanentlyDeletedSystemHolidays') || '[]'
-      );
-      if (!permanentlyDeleted.includes(dateToDelete)) {
-        permanentlyDeleted.push(dateToDelete);
-        localStorage.setItem(
-          'permanentlyDeletedSystemHolidays',
-          JSON.stringify(permanentlyDeleted)
-        );
-        setPermanentlyDeletedSystemHolidays(permanentlyDeleted);
-      }
-
-      // 3. editedSystemHolidays에서도 제거 (있다면)
-      const edited = JSON.parse(
-        localStorage.getItem('editedSystemHolidays') || '{}'
-      );
-      if (edited[dateToDelete]) {
-        delete edited[dateToDelete];
-        localStorage.setItem('editedSystemHolidays', JSON.stringify(edited));
-      }
-
-      return true;
-    } catch (error) {
-      return false;
-    }
-  };
+    loadHolidayData,
+    getKoreanHolidays,
+    forceRefreshHolidays,
+    restoreSystemHoliday,
+    permanentlyDeleteSystemHoliday,
+  } = useHolidayData();
 
   //---[1_공통] 1.3.3_사용자 및 로그인 STATE---//
   const [employees, setEmployees] = useState([]);
@@ -651,18 +360,10 @@ const HRManagementSystem = () => {
   // newEmployee → AdminEmployeeManagement 로컬 state로 이동
   const [showNewEmployeeModal, setShowNewEmployeeModal] = useState(false);
 
-  const [currentUser, setCurrentUser] = useState(() => {
-    // F5 새로고침 시에는 유지, 창 닫기 시에는 로그아웃
-    const savedUser = sessionStorage.getItem('currentUser');
-    if (savedUser) {
-      try {
-        return JSON.parse(savedUser);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  });
+  // *[1_공통] 1.3.4.1.0_인증 상태 (AuthContext에서 소비)*
+  // currentUser / setCurrentUser / logout → src/contexts/AuthContext.js 로 이동됨
+  const { currentUser, setCurrentUser, logout: authLogout } = useAuthContext();
+
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberUserId, setRememberUserId] = useState(false);
@@ -857,37 +558,61 @@ const HRManagementSystem = () => {
     useState('employee-leave'); // 'employee-leave' 또는 'leave-history'
   // editingAnnualLeave, editAnnualData, leaveHistoryPage → AdminLeaveManagement 로컬 state로 이동
 
-  //---[2_관리자 모드] 2.7_건의 관리 STATE---//
-  const [suggestions, setSuggestions] = useState([]);
-  const [suggestionPage, setSuggestionPage] = useState(1);
-
   //---[2_관리자 모드] 2.10_평가 관리 STATE---//
   const [evaluations, setEvaluations] = useState([]);
-  const [notices, setNotices] = useState([]);
   // *[2_관리자 모드] 2.10_평가관리 state → AdminEvaluationManagement 로컬 state로 이동*
   // *[2_관리자 모드] 2.10.2_안전사고 편집 상태 → AdminDashboard 로컬 state로 이동*
 
-  //---[2_관리자 모드] 2.4_알림 관리 STATE---//
-  const [regularNotifications, setRegularNotifications] = useState([]);
-  const [realtimeNotifications, setRealtimeNotifications] = useState([]);
-  const [notificationLogs, setNotificationLogs] = useState([]);
-
-  // *[2_관리자 모드] 2.4_알림 로그 state (점진적 더보기)*
+  //---[2_관리자 모드] 2.4_알림 관리 / 2.7_건의 관리 / 공지 STATE---//
+  // (src/hooks/useCommunicationData.js로 분리됨)
   const {
+    notices,
+    setNotices,
+    suggestions,
+    setSuggestions,
+    suggestionPage,
+    setSuggestionPage,
+    regularNotifications,
+    setRegularNotifications,
+    realtimeNotifications,
+    setRealtimeNotifications,
+    notificationLogs,
+    setNotificationLogs,
     visibleLogCount,
     setVisibleLogCount,
     handleLoadMoreLogs,
     handleCollapseLogs,
-  } = useNotificationLogState();
-
-  // *[2_관리자 모드] 2.4.1_알림 로그 검색*
-  const [notificationLogSearch, setNotificationLogSearch] = useState({
-    year: '',
-    month: '',
-    recipient: '',
-    titleOrContent: '',
-    type: '',
-  });
+    notificationLogSearch,
+    setNotificationLogSearch,
+    showAddRegularNotificationPopup,
+    setShowAddRegularNotificationPopup,
+    showAddRealtimeNotificationPopup,
+    setShowAddRealtimeNotificationPopup,
+    showAddNotificationPopup,
+    setShowAddNotificationPopup,
+    알림유형,
+    set알림유형,
+    showEditRegularNotificationPopup,
+    setShowEditRegularNotificationPopup,
+    showEditRealtimeNotificationPopup,
+    setShowEditRealtimeNotificationPopup,
+    editingRegularNotification,
+    setEditingRegularNotification,
+    editingRealtimeNotification,
+    setEditingRealtimeNotification,
+    regularNotificationForm,
+    setRegularNotificationForm,
+    realtimeNotificationForm,
+    setRealtimeNotificationForm,
+    showRecurringSettingsModal,
+    setShowRecurringSettingsModal,
+    recurringSettings,
+    setRecurringSettings,
+    currentFormType,
+    setCurrentFormType,
+    cleanupExpiredRegulars,
+    cleanupExpiredNotifications,
+  } = useCommunicationData();
 
   // *[2_관리자 모드] 2.4.2_일정 검색 (관리자 모드)*
   const [scheduleSearch, setScheduleSearch] = useState({
@@ -896,66 +621,6 @@ const HRManagementSystem = () => {
     type: '',
     titleOrContent: '',
   });
-
-  // *[2_관리자 모드] 2.4.3_알림 팝업 상태*
-  const [showAddRegularNotificationPopup, setShowAddRegularNotificationPopup] =
-    useState(false);
-  const [
-    showAddRealtimeNotificationPopup,
-    setShowAddRealtimeNotificationPopup,
-  ] = useState(false);
-  const [showAddNotificationPopup, setShowAddNotificationPopup] =
-    useState(false);
-  const [알림유형, set알림유형] = useState('정기');
-
-  // *[2_관리자 모드] 2.4.4_알림 편집 팝업 상태*
-  const [
-    showEditRegularNotificationPopup,
-    setShowEditRegularNotificationPopup,
-  ] = useState(false);
-  const [
-    showEditRealtimeNotificationPopup,
-    setShowEditRealtimeNotificationPopup,
-  ] = useState(false);
-  const [editingRegularNotification, setEditingRegularNotification] =
-    useState(null);
-  const [editingRealtimeNotification, setEditingRealtimeNotification] =
-    useState(null);
-
-  // *[2_관리자 모드] 2.4.5_알림 폼 데이터*
-  const [regularNotificationForm, setRegularNotificationForm] = useState({
-    title: '',
-    content: '',
-    status: '진행중',
-    startDate: '',
-    endDate: '',
-    repeatCycle: '특정일',
-    recipients: { type: '전체', value: '전체직원', selectedEmployees: [] },
-  });
-  const [realtimeNotificationForm, setRealtimeNotificationForm] = useState({
-    title: '',
-    content: '',
-    status: '진행중',
-    startDate: '',
-    endDate: '',
-    repeatCycle: '특정일',
-    recipients: { type: '전체', value: '전체직원', selectedEmployees: [] },
-  });
-
-  // *[2_관리자 모드] 2.4.6_반복 설정 모달*
-  const [showRecurringSettingsModal, setShowRecurringSettingsModal] =
-    useState(false);
-  const [recurringSettings, setRecurringSettings] = useState({
-    반복주기_숫자: 1,
-    반복주기_단위: '일',
-    반복시작일: '',
-    반복종료일: '',
-    반복시간: '09:00',
-    반복요일: [],
-    반복일자: 1,
-    반복월: 1,
-  });
-  const [currentFormType, setCurrentFormType] = useState('');
 
   //---[2_관리자 모드] 2.0_공통사항 STATE---//
   const [activeTab, setActiveTab] = useState(() => {
@@ -1071,81 +736,8 @@ const HRManagementSystem = () => {
 
   // *[2_관리자 모드] 2.7_건의 관리 - 건의 내역 전체 수정 STATE*
 
-  //---[2_관리자 모드] 2.1_대시보드 STATE---//
-  // *[2_관리자 모드] 2.1.1_대시보드 날짜 필터*
-  const [dashboardDateFilter, setDashboardDateFilter] = useState('today');
-  const [dashboardSelectedDate, setDashboardSelectedDate] = useState(
-    formatDateToString(new Date())
-  );
-  const [dashboardStats, setDashboardStats] = useState(null);
-
-  // *[2_관리자 모드] 2.1.2_근태 기록*
-  const [attendanceRecords, setAttendanceRecords] = useState([]);
-
-  // *[2_관리자 모드] 2.1.3_직원 목록 팝업 관련*
-  // (useDashboardAttendance hook으로 분리됨)
-
-  // *[2_관리자 모드] 2.1.4_급여 비밀번호 팝업*
   // *[2_관리자 모드] 2.1.5_안전사고 관리*
   const [safetyAccidents, setSafetyAccidents] = useState([]);
-  const [safetyAccidentPage, setSafetyAccidentPage] = useState(1);
-  const [safetyAccidentSearch, setSafetyAccidentSearch] = useState({
-    year: '',
-    month: '',
-    severity: '',
-    content: '',
-  });
-  const [showSafetyAccidentInput, setShowSafetyAccidentInput] = useState(false);
-
-  // *[2_관리자 모드] 2.1.6_근태 요약 관리*
-  const [attendanceSummaries, setAttendanceSummaries] = useState([]);
-
-  // *[2_관리자 모드] 2.1.6_워라밸 및 목표 관리*
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [availableYears, setAvailableYears] = useState([
-    new Date().getFullYear() - 1,
-    new Date().getFullYear(),
-    new Date().getFullYear() + 1,
-  ]);
-  const [showGoalDetailsPopup, setShowGoalDetailsPopup] = useState(false);
-  const [showWorkLifeBalancePopup, setShowWorkLifeBalancePopup] =
-    useState(false);
-  const [showWorkLifeDetailPopup, setShowWorkLifeDetailPopup] = useState(false);
-  const [workLifeDetailMetric, setWorkLifeDetailMetric] = useState(null);
-  const [workLifeDetailMonth, setWorkLifeDetailMonth] = useState(null);
-  const [selectedViolationMonth, setSelectedViolationMonth] = useState(null);
-  const [stressSortColumn, setStressSortColumn] = useState('value'); // 스트레스 지수 정렬 컬럼
-  const [stressSortDirection, setStressSortDirection] = useState('desc'); // 스트레스 지수 정렬 방향
-  const [showGoalDetailDataPopup, setShowGoalDetailDataPopup] = useState(false);
-  const [goalDetailMetric, setGoalDetailMetric] = useState(null);
-  const [goalDetailMonth, setGoalDetailMonth] = useState(null);
-
-  // *[2_관리자 모드] 2.1.7_정렬 설정*
-  const [overtimeSortConfig, setOvertimeSortConfig] = useState({
-    field: null,
-    order: 'asc',
-  });
-  const [leaveSortConfig, setLeaveSortConfig] = useState({
-    field: null,
-    order: 'asc',
-  });
-  const [violationSortConfig, setViolationSortConfig] = useState({
-    field: null,
-    order: 'asc',
-  });
-
-  // *[2_관리자 모드] 2.1.8_AI 관련 상태*
-  const [aiPromptSettings, setAiPromptSettings] = useState({
-    employeeEvaluation: '',
-    performanceAnalysis: '',
-    workLifeBalance: '',
-  });
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [aiRecommendations, setAiRecommendations] = useState([]);
-  const [showAiHistoryPopup, setShowAiHistoryPopup] = useState(false);
-  const [showPromptSettings, setShowPromptSettings] = useState(false);
-  const [aiRecommendationHistory, setAiRecommendationHistory] = useState([]);
-
   // *[2_관리자 모드] 2.1.9_AI 모델 타입 정의*
   const modelTypes = {
     chatgpt: [
@@ -1166,24 +758,6 @@ const HRManagementSystem = () => {
       { id: 'gemini-pro', name: 'Gemini Pro' },
     ],
   };
-
-  // *[2_관리자 모드] 2.1.10_대시보드 출근현황 연동 useEffect*
-  useEffect(() => {
-    const loadDashboardAttendance = async () => {
-      try {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
-        const response = await AttendanceAPI.getMonthlyData(year, month);
-        if (response && response.data) {
-          setAttendanceRecords(response.data);
-        }
-      } catch (e) {
-        //  console.error('근태 연동 실패', e);
-      }
-    };
-    loadDashboardAttendance();
-  }, [API_BASE_URL, activeTab]);
 
   // *[2_관리자 모드] 2.1.11_알림 로그 초기화 useEffect*
   useEffect(() => {
@@ -1211,89 +785,9 @@ const HRManagementSystem = () => {
     }
   }, [currentUser?.id]);
 
-  // *[1_공통] 1.3.8.2_만료 알림 정리 함수*
-  const cleanupExpiredNotifications = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    setRegularNotifications((prev) =>
-      prev.filter((n) => {
-        if (isExpired5Days(n.createdAt)) return false;
-
-        if (n.endDate) {
-          const endDate = new Date(n.endDate);
-          endDate.setHours(23, 59, 59, 999);
-
-          if (endDate < today) return false;
-        }
-
-        return true;
-      })
-    );
-
-    setRealtimeNotifications((prev) =>
-      prev.filter((n) => !isExpired5Days(n.createdAt))
-    );
-  };
-
-  // *[1_공통] 1.3.8.3_정기 알림 만료 판정*
-  const isRegularExpired = (n) => {
-    if (!n?.endDate) return false;
-    const del = new Date(n.endDate);
-    del.setDate(del.getDate() + 1); // 종료 다음날
-    del.setHours(0, 0, 0, 0); // 00:00 기준
-    return new Date() >= del;
-  };
-
-  // *[1_공통] 1.3.8.4_알림 로그 3년 체크*
-  const isLogOlderThan3Years = (createdAt) => {
-    if (!createdAt) return false;
-    try {
-      const logDate = new Date(createdAt);
-      const threeYearsAgo = new Date();
-      threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-      return logDate < threeYearsAgo;
-    } catch (e) {
-      return false;
-    }
-  };
-
-  // *[1_공통] 1.3.8.5_알림 로그 3년 삭제*
-  const cleanupOldLogs = () => {
-    setNotificationLogs((prev) =>
-      prev.filter((log) => !isLogOlderThan3Years(log.createdAt))
-    );
-  };
-
-  // *[1_공통] 1.3.8.6_만료 알림 정리*
-  const cleanupExpiredRegulars = () => {
-    try {
-      const now = new Date().toLocaleString('ko-KR');
-
-      setRegularNotifications((prev) => {
-        const expired = prev.filter((n) => isRegularExpired(n));
-        const active = prev.filter((n) => !isRegularExpired(n));
-
-        if (expired.length > 0) {
-          const expiredLogs = expired.map((n) => ({
-            id: `expire_${n.id}`,
-            type: '정기알림',
-            title: n.title,
-            status: '만료됨',
-            createdAt: now,
-          }));
-
-          setNotificationLogs((prevLogs) => [...expiredLogs, ...prevLogs]);
-        }
-
-        return active;
-      });
-
-      cleanupOldLogs();
-    } catch (e) {
-      console.error('만료 정기알림 정리 오류', e);
-    }
-  };
+  // *[1_공통] 1.3.8.2_만료 알림 정리 함수* (useCommunicationData로 이동됨 — cleanupExpiredNotifications)
+  // *[1_공통] 1.3.8.3~1.3.8.6_만료 알림 관련 함수 (useCommunicationData로 이동됨)*
+  // isRegularExpired, isLogOlderThan3Years, cleanupOldLogs, cleanupExpiredRegulars
 
   // *[3_일반직원 모드] 3.1_일반직원 STATE*
   const {
@@ -1511,26 +1005,18 @@ const HRManagementSystem = () => {
       }
 
       updateEmployeeNotifications();
-      cleanupExpiredNotifications();
+      // cleanupExpiredNotifications: useCommunicationData 내부 6h 인터벌로 이동됨
     };
 
     // [5차 패치] 200ms 지연 — 알림(loadNotificationsNow)이 먼저 HTTP 슬롯 확보
     const loadDataTimer = setTimeout(() => loadData(), 200);
 
-    const cleanupInterval = setInterval(() => {
-      cleanupExpiredNotifications();
-    }, 6 * 60 * 60 * 1000);
-
     return () => {
       clearTimeout(loadDataTimer);
-      clearInterval(cleanupInterval);
     };
   }, []); // currentYear 의존성 제거 - 초기 로드만 수행
 
-  // *[1_공통] 1.3.8.8_만료 알림 초기 정리 useEffect*
-  useEffect(() => {
-    cleanupExpiredRegulars();
-  }, []);
+  // *[1_공통] 1.3.8.8_만료 알림 초기 정리 useEffect* (useCommunicationData 내부로 이동됨)
 
   // *[2_관리자 모드] 2.9.1_급여 키 정규화 useEffect*
   useEffect(() => {
@@ -2022,29 +1508,6 @@ const HRManagementSystem = () => {
 
     loadMonthlyAttendanceData();
   }, [attendanceSheetYear, attendanceSheetMonth]);
-
-  // *[2_관리자 모드] 대시보드 날짜 변경 시 해당 월 근태 데이터 로드*
-  useEffect(() => {
-    if (activeTab === 'dashboard' && dashboardSelectedDate) {
-      const selectedDate = new Date(dashboardSelectedDate);
-      const selectedYear = selectedDate.getFullYear();
-      const selectedMonth = selectedDate.getMonth() + 1;
-
-      // 현재 로드된 월과 다른 경우에만 로드
-      if (
-        selectedYear !== attendanceSheetYear ||
-        selectedMonth !== attendanceSheetMonth
-      ) {
-        setAttendanceSheetYear(selectedYear);
-        setAttendanceSheetMonth(selectedMonth);
-      }
-    }
-  }, [
-    activeTab,
-    dashboardSelectedDate,
-    attendanceSheetYear,
-    attendanceSheetMonth,
-  ]);
 
   // *[3_일반직원 모드] 회사 일정/근태 탭 월 변경 시 근태 데이터 로드*
   useEffect(() => {
@@ -2626,8 +2089,6 @@ const HRManagementSystem = () => {
   });
   const [isEditingAttendance, setIsEditingAttendance] = useState(false);
   const [workTypeSettings, setWorkTypeSettings] = useState({}); // 일별 근무구분 설정 (평일/휴일)
-  const [isStressCalculationExpanded, setIsStressCalculationExpanded] =
-    useState(false);
 
   //---[2_관리자 모드] 2.3_공지 관리 STATE---//
   // noticeForm/editingNoticeId → AdminNoticeManagement 로컬 state로 이동
@@ -3001,6 +2462,37 @@ const HRManagementSystem = () => {
   // *[1_공통] 탭 비활성 중 수신된 연차/건의 이벤트 대기 플래그*
   const pendingSocketReloadRef = React.useRef({ leave: false, suggestion: false });
 
+  // *[1_공통] Socket.io stale-closure 방지용 refs*
+  const leaveRequestsRef = useRef(leaveRequests);
+  const attendanceSheetYearRef = useRef(attendanceSheetYear);
+  const attendanceSheetMonthRef = useRef(attendanceSheetMonth);
+  const currentYearRef = useRef(currentYear);
+  useEffect(() => { leaveRequestsRef.current = leaveRequests; }, [leaveRequests]);
+  useEffect(() => { attendanceSheetYearRef.current = attendanceSheetYear; }, [attendanceSheetYear]);
+  useEffect(() => { attendanceSheetMonthRef.current = attendanceSheetMonth; }, [attendanceSheetMonth]);
+  useEffect(() => { currentYearRef.current = currentYear; }, [currentYear]);
+
+  // *[1_공통] 전역 Socket.io 실시간 업데이트*
+  useSocketSync({
+    currentUser,
+    leaveRequestsRef,
+    attendanceSheetYearRef,
+    attendanceSheetMonthRef,
+    currentYearRef,
+    pendingSocketReloadRef,
+    setEmployees,
+    setRegularNotifications,
+    setRealtimeNotifications,
+    setSuggestions,
+    setLeaveRequests,
+    setAttendanceSheetData,
+    setPayrollByMonth,
+    setEvaluationData,
+    setSafetyAccidents,
+    setScheduleEvents,
+    setCustomHolidays,
+  });
+
   // *[1_공통] 탭 재활성화 시 대기 중인 연차/건의 API 즉시 재조회*
   React.useEffect(() => {
     if (!currentUser?.isAdmin) return;
@@ -3085,1029 +2577,10 @@ const HRManagementSystem = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [currentUser, setLeaveRequests, setSuggestions, devLog]);
 
-  // *[3_일반직원 모드] 탭 재활성화 시 공지/알림 재조회*
-  React.useEffect(() => {
-    if (!currentUser || currentUser.isAdmin) return;
+  // *[3_일반직원 모드] 탭 재활성화 시 공지/알림 재조회* (useCommunicationData 내부로 이동됨)
 
-    const handleStaffVisibilityChange = async () => {
-      if (document.hidden) return;
-      devLog('👁️ [직원 탭 재활성화] 공지/알림 재조회');
-      try {
-        const dbNotices = await NoticeAPI.list(false, true); // lite=true: content 제외 (직원 탭 재활성화 경량화)
-        if (Array.isArray(dbNotices) && dbNotices.length > 0) {
-          setNotices(dbNotices.map((notice) => {
-            let attachments = notice.attachments || [];
-            if (attachments.length > 0 && typeof attachments[0] === 'string') {
-              attachments = attachments.map((fileName) => ({ name: fileName, url: '', size: '' }));
-            }
-            return {
-              id: notice._id, _id: notice._id,
-              title: notice.title, content: notice.content,
-              author: notice.author, authorId: notice.authorId,
-              category: notice.category, priority: notice.priority,
-              files: attachments, attachments,
-              date: notice.createdAt ? new Date(notice.createdAt).toISOString().slice(0, 10) : '',
-              createdAt: notice.createdAt, updatedAt: notice.updatedAt,
-              views: notice.views || 0, viewCount: notice.viewCount || 0,
-              viewedBy: notice.viewedBy || [],
-              isImportant: notice.isImportant || false,
-              isScheduled: notice.isScheduled || false,
-              scheduledDateTime: notice.scheduledDateTime,
-            };
-          }));
-        }
-      } catch (err) {
-        console.error('❌ [직원 탭 재활성화] 공지 재조회 실패:', err);
-      }
-      // 시스템 타입 포함을 위해 타입 무필터 통합 조회 (정기+실시간+시스템)
-      try {
-        const notifications = await NotificationAPI.list(null, currentUser.name, currentUser.department, currentUser.position, currentUser.role);
-        if (notifications && Array.isArray(notifications)) {
-          const mapped = notifications.map((n) => ({ ...n, id: n._id || n.id }));
-          const regularList = mapped.filter((n) => n.notificationType === '정기');
-          const realtimeList = mapped.filter((n) =>
-            n.notificationType === '실시간' || n.notificationType === '시스템'
-          );
-          setRegularNotifications(regularList);
-          setRealtimeNotifications(realtimeList.map((log) => ({
-            ...log,
-            status: log.notificationType === '시스템' ? '진행중' : log.status || '진행중',
-            isAutoGenerated: log.notificationType === '시스템',
-          })));
-        }
-      } catch (err) {
-        console.error('❌ [직원 탭 재활성화] 알림 재조회 실패:', err);
-      }
-    };
+  // *[1_공통] 전역 Socket.io 실시간 업데이트* → useSocketSync 훅으로 이동됨
 
-    document.addEventListener('visibilitychange', handleStaffVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleStaffVisibilityChange);
-  }, [currentUser?.id, setNotices, setRegularNotifications, setRealtimeNotifications]); // [4차 패치] [currentUser] → [currentUser?.id]
-
-  // *[1_공통] 전역 Socket.io 실시간 업데이트*
-  React.useEffect(() => {
-    if (!currentUser) return;
-
-    const socket = io(SERVER_URL, {
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      transports: ['websocket', 'polling'],
-    });
-
-    let globalSocketConnected = false;
-    socket.on('connect', async () => {
-      devLog('🔌 [전역 Socket] 연결됨');
-      if (globalSocketConnected) {
-        // 재연결: 알림 API 1회 재조회 (시스템 타입 포함을 위해 타입 무필터 통합 조회)
-        devLog('🔄 [전역 Socket] 재연결 - 알림 재조회');
-        try {
-          const recipientName = currentUser?.isAdmin ? null : currentUser?.name;
-          const dept = currentUser?.isAdmin ? null : currentUser?.department;
-          const pos = currentUser?.isAdmin ? null : currentUser?.position;
-          const rl = currentUser?.isAdmin ? null : currentUser?.role;
-          const notifications = await NotificationAPI.list(null, recipientName, dept, pos, rl);
-          if (notifications && Array.isArray(notifications)) {
-            const mapped = notifications.map((n) => ({ ...n, id: n._id || n.id }));
-            const regularList = mapped.filter((n) => n.notificationType === '정기');
-            const realtimeList = mapped.filter((n) =>
-              n.notificationType === '실시간' || n.notificationType === '시스템'
-            );
-            setRegularNotifications(regularList);
-            setRealtimeNotifications(realtimeList.map((log) => ({
-              ...log,
-              status: log.notificationType === '시스템' ? '진행중' : log.status || '진행중',
-              isAutoGenerated: log.notificationType === '시스템',
-            })));
-          }
-        } catch (err) {
-          console.error('❌ [전역 Socket] 재연결 알림 재조회 실패:', err);
-        }
-      }
-      globalSocketConnected = true;
-    });
-
-    // 직원 실시간 업데이트
-    socket.on('employee-created', async (data) => {
-      devLog(`✨ [실시간] 직원 등록됨: ${data.name}`);
-      try {
-        const dbEmployees = await EmployeeAPI.list();
-        if (dbEmployees && dbEmployees.length > 0) {
-          const formattedEmployees = dbEmployees.map((emp) => {
-            const baseEmp = {
-              id: emp.employeeId,
-              name: emp.name,
-              password: emp.password || emp.phone?.slice(-4) || '0000',
-              phone: emp.phone,
-              department: emp.department,
-              subDepartment: emp.subDepartment || '',
-              position: emp.position,
-              role: emp.role,
-              joinDate: formatDateToString(emp.joinDate),
-              leaveDate:
-                emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
-                  ? formatDateToString(emp.leaveDate)
-                  : '', // ✅ 퇴사일 조건부 표시
-              workType: emp.workType,
-              payType: emp.salaryType,
-              contractType: emp.contractType || '정규', // 계약형태
-              status: emp.status,
-              address: emp.address,
-              lastLogin: emp.lastLogin, // 마지막 로그인 시각
-              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
-              leaveUsed: emp.leaveUsed,
-              // ✅ 호환성을 위한 매핑 필드
-              usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
-            };
-            const annualData = calculateEmployeeAnnualLeaveUtil(
-              baseEmp,
-              leaveRequests
-            );
-            return {
-              ...baseEmp,
-              leaveYearStart: annualData.annualStart,
-              leaveYearEnd: annualData.annualEnd,
-              totalAnnualLeave: annualData.totalAnnual,
-              usedAnnualLeave: annualData.usedAnnual,
-              remainingAnnualLeave: annualData.remainAnnual,
-            };
-          });
-          setEmployees(formattedEmployees);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 직원 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('employee-updated', async (data) => {
-      devLog(`✏️ [실시간] 직원 수정됨: ${data.name}`);
-      try {
-        const dbEmployees = await EmployeeAPI.list();
-        if (dbEmployees && dbEmployees.length > 0) {
-          const formattedEmployees = dbEmployees.map((emp) => {
-            const baseEmp = {
-              id: emp.employeeId,
-              name: emp.name,
-              password: emp.password || emp.phone?.slice(-4) || '0000',
-              phone: emp.phone,
-              department: emp.department,
-              subDepartment: emp.subDepartment || '',
-              position: emp.position,
-              role: emp.role,
-              joinDate: formatDateToString(emp.joinDate),
-              leaveDate:
-                emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
-                  ? formatDateToString(emp.leaveDate)
-                  : '', // ✅ 퇴사일 조건부 표시
-              workType: emp.workType,
-              payType: emp.salaryType,
-              contractType: emp.contractType || '정규', // 계약형태
-              status: emp.status,
-              address: emp.address,
-              lastLogin: emp.lastLogin, // 마지막 로그인 시각
-              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
-              leaveUsed: emp.leaveUsed,
-              // ✅ 호환성을 위한 매핑 필드
-              usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
-            };
-            const annualData = calculateEmployeeAnnualLeaveUtil(
-              baseEmp,
-              leaveRequests
-            );
-            return {
-              ...baseEmp,
-              leaveYearStart: annualData.annualStart,
-              leaveYearEnd: annualData.annualEnd,
-              totalAnnualLeave: annualData.totalAnnual,
-              usedAnnualLeave: annualData.usedAnnual,
-              remainingAnnualLeave: annualData.remainAnnual,
-            };
-          });
-          setEmployees(formattedEmployees);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 직원 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('employee-deleted', async (data) => {
-      devLog(`🗑️ [실시간] 직원 삭제됨: ${data.name}`);
-      try {
-        const dbEmployees = await EmployeeAPI.list();
-        if (dbEmployees && dbEmployees.length > 0) {
-          const formattedEmployees = dbEmployees.map((emp) => {
-            const baseEmp = {
-              id: emp.employeeId,
-              name: emp.name,
-              password: emp.password || emp.phone?.slice(-4) || '0000',
-              phone: emp.phone,
-              department: emp.department,
-              subDepartment: emp.subDepartment || '',
-              position: emp.position,
-              role: emp.role,
-              joinDate: formatDateToString(emp.joinDate),
-              leaveDate:
-                emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
-                  ? formatDateToString(emp.leaveDate)
-                  : '', // ✅ 퇴사일 조건부 표시
-              workType: emp.workType,
-              payType: emp.salaryType,
-              contractType: emp.contractType || '정규', // 계약형태
-              status: emp.status,
-              address: emp.address,
-              lastLogin: emp.lastLogin, // 마지막 로그인 시각
-              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
-              leaveUsed: emp.leaveUsed,
-              // ✅ 호환성을 위한 매핑 필드
-              usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
-            };
-            const annualData = calculateEmployeeAnnualLeaveUtil(
-              baseEmp,
-              leaveRequests
-            );
-            return {
-              ...baseEmp,
-              leaveYearStart: annualData.annualStart,
-              leaveYearEnd: annualData.annualEnd,
-              totalAnnualLeave: annualData.totalAnnual,
-              usedAnnualLeave: annualData.usedAnnual,
-              remainingAnnualLeave: annualData.remainAnnual,
-            };
-          });
-          setEmployees(formattedEmployees);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 직원 데이터 갱신 실패:', error);
-      }
-    });
-
-    // 알림 실시간 업데이트 (시스템 타입 포함을 위해 타입 무필터 통합 조회)
-    const refreshNotifications = async (label) => {
-      const recipientName = currentUser?.isAdmin ? null : currentUser?.name;
-      const dept = currentUser?.isAdmin ? null : currentUser?.department;
-      const pos = currentUser?.isAdmin ? null : currentUser?.position;
-      const rl = currentUser?.isAdmin ? null : currentUser?.role;
-      const notifications = await NotificationAPI.list(null, recipientName, dept, pos, rl);
-      if (notifications && Array.isArray(notifications)) {
-        const mapped = notifications.map((n) => ({ ...n, id: n._id || n.id }));
-        const regularList = mapped.filter((n) => n.notificationType === '정기');
-        const realtimeList = mapped.filter((n) =>
-          n.notificationType === '실시간' || n.notificationType === '시스템'
-        );
-        setRegularNotifications(regularList);
-        setRealtimeNotifications(realtimeList.map((log) => ({
-          ...log,
-          status: log.notificationType === '시스템' ? '진행중' : log.status || '진행중',
-          isAutoGenerated: log.notificationType === '시스템',
-        })));
-      }
-    };
-
-    socket.on('notification-created', async (data) => {
-      devLog(`✨ [실시간] 알림 등록됨: ${data.title}`);
-      try { await refreshNotifications('created'); }
-      catch (error) { console.error('❌ [실시간] 알림 데이터 갱신 실패:', error); }
-    });
-
-    socket.on('notification-updated', async (data) => {
-      devLog(`✏️ [실시간] 알림 수정됨: ${data.title}`);
-      try { await refreshNotifications('updated'); }
-      catch (error) { console.error('❌ [실시간] 알림 데이터 갱신 실패:', error); }
-    });
-
-    socket.on('notification-deleted', async (data) => {
-      devLog(`🗑️ [실시간] 알림 삭제됨: ${data.notificationId}`);
-      try { await refreshNotifications('deleted'); }
-      catch (error) { console.error('❌ [실시간] 알림 데이터 갱신 실패:', error); }
-    });
-
-    // 건의사항 실시간 업데이트
-    socket.on('suggestion-created', async (data) => {
-      devLog(`✨ [실시간] 건의사항 등록됨: ${data.title}`);
-      if (!currentUser || !currentUser.id) {
-        devLog('⚠️ currentUser 정보 없음 - 건의사항 업데이트 스킵');
-        return;
-      }
-      if (document.hidden) {
-        pendingSocketReloadRef.current.suggestion = true;
-        return;
-      }
-      try {
-        const isAdmin =
-          currentUser.isAdmin === true || currentUser.role === 'admin';
-        const dbSuggestions = await SuggestionAPI.list(
-          isAdmin ? null : currentUser.id,
-          isAdmin ? 'admin' : null
-        );
-        if (dbSuggestions && dbSuggestions.length > 0) {
-          const formattedSuggestions = dbSuggestions.map((suggestion) => ({
-            id: suggestion._id,
-            _id: suggestion._id,
-            employeeId: suggestion.employeeId,
-            name: suggestion.name || '',
-            department: suggestion.department || '',
-            type: suggestion.type,
-            title: suggestion.title,
-            content: suggestion.content,
-            status: suggestion.status,
-            remark: suggestion.remark || '',
-            approver: suggestion.approver,
-            approvalDate: formatDateByLang(suggestion.approvalDate),
-            applyDate:
-              suggestion.applyDate ||
-              (suggestion.createdAt
-                ? new Date(suggestion.createdAt).toISOString().slice(0, 10)
-                : ''),
-            createdAt: suggestion.createdAt,
-            date:
-              suggestion.applyDate ||
-              (suggestion.createdAt
-                ? new Date(suggestion.createdAt).toISOString().slice(0, 10)
-                : ''),
-          }));
-          setSuggestions(formattedSuggestions);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 건의사항 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('suggestion-updated', async (data) => {
-      devLog(`✏️ [실시간] 건의사항 수정됨: ${data.title}`);
-      if (!currentUser || !currentUser.id) {
-        devLog('⚠️ currentUser 정보 없음 - 건의사항 업데이트 스킵');
-        return;
-      }
-      if (document.hidden) {
-        pendingSocketReloadRef.current.suggestion = true;
-        return;
-      }
-      try {
-        const isAdmin =
-          currentUser.isAdmin === true || currentUser.role === 'admin';
-        const dbSuggestions = await SuggestionAPI.list(
-          isAdmin ? null : currentUser.id,
-          isAdmin ? 'admin' : null
-        );
-        if (dbSuggestions && dbSuggestions.length > 0) {
-          const formattedSuggestions = dbSuggestions.map((suggestion) => ({
-            id: suggestion._id,
-            _id: suggestion._id,
-            employeeId: suggestion.employeeId,
-            name: suggestion.name || '',
-            department: suggestion.department || '',
-            type: suggestion.type,
-            title: suggestion.title,
-            content: suggestion.content,
-            status: suggestion.status,
-            remark: suggestion.remark || '',
-            approver: suggestion.approver,
-            approvalDate: formatDateByLang(suggestion.approvalDate),
-            applyDate:
-              suggestion.applyDate ||
-              (suggestion.createdAt
-                ? new Date(suggestion.createdAt).toISOString().slice(0, 10)
-                : ''),
-            createdAt: suggestion.createdAt,
-            date:
-              suggestion.applyDate ||
-              (suggestion.createdAt
-                ? new Date(suggestion.createdAt).toISOString().slice(0, 10)
-                : ''),
-          }));
-          setSuggestions(formattedSuggestions);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 건의사항 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('suggestion-deleted', async (data) => {
-      devLog(`🗑️ [실시간] 건의사항 삭제됨: ${data.suggestionId}`);
-      if (!currentUser || !currentUser.id) {
-        devLog('⚠️ currentUser 정보 없음 - 건의사항 업데이트 스킵');
-        return;
-      }
-      try {
-        const isAdmin =
-          currentUser.isAdmin === true || currentUser.role === 'admin';
-        const dbSuggestions = await SuggestionAPI.list(
-          isAdmin ? null : currentUser.id,
-          isAdmin ? 'admin' : null
-        );
-        if (dbSuggestions && dbSuggestions.length > 0) {
-          const formattedSuggestions = dbSuggestions.map((suggestion) => ({
-            id: suggestion._id,
-            _id: suggestion._id,
-            employeeId: suggestion.employeeId,
-            name: suggestion.name || '',
-            department: suggestion.department || '',
-            type: suggestion.type,
-            title: suggestion.title,
-            content: suggestion.content,
-            status: suggestion.status,
-            remark: suggestion.remark || '',
-            approver: suggestion.approver,
-            approvalDate: formatDateByLang(suggestion.approvalDate),
-            applyDate:
-              suggestion.applyDate ||
-              (suggestion.createdAt
-                ? new Date(suggestion.createdAt).toISOString().slice(0, 10)
-                : ''),
-            createdAt: suggestion.createdAt,
-            date:
-              suggestion.applyDate ||
-              (suggestion.createdAt
-                ? new Date(suggestion.createdAt).toISOString().slice(0, 10)
-                : ''),
-          }));
-          setSuggestions(formattedSuggestions);
-        } else {
-          setSuggestions([]);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 건의사항 데이터 갱신 실패:', error);
-      }
-    });
-
-    // 연차 실시간 업데이트
-    socket.on('leave-created', async (data) => {
-      devLog(
-        `✨ [실시간] 연차 신청됨: ${data.employeeName} - ${data.leaveType}`
-      );
-      // 탭 비활성 상태이면 재활성화 시 처리하도록 플래그만 세움
-      if (document.hidden) {
-        pendingSocketReloadRef.current.leave = true;
-        return;
-      }
-      try {
-        const dbLeaves = await LeaveAPI.list();
-        if (dbLeaves && dbLeaves.length > 0) {
-          const formattedLeaves = dbLeaves.map((leave) => ({
-            id: leave._id,
-            employeeId: leave.employeeId,
-            employeeName: leave.employeeName,
-            name: leave.employeeName || leave.name,
-            department: leave.department,
-            leaveType: leave.leaveType,
-            type: leave.leaveType || leave.type,
-            startDate: formatDateByLang(leave.startDate),
-            endDate: formatDateByLang(leave.endDate),
-            days: leave.requestedDays,
-            requestedDays: leave.requestedDays,
-            reason: leave.reason,
-            contact: leave.contact,
-            status: leave.status,
-            requestDate: formatDateByLang(leave.requestDate || leave.createdAt),
-            approvedAt: leave.approvedAt,
-            approver: leave.approver,
-            approverName: leave.approverName,
-            approvedDays: leave.approvedDays,
-            rejectedAt: leave.rejectedAt,
-            rejectedBy: leave.rejectedBy,
-            rejectedByName: leave.rejectedByName,
-            rejectionReason: leave.rejectionReason,
-            startTime: leave.startTime || null,
-            endTime: leave.endTime || null,
-          }));
-          setLeaveRequests(formattedLeaves);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 연차 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('leave-updated', async (data) => {
-      devLog(
-        `✏️ [실시간] 연차 수정됨: ${data.employeeName} - ${data.leaveType}`
-      );
-      if (document.hidden) {
-        pendingSocketReloadRef.current.leave = true;
-        return;
-      }
-      try {
-        const dbLeaves = await LeaveAPI.list();
-        if (dbLeaves && dbLeaves.length > 0) {
-          const formattedLeaves = dbLeaves.map((leave) => ({
-            id: leave._id,
-            employeeId: leave.employeeId,
-            employeeName: leave.employeeName,
-            name: leave.employeeName || leave.name,
-            department: leave.department,
-            leaveType: leave.leaveType,
-            type: leave.leaveType || leave.type,
-            startDate: formatDateByLang(leave.startDate),
-            endDate: formatDateByLang(leave.endDate),
-            days: leave.requestedDays,
-            requestedDays: leave.requestedDays,
-            reason: leave.reason,
-            contact: leave.contact,
-            status: leave.status,
-            requestDate: formatDateByLang(leave.requestDate || leave.createdAt),
-            approvedAt: leave.approvedAt,
-            approver: leave.approver,
-            approverName: leave.approverName,
-            approvedDays: leave.approvedDays,
-            rejectedAt: leave.rejectedAt,
-            rejectedBy: leave.rejectedBy,
-            rejectedByName: leave.rejectedByName,
-            rejectionReason: leave.rejectionReason,
-            startTime: leave.startTime || null,
-            endTime: leave.endTime || null,
-          }));
-          setLeaveRequests(formattedLeaves);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 연차 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('leave-status-changed', async (data) => {
-      devLog(
-        `🔄 [실시간] 연차 상태 변경됨: ${data.employeeName} - ${data.status}`
-      );
-      if (document.hidden) {
-        pendingSocketReloadRef.current.leave = true;
-        return;
-      }
-      try {
-        const dbLeaves = await LeaveAPI.list();
-        if (dbLeaves && dbLeaves.length > 0) {
-          const formattedLeaves = dbLeaves.map((leave) => ({
-            id: leave._id,
-            employeeId: leave.employeeId,
-            employeeName: leave.employeeName,
-            name: leave.employeeName || leave.name,
-            department: leave.department,
-            leaveType: leave.leaveType,
-            type: leave.leaveType || leave.type,
-            startDate: formatDateByLang(leave.startDate),
-            endDate: formatDateByLang(leave.endDate),
-            days: leave.requestedDays,
-            requestedDays: leave.requestedDays,
-            reason: leave.reason,
-            contact: leave.contact,
-            status: leave.status,
-            requestDate: formatDateByLang(leave.requestDate || leave.createdAt),
-            approvedAt: leave.approvedAt,
-            approver: leave.approver,
-            approverName: leave.approverName,
-            approvedDays: leave.approvedDays,
-            rejectedAt: leave.rejectedAt,
-            rejectedBy: leave.rejectedBy,
-            rejectedByName: leave.rejectedByName,
-            rejectionReason: leave.rejectionReason,
-            startTime: leave.startTime || null,
-            endTime: leave.endTime || null,
-          }));
-          setLeaveRequests(formattedLeaves);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 연차 데이터 갱신 실패:', error);
-      }
-    });
-
-    // 근태 실시간 업데이트
-    socket.on('attendance-bulk-saved', async (data) => {
-      devLog(
-        `✨ [실시간] 근태 대량 저장됨: ${data.year}년 ${data.month}월 (추가: ${data.inserted}건, 수정: ${data.updated}건)`
-      );
-
-      // 현재 보고 있는 연월과 일치하면 데이터 갱신
-      if (
-        data.year === attendanceSheetYear &&
-        data.month === attendanceSheetMonth
-      ) {
-        try {
-          const response = await AttendanceAPI.getMonthlyData(
-            data.year,
-            data.month
-          );
-          if (response && response.data) {
-            setAttendanceSheetData(response.data);
-            devLog(
-              `✅ [실시간] 근태 데이터 갱신 완료: ${data.year}년 ${data.month}월`
-            );
-          }
-        } catch (error) {
-          console.error('❌ [실시간] 근태 데이터 갱신 실패:', error);
-        }
-      }
-    });
-
-    socket.on('attendance-monthly-saved', async (data) => {
-      devLog(
-        `✨ [실시간] 근태 월별 저장됨: ${data.year}년 ${data.month}월 (${data.successCount}건 성공)`
-      );
-
-      // 현재 보고 있는 연월과 일치하면 데이터 갱신
-      if (
-        data.year === attendanceSheetYear &&
-        data.month === attendanceSheetMonth
-      ) {
-        try {
-          const response = await AttendanceAPI.getMonthlyData(
-            data.year,
-            data.month
-          );
-          if (response && response.data) {
-            setAttendanceSheetData(response.data);
-            devLog(
-              `✅ [실시간] 근태 데이터 갱신 완료: ${data.year}년 ${data.month}월`
-            );
-          }
-        } catch (error) {
-          console.error('❌ [실시간] 근태 데이터 갱신 실패:', error);
-        }
-      }
-    });
-
-    socket.on('attendance-checked-in', (data) => {
-      devLog(
-        `✨ [실시간] 출근 등록됨: ${data.employeeId}${
-          data.isLate ? ' (지각)' : ''
-        }`
-      );
-    });
-
-    socket.on('attendance-checked-out', (data) => {
-      devLog(
-        `✨ [실시간] 퇴근 등록됨: ${data.employeeId} (근무시간: ${data.workMinutes}분)`
-      );
-    });
-
-    socket.on('attendance-updated', (data) => {
-      devLog(`✏️ [실시간] 근태 수정됨: ${data.employeeId}`);
-    });
-
-    socket.on('attendance-deleted', (data) => {
-      devLog(`🗑️ [실시간] 근태 삭제됨: ${data.employeeId}`);
-    });
-
-    // 급여 실시간 업데이트
-    socket.on('payroll-bulk-uploaded', async (data) => {
-      devLog(
-        `✨ [실시간] 급여 대량 업로드됨: ${data.year}년 ${data.month}월 (추가: ${data.inserted}건, 수정: ${data.updated}건)`
-      );
-
-      // 업로드된 연월의 급여 데이터 갱신
-      try {
-        const response = await PayrollAPI.getMonthlyData(data.year, data.month);
-        if (response && response.data) {
-          const yearMonth = `${data.year}-${String(data.month).padStart(
-            2,
-            '0'
-          )}`;
-          setPayrollByMonth((prev) => ({
-            ...prev,
-            [yearMonth]: response.data,
-          }));
-          devLog(
-            `✅ [실시간] 급여 데이터 갱신 완료: ${data.year}년 ${data.month}월`
-          );
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 급여 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('payroll-created', async (data) => {
-      devLog(
-        `✨ [실시간] 급여 생성됨: ${data.employeeId} (${data.year}년 ${data.month}월)`
-      );
-
-      // 생성된 급여의 연월 데이터 갱신
-      try {
-        const response = await PayrollAPI.getMonthlyData(data.year, data.month);
-        if (response && response.data) {
-          const yearMonth = `${data.year}-${String(data.month).padStart(
-            2,
-            '0'
-          )}`;
-          setPayrollByMonth((prev) => ({
-            ...prev,
-            [yearMonth]: response.data,
-          }));
-          devLog(
-            `✅ [실시간] 급여 데이터 갱신 완료: ${data.year}년 ${data.month}월`
-          );
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 급여 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('payroll-updated', async (data) => {
-      devLog(
-        `✏️ [실시간] 급여 수정됨: ${data.employeeId} (${data.year}년 ${data.month}월)`
-      );
-
-      // 수정된 급여의 연월 데이터 갱신
-      try {
-        const response = await PayrollAPI.getMonthlyData(data.year, data.month);
-        if (response && response.data) {
-          const yearMonth = `${data.year}-${String(data.month).padStart(
-            2,
-            '0'
-          )}`;
-          setPayrollByMonth((prev) => ({
-            ...prev,
-            [yearMonth]: response.data,
-          }));
-          devLog(
-            `✅ [실시간] 급여 데이터 갱신 완료: ${data.year}년 ${data.month}월`
-          );
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 급여 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('payroll-deleted', async (data) => {
-      devLog(
-        `🗑️ [실시간] 급여 삭제됨: ${data.employeeId} (${data.year}년 ${data.month}월)`
-      );
-
-      // 삭제된 급여의 연월 데이터 갱신
-      try {
-        const response = await PayrollAPI.getMonthlyData(data.year, data.month);
-        if (response && response.data) {
-          const yearMonth = `${data.year}-${String(data.month).padStart(
-            2,
-            '0'
-          )}`;
-          setPayrollByMonth((prev) => ({
-            ...prev,
-            [yearMonth]: response.data,
-          }));
-          devLog(
-            `✅ [실시간] 급여 데이터 갱신 완료: ${data.year}년 ${data.month}월`
-          );
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 급여 데이터 갱신 실패:', error);
-      }
-    });
-
-    // 평가 실시간 업데이트
-    socket.on('evaluation-created', async (data) => {
-      devLog(
-        `✨ [실시간] 평가 생성됨: ${data.name} (${data.year}년 - ${data.grade}등급)`
-      );
-      try {
-        const evaluations = await EvaluationAPI.list();
-        if (evaluations && Array.isArray(evaluations)) {
-          setEvaluationData(evaluations);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 평가 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('evaluation-updated', async (data) => {
-      devLog(
-        `✏️ [실시간] 평가 수정됨: ${data.name} (${data.year}년 - ${data.grade}등급)`
-      );
-      try {
-        const evaluations = await EvaluationAPI.list();
-        if (evaluations && Array.isArray(evaluations)) {
-          setEvaluationData(evaluations);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 평가 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('evaluation-deleted', async (data) => {
-      devLog(`🗑️ [실시간] 평가 삭제됨: ${data.name} (${data.year}년)`);
-      try {
-        const evaluations = await EvaluationAPI.list();
-        if (evaluations && Array.isArray(evaluations)) {
-          setEvaluationData(evaluations);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 평가 데이터 갱신 실패:', error);
-      }
-    });
-
-    // 안전사고 실시간 업데이트
-    socket.on('safety-accident-created', async (data) => {
-      devLog(`✨ [실시간] 안전사고 등록됨: ${data.date} (${data.severity})`);
-      try {
-        const accidents = await SafetyAccidentAPI.list();
-        if (accidents && Array.isArray(accidents)) {
-          const mappedAccidents = accidents.map((a) => ({
-            ...a,
-            id: a._id || a.id,
-          }));
-          setSafetyAccidents(mappedAccidents);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 안전사고 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('safety-accident-updated', async (data) => {
-      devLog(`✏️ [실시간] 안전사고 수정됨: ${data.date} (${data.severity})`);
-      try {
-        const accidents = await SafetyAccidentAPI.list();
-        if (accidents && Array.isArray(accidents)) {
-          const mappedAccidents = accidents.map((a) => ({
-            ...a,
-            id: a._id || a.id,
-          }));
-          setSafetyAccidents(mappedAccidents);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 안전사고 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('safety-accident-deleted', async (data) => {
-      devLog(`🗑️ [실시간] 안전사고 삭제됨: ${data.date}`);
-      try {
-        const accidents = await SafetyAccidentAPI.list();
-        if (accidents && Array.isArray(accidents)) {
-          const mappedAccidents = accidents.map((a) => ({
-            ...a,
-            id: a._id || a.id,
-          }));
-          setSafetyAccidents(mappedAccidents);
-        } else {
-          setSafetyAccidents([]);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 안전사고 데이터 갱신 실패:', error);
-      }
-    });
-
-    // 일정 실시간 업데이트
-    socket.on('schedule-created', async (data) => {
-      devLog(`✨ [실시간] 일정 생성됨: ${data.title} (${data.date})`);
-      try {
-        const response = await ScheduleAPI.list();
-        const schedules = response?.data || response || [];
-        if (Array.isArray(schedules) && schedules.length > 0) {
-          const formattedSchedules = schedules.map((schedule) => ({
-            id: schedule._id || schedule.id,
-            title: schedule.title,
-            date: schedule.date?.split('T')[0] || schedule.date,
-            startDate: schedule.startDate?.split('T')[0],
-            endDate: schedule.endDate?.split('T')[0],
-            type: schedule.type,
-            category: schedule.category,
-            isCustom: schedule.isCustom || false,
-            description: schedule.description,
-            color: schedule.color,
-            createdBy: schedule.createdBy,
-            participants: schedule.participants || [],
-          }));
-          setScheduleEvents(formattedSchedules);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 일정 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('schedule-updated', async (data) => {
-      devLog(`✏️ [실시간] 일정 수정됨: ${data.title} (${data.date})`);
-      try {
-        const response = await ScheduleAPI.list();
-        const schedules = response?.data || response || [];
-        if (Array.isArray(schedules) && schedules.length > 0) {
-          const formattedSchedules = schedules.map((schedule) => ({
-            id: schedule._id || schedule.id,
-            title: schedule.title,
-            date: schedule.date?.split('T')[0] || schedule.date,
-            startDate: schedule.startDate?.split('T')[0],
-            endDate: schedule.endDate?.split('T')[0],
-            type: schedule.type,
-            category: schedule.category,
-            isCustom: schedule.isCustom || false,
-            description: schedule.description,
-            color: schedule.color,
-            createdBy: schedule.createdBy,
-            participants: schedule.participants || [],
-          }));
-          setScheduleEvents(formattedSchedules);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 일정 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('schedule-deleted', async (data) => {
-      devLog(`🗑️ [실시간] 일정 삭제됨: ${data.title}`);
-      try {
-        const response = await ScheduleAPI.list();
-        const schedules = response?.data || response || [];
-        if (Array.isArray(schedules) && schedules.length > 0) {
-          const formattedSchedules = schedules.map((schedule) => ({
-            id: schedule._id || schedule.id,
-            title: schedule.title,
-            date: schedule.date?.split('T')[0] || schedule.date,
-            startDate: schedule.startDate?.split('T')[0],
-            endDate: schedule.endDate?.split('T')[0],
-            type: schedule.type,
-            category: schedule.category,
-            isCustom: schedule.isCustom || false,
-            description: schedule.description,
-            color: schedule.color,
-            createdBy: schedule.createdBy,
-            participants: schedule.participants || [],
-          }));
-          setScheduleEvents(formattedSchedules);
-        } else {
-          setScheduleEvents([]);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 일정 데이터 갱신 실패:', error);
-      }
-    });
-
-    // ✅ 휴일 실시간 업데이트 리스너
-    socket.on('holiday-created', async (data) => {
-      devLog(`✨ [실시간] 휴일 생성됨: ${data.title} (${data.date})`);
-      try {
-        const startYear = currentYear - 1;
-        const endYear = currentYear + 1;
-        const response = await HolidayAPI.getYearsHolidays(startYear, endYear);
-
-        if (response.success && response.data) {
-          const allCustomHolidays = {};
-          Object.values(response.data).forEach((yearHolidays) => {
-            Object.entries(yearHolidays).forEach(([date, name]) => {
-              if (date.includes('-') && date.split('-').length === 3) {
-                allCustomHolidays[date] = name;
-              }
-            });
-          });
-          setCustomHolidays(allCustomHolidays);
-          devLog(`✅ [실시간] 휴일 데이터 갱신 완료`);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 휴일 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('holiday-updated', async (data) => {
-      devLog(`✏️ [실시간] 휴일 수정됨: ${data.title} (${data.date})`);
-      try {
-        const startYear = currentYear - 1;
-        const endYear = currentYear + 1;
-        const response = await HolidayAPI.getYearsHolidays(startYear, endYear);
-
-        if (response.success && response.data) {
-          const allCustomHolidays = {};
-          Object.values(response.data).forEach((yearHolidays) => {
-            Object.entries(yearHolidays).forEach(([date, name]) => {
-              if (date.includes('-') && date.split('-').length === 3) {
-                allCustomHolidays[date] = name;
-              }
-            });
-          });
-          setCustomHolidays(allCustomHolidays);
-          devLog(`✅ [실시간] 휴일 데이터 갱신 완료`);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 휴일 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('holiday-deleted', async (data) => {
-      devLog(`🗑️ [실시간] 휴일 삭제됨: ${data.title}`);
-      try {
-        const startYear = currentYear - 1;
-        const endYear = currentYear + 1;
-        const response = await HolidayAPI.getYearsHolidays(startYear, endYear);
-
-        if (response.success && response.data) {
-          const allCustomHolidays = {};
-          Object.values(response.data).forEach((yearHolidays) => {
-            Object.entries(yearHolidays).forEach(([date, name]) => {
-              if (date.includes('-') && date.split('-').length === 3) {
-                allCustomHolidays[date] = name;
-              }
-            });
-          });
-          setCustomHolidays(allCustomHolidays);
-          devLog(`✅ [실시간] 휴일 데이터 갱신 완료`);
-        }
-      } catch (error) {
-        console.error('❌ [실시간] 휴일 데이터 갱신 실패:', error);
-      }
-    });
-
-    socket.on('disconnect', () => {
-      devLog('🔌 [전역 Socket] 연결 해제됨');
-    });
-
-    return () => {
-      socket.removeAllListeners();
-      if (socket.connected) {
-        socket.disconnect();
-      }
-    };
-  }, [currentUser?.id]); // [4차 패치] [currentUser] → [currentUser?.id]: employee sync 시 소켓 재생성 방지
 
   // *[1_공통] 언어 및 다국어*
   const { handleLanguageSelect, getText, getLeaveTypeText } = useLanguage({
@@ -4119,20 +2592,15 @@ const HRManagementSystem = () => {
     currentUser,
   });
 
+  // useAuth가 useDashboardController보다 먼저 평가되므로 setter를 ref로 중계해 TDZ를 방지
+  const dashboardDateFilterSetterRef = useRef(null);
+  const dashboardSelectedDateSetterRef = useRef(null);
+
   // *[1_공통] 인증 및 비밀번호 변경*
   const {
     handleLogin,
     handleChangePassword,
-    showCurrentPassword,
-    setShowCurrentPassword,
-    showNewPassword,
-    setShowNewPassword,
-    showConfirmPassword,
-    setShowConfirmPassword,
   } = useAuth({
-    admins,
-    employees,
-    setCurrentUser,
     setLoginError,
     setSelectedLanguage,
     setShowLanguageSelection,
@@ -4141,7 +2609,6 @@ const HRManagementSystem = () => {
     setCurrentMonth,
     getText,
     changePasswordForm,
-    currentUser,
     setEmployees,
     setAdmins,
     setChangePasswordError,
@@ -4149,8 +2616,10 @@ const HRManagementSystem = () => {
     setChangePasswordForm,
     API_BASE_URL,
     setPayrollByMonth,
-    setDashboardDateFilter,
-    setDashboardSelectedDate,
+    setDashboardDateFilter: (...args) =>
+      dashboardDateFilterSetterRef.current?.(...args),
+    setDashboardSelectedDate: (...args) =>
+      dashboardSelectedDateSetterRef.current?.(...args),
     formatDateToString,
     rememberUserId,
     rememberPassword,
@@ -4339,11 +2808,6 @@ const HRManagementSystem = () => {
       devLog('✅ 초기 모델 상태 설정 완료:', initialUsageStatus);
     }
 
-    const promptSettings =
-      localStorage.getItem('aiPromptSettings') ||
-      '회사 HR 데이터를 분석하여 실용적인 개선 방안을 제안해주세요.';
-    setAiPromptSettings(promptSettings);
-
     devLog('🎯 초기화 완료');
   }, []);
 
@@ -4508,233 +2972,10 @@ const HRManagementSystem = () => {
     loadLeavesFromDB();
   }, [currentUser?.id]); // [4차 패치] [currentUser] → [currentUser?.id]: 루프 차단 (employee sync 시 재실행 방지)
 
-  // *[1_공통] 공지사항 데이터 DB에서 로드 및 Socket.io 실시간 업데이트*
-  React.useEffect(() => {
-    // 로그인 전(currentUser=null)에는 실행하지 않음 - mount 시 불필요한 선행 호출 방지
-    if (!currentUser) return;
+  // *[1_공통] 공지사항 데이터 DB에서 로드 및 Socket.io 실시간 업데이트* (useCommunicationData 내부로 이동됨)
 
-    const loadNoticesFromDB = async () => {
-      try {
-        devLog('🔄 DB에서 공지사항 데이터 로딩 시작...');
-        // 관리자 모드에서는 예약된 공지도 포함; 일반직원은 lite=true (content 제외)
-        const includeScheduled = currentUser?.role === 'admin';
-        const isStaff = !currentUser?.isAdmin && currentUser?.role !== 'admin';
-        const dbNotices = await NoticeAPI.list(includeScheduled, isStaff);
-
-        // ✅ 배열 응답 검증
-        if (Array.isArray(dbNotices) && dbNotices.length > 0) {
-          const formattedNotices = dbNotices.map((notice) => {
-            // attachments가 문자열 배열인 경우 객체 배열로 변환 (하위호환성)
-            let attachments = notice.attachments || [];
-            if (attachments.length > 0 && typeof attachments[0] === 'string') {
-              attachments = attachments.map((fileName) => ({
-                name: fileName,
-                url: '',
-                size: '',
-              }));
-            }
-
-            return {
-              id: notice._id,
-              _id: notice._id,
-              title: notice.title,
-              content: notice.content,
-              author: notice.author,
-              authorId: notice.authorId,
-              category: notice.category,
-              priority: notice.priority,
-              files: attachments,
-              attachments: attachments,
-              date: notice.createdAt
-                ? new Date(notice.createdAt).toISOString().slice(0, 10)
-                : '',
-              createdAt: notice.createdAt,
-              updatedAt: notice.updatedAt,
-              views: notice.views || 0,
-              viewCount: notice.viewCount || 0, // ✅ 조회수 (고유 직원 수)
-              viewedBy: notice.viewedBy || [], // ✅ 조회한 직원 ID 목록
-              isImportant: notice.isImportant || false,
-              isScheduled: notice.isScheduled || false,
-              scheduledDateTime: notice.scheduledDateTime,
-            };
-          });
-          setNotices(formattedNotices);
-          devLog(`✅ DB에서 공지사항 ${formattedNotices.length}건 로드 완료`);
-        } else {
-          devLog('⚠️ DB에 공지사항 데이터 없음 - 기존 데이터 유지');
-          // 기존 공지사항 데이터 유지 (빈 응답 시 초기화하지 않음)
-        }
-      } catch (error) {
-        console.error('❌ DB 공지사항 로드 실패:', error);
-        devLog('⚠️ 공지사항 API 실패 - 기존 데이터 유지');
-        // 기존 공지사항 데이터 유지 (API 실패 시 빈 배열로 초기화하지 않음)
-      }
-    };
-
-    // 마운트 시 loadNoticesNow()에서 이미 로드됨 — 재조회 불필요
-    // 관리자도 예약공지 미사용이므로 동일
-
-    // [3차 패치] socket 즉시 연결 (2차 패치의 500ms 지연 롤백)
-    // 이유: currentUser가 2번 변경될 때 500ms timer가 clearTimeout되어 socket이 아예 안 붙는 문제
-    const noticeSocket = io(SERVER_URL, {
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      transports: ['websocket', 'polling'],
-    });
-
-    let noticeSocketConnected = false;
-    noticeSocket.on('connect', () => {
-      devLog('🔌 [공지 Socket] 연결됨');
-      if (noticeSocketConnected) {
-        devLog('🔄 [공지 Socket] 재연결 - 공지사항 재조회');
-        loadNoticesFromDB();
-      }
-      noticeSocketConnected = true;
-    });
-
-    noticeSocket.on('notice-published', () => {
-      devLog('📢 예약 공지사항 자동 게시 - 공지사항 재조회');
-      loadNoticesFromDB();
-    });
-
-    noticeSocket.on('notice-created', (data) => {
-      devLog(`✨ [공지 Socket] 공지사항 등록됨: ${data.title}`);
-      loadNoticesFromDB();
-    });
-
-    noticeSocket.on('notice-updated', (data) => {
-      devLog(`✏️ [공지 Socket] 공지사항 수정됨: ${data.title}`);
-      loadNoticesFromDB();
-    });
-
-    noticeSocket.on('notice-deleted', (data) => {
-      devLog(`🗑️ [공지 Socket] 공지사항 삭제됨: ${data.noticeId}`);
-      loadNoticesFromDB();
-    });
-
-    noticeSocket.on('disconnect', () => {
-      devLog('🔌 [공지 Socket] 연결 해제됨');
-    });
-
-    return () => {
-      noticeSocket.removeAllListeners();
-      if (noticeSocket.connected) {
-        noticeSocket.disconnect();
-      }
-    };
-  }, [currentUser?.id]);
-
-  // *[1_공통] 로그인 후 알림 재조회 — 일반직원: 본인 수신 알림만, 관리자: 전체*
-  React.useEffect(() => {
-    if (!currentUser) return;
-
-    const reloadNotificationsForUser = async () => {
-      try {
-        let notifications;
-        if (currentUser.isAdmin) {
-          // 관리자: 전체 조회 (limit 200)
-          notifications = await NotificationAPI.list();
-        } else {
-          // [B안] 일반직원: 본인 이름 필터 → 소량 응답, 빠름
-          devLog(`🔄 [알림 B안] 본인 알림 조회: ${currentUser.name}`);
-          notifications = await NotificationAPI.list(null, currentUser.name, currentUser.department, currentUser.position, currentUser.role);
-        }
-        if (notifications && Array.isArray(notifications)) {
-          const mappedNotifications = notifications.map((n) => ({ ...n, id: n._id || n.id }));
-          const regularList = mappedNotifications.filter((n) => n.notificationType === '정기');
-          const realtimeList = mappedNotifications.filter((n) =>
-            n.notificationType === '실시간' || n.notificationType === '시스템'
-          );
-          setRegularNotifications(regularList);
-          setRealtimeNotifications(realtimeList.map((log) => ({
-            ...log,
-            status: log.notificationType === '시스템' ? '진행중' : log.status || '진행중',
-            isAutoGenerated: log.notificationType === '시스템',
-          })));
-          const allLogs = [...regularList, ...realtimeList].map((n) => ({
-            id: n.id, type: n.notificationType, title: n.title, content: n.content,
-            recipients: n.recipients?.value || '전체직원', repeatType: n.repeatCycle,
-            createdAt: n.createdAt, completedAt: n.completedAt,
-          }));
-          setNotificationLogs(allLogs);
-          devLog(`✅ [알림 B안] 로드 완료: 정기=${regularList.length}, 실시간=${realtimeList.length}`);
-        }
-      } catch (error) {
-        devLog('❌ [알림 B안] 로드 실패:', error);
-      }
-    };
-
-    reloadNotificationsForUser();
-  }, [currentUser?.id]);
-
-  // *[1_공통] 건의사항 데이터 DB에서 로드*
-  React.useEffect(() => {
-    const loadSuggestionsFromDB = async () => {
-      if (!currentUser || !currentUser.id) {
-        devLog('⚠️ currentUser 정보 없음 - 건의사항 로드 스킵');
-        return;
-      }
-
-      try {
-        devLog('🔄 DB에서 건의사항 데이터 로딩 시작...');
-        // 관리자는 전체 조회, 일반 직원은 본인 것만 조회
-        // 관리자 계정만 건의관리 접근 가능 (isAdmin = true)
-        const isAdmin =
-          currentUser.isAdmin === true || currentUser.role === 'admin';
-        const dbSuggestions = await SuggestionAPI.list(
-          isAdmin ? null : currentUser.id,
-          isAdmin ? 'admin' : null
-        );
-
-        // ✅ 배열 응답 검증
-        if (Array.isArray(dbSuggestions) && dbSuggestions.length > 0) {
-          const formattedSuggestions = dbSuggestions.map((suggestion) => ({
-            id: suggestion._id,
-            _id: suggestion._id,
-            employeeId: suggestion.employeeId,
-            name: suggestion.name || '',
-            department: suggestion.department || '',
-            type: suggestion.type,
-            title: suggestion.title,
-            content: suggestion.content,
-            status: suggestion.status,
-            remark: suggestion.remark || '',
-            approver: suggestion.approver,
-            approvalDate: formatDateByLang(suggestion.approvalDate),
-            applyDate:
-              suggestion.applyDate ||
-              (suggestion.createdAt
-                ? new Date(suggestion.createdAt).toISOString().slice(0, 10)
-                : ''),
-            createdAt: suggestion.createdAt,
-            date:
-              suggestion.applyDate ||
-              (suggestion.createdAt
-                ? new Date(suggestion.createdAt).toISOString().slice(0, 10)
-                : ''),
-          }));
-          setSuggestions(formattedSuggestions);
-          devLog(
-            `✅ DB에서 건의사항 ${formattedSuggestions.length}건 로드 완료`
-          );
-        } else {
-          devLog('⚠️ DB에 건의사항 데이터 없음');
-          setSuggestions([]);
-        }
-      } catch (error) {
-        console.error('❌ [건의사항 로드] DB 건의사항 로드 실패:', error);
-        console.error(
-          '❌ [건의사항 로드] 에러 상세:',
-          error.message,
-          error.stack
-        );
-        devLog('⚠️ 건의사항 API 실패 - 빈 배열 사용');
-        setSuggestions([]);
-      }
-    };
-
-    loadSuggestionsFromDB();
-  }, [currentUser?.id]); // [4차 패치] [currentUser] → [currentUser?.id]: 루프 재실행 방지
+  // *[1_공통] 로그인 후 알림 재조회* (useCommunicationData 내부로 이동됨)
+  // *[1_공통] 건의사항 데이터 DB에서 로드* (useCommunicationData 내부로 이동됨)
 
   // *[1_공통] 일정 데이터 DB에서 로드*
   React.useEffect(() => {
@@ -4796,254 +3037,6 @@ const HRManagementSystem = () => {
 
     loadSchedulesFromDB();
   }, []);
-
-  // *[2_관리자 모드] 2.1_대시보드 AI 추천 자동 분석*
-  // ✅ 로그인 시에만 AI 추천사항 실행 (새로고침 시에는 실행하지 않음)
-  React.useEffect(() => {
-    const currentApiKey =
-      unifiedApiKey ||
-      getActiveAiKey(unifiedApiKey, geminiApiKey, chatgptApiKey, claudeApiKey);
-
-    // ✅ sessionStorage에서 로그인 직후인지 확인
-    const justLoggedIn = sessionStorage.getItem('justLoggedIn');
-
-    if (
-      currentUser?.isAdmin &&
-      activeTab === 'dashboard' &&
-      currentApiKey &&
-      !isAnalyzing &&
-      justLoggedIn === 'true' // ✅ 로그인 직후에만 실행
-    ) {
-      // ✅ 플래그 제거 (한 번만 실행)
-      sessionStorage.removeItem('justLoggedIn');
-
-      generateAiRecommendations();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    currentUser,
-    activeTab,
-    unifiedApiKey,
-    geminiApiKey,
-    chatgptApiKey,
-    claudeApiKey,
-    isAnalyzing,
-  ]);
-
-  // *[2_관리자 모드] 2.1_대시보드 AI 추천 히스토리 초기 로딩* (첫 로그인 시에만)
-  React.useEffect(() => {
-    const loadAiHistory = async () => {
-      if (currentUser?.isAdmin) {
-        try {
-          const historyResponse = await fetch(
-            `${API_BASE_URL}/ai/recommendations`
-          );
-          if (historyResponse.ok) {
-            const historyData = await historyResponse.json();
-            setAiRecommendationHistory(
-              historyData.slice(0, 10).map((item) => ({
-                id: item._id || item.id,
-                type: 'ai-analysis',
-                title: item.title,
-                content: item.content,
-                date: item.date,
-                time: item.time,
-                createdAt: item.createdAt || item.timestamp,
-                recommendations: item.recommendations,
-              }))
-            );
-            devLog(
-              '✅ AI 추천사항 히스토리 로딩 완료:',
-              historyData.length,
-              '건'
-            );
-          }
-        } catch (error) {
-          devLog('⚠️ AI 추천사항 히스토리 로딩 실패:', error);
-        }
-      }
-    };
-
-    loadAiHistory();
-  }, [currentUser?.id]); // [4차 패치] [currentUser] → [currentUser?.id]: 루프 재실행 방지
-
-  // *[2_관리자 모드] 2.1_대시보드 수동 새로고침 함수*
-  const refreshDashboardData = React.useCallback(async () => {
-    if (currentUser?.isAdmin) {
-      try {
-        devLog('🔄 대시보드 데이터 갱신 시작');
-
-        // 1. 현재 월의 근태 데이터 다시 로드
-        if (attendanceSheetYear && attendanceSheetMonth) {
-          const attendanceData = await AttendanceAPI.getMonthlyData(
-            attendanceSheetYear,
-            attendanceSheetMonth
-          );
-          if (attendanceData && attendanceData.length > 0) {
-            const formattedData = {};
-            attendanceData.forEach((record) => {
-              const key = `${record.employeeId}_${record.year}_${record.month}_${record.day}`;
-              formattedData[key] = {
-                checkIn: record.checkIn || '',
-                checkOut: record.checkOut || '',
-                status: record.status || '',
-                isLate: record.isLate || false,
-                shift: record.shift || '',
-              };
-            });
-            setAttendanceSheetData(formattedData);
-            devLog('✅ 근태 데이터 갱신 완료');
-          }
-        }
-
-        // 2. 직원 데이터 다시 로드
-        const dbEmployees = await EmployeeAPI.list();
-        if (dbEmployees && dbEmployees.length > 0) {
-          const formattedEmployees = dbEmployees.map((emp) => {
-            const baseEmp = {
-              id: emp.employeeId,
-              name: emp.name,
-              password: emp.password || emp.phone?.slice(-4) || '0000',
-              phone: emp.phone,
-              department: emp.department,
-              subDepartment: emp.subDepartment || '',
-              position: emp.position,
-              role: emp.role,
-              joinDate: formatDateToString(emp.joinDate),
-              leaveDate:
-                emp.leaveDate && emp.leaveDate !== '1970-01-01T00:00:00.000Z'
-                  ? formatDateToString(emp.leaveDate)
-                  : '', // ✅ 퇴사일 조건부 표시
-              workType: emp.workType,
-              payType: emp.salaryType,
-              contractType: emp.contractType || '정규', // 계약형태
-              status: emp.status,
-              address: emp.address,
-              lastLogin: emp.lastLogin, // 마지막 로그인 시각
-              // ✅ DB 원본 필드 유지 (calculateEmployeeAnnualLeave에서 사용)
-              leaveUsed: emp.leaveUsed,
-              // ✅ 호환성을 위한 매핑 필드
-              usedLeave: emp.usedLeave ?? emp.leaveUsed ?? 0,
-            };
-            const annualData = calculateEmployeeAnnualLeaveUtil(
-              baseEmp,
-              leaveRequests
-            );
-            return {
-              ...baseEmp,
-              leaveYearStart: annualData.annualStart,
-              leaveYearEnd: annualData.annualEnd,
-              totalAnnualLeave: annualData.totalAnnual,
-              usedAnnualLeave: annualData.usedAnnual,
-              remainingAnnualLeave: annualData.remainAnnual,
-            };
-          });
-          setEmployees(formattedEmployees);
-          devLog('✅ 직원 데이터 갱신 완료');
-        }
-
-        // 3. 연차 데이터 다시 로드
-        const dbLeaves = await LeaveAPI.list();
-        if (dbLeaves && dbLeaves.length > 0) {
-          const formattedLeaves = dbLeaves.map((leave) => ({
-            id: leave._id,
-            employeeId: leave.employeeId,
-            employeeName: leave.employeeName,
-            name: leave.employeeName || leave.name,
-            department: leave.department,
-            leaveType: leave.leaveType,
-            type: leave.leaveType || leave.type,
-            startDate: formatDateByLang(leave.startDate),
-            endDate: formatDateByLang(leave.endDate),
-            days: leave.requestedDays,
-            requestedDays: leave.requestedDays,
-            reason: leave.reason,
-            contact: leave.contact,
-            status: leave.status,
-            requestDate: formatDateByLang(leave.requestDate || leave.createdAt),
-            approvedAt: leave.approvedAt,
-            approver: leave.approver,
-            approverName: leave.approverName,
-            approvedDays: leave.approvedDays,
-            rejectedAt: leave.rejectedAt,
-            rejectedBy: leave.rejectedBy,
-            rejectedByName: leave.rejectedByName,
-            rejectionReason: leave.rejectionReason,
-            startTime: leave.startTime || null,
-            endTime: leave.endTime || null,
-          }));
-          setLeaveRequests(formattedLeaves);
-          devLog('✅ 연차 데이터 갱신 완료');
-        } else {
-          setLeaveRequests([]);
-          devLog('✅ 연차 데이터 갱신 완료 (0건)');
-        }
-
-        // 4. 안전사고 데이터 다시 로드
-        const accidents = await SafetyAccidentAPI.list();
-        if (accidents && Array.isArray(accidents)) {
-          const mappedAccidents = accidents.map((a) => ({
-            ...a,
-            id: a._id || a.id,
-          }));
-          setSafetyAccidents(mappedAccidents);
-          devLog('✅ 안전사고 데이터 갱신 완료');
-        }
-
-        devLog('🎉 대시보드 데이터 갱신 완료');
-      } catch (error) {
-        console.error('❌ 대시보드 데이터 갱신 실패:', error);
-      }
-    }
-  }, [currentUser, attendanceSheetYear, attendanceSheetMonth]);
-
-  // *[2_관리자 모드] 2.1_대시보드 탭 진입 시 데이터 갱신*
-  React.useEffect(() => {
-    if (currentUser?.isAdmin && activeTab === 'dashboard') {
-      refreshDashboardData();
-    }
-  }, [activeTab, currentUser, refreshDashboardData]);
-
-  // *[2_관리자 모드] 2.1_대시보드 출근현황 60분 자동 갱신* (탭 활성 시만)
-  React.useEffect(() => {
-    if (currentUser?.isAdmin && activeTab === 'dashboard') {
-      const interval = setInterval(async () => {
-        try {
-          devLog('⏰ [60분 자동 갱신] 출근현황 데이터 갱신 시작');
-
-          // 현재 월의 근태 데이터만 다시 로드
-          if (attendanceSheetYear && attendanceSheetMonth) {
-            const attendanceData = await AttendanceAPI.getMonthlyData(
-              attendanceSheetYear,
-              attendanceSheetMonth
-            );
-            if (attendanceData && attendanceData.length > 0) {
-              const formattedData = {};
-              attendanceData.forEach((record) => {
-                const key = `${record.employeeId}_${record.year}_${record.month}_${record.day}`;
-                formattedData[key] = {
-                  checkIn: record.checkIn || '',
-                  checkOut: record.checkOut || '',
-                  status: record.status || '',
-                  isLate: record.isLate || false,
-                  shift: record.shift || '',
-                };
-              });
-              setAttendanceSheetData(formattedData);
-              devLog('✅ [60분 자동 갱신] 출근현황 데이터 갱신 완료');
-            }
-          }
-        } catch (error) {
-          console.error(
-            '❌ [60분 자동 갱신] 출근현황 데이터 갱신 실패:',
-            error
-          );
-        }
-      }, 60 * 60 * 1000); // 60분
-
-      return () => clearInterval(interval);
-    }
-  }, [activeTab, currentUser, attendanceSheetYear, attendanceSheetMonth]);
 
   // *[2_관리자 모드] 2.4_반복 설정 관리*
   const {
@@ -5337,43 +3330,6 @@ const HRManagementSystem = () => {
     );
   };
 
-  // *[2_관리자 모드] 2.12_AI 프롬프트 저장*
-  const handleAiPromptSave = async (prompt) => {
-    try {
-      // 서버에 저장
-      const response = await fetch(`${API_BASE_URL}/ai/prompts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompts: {
-            dashboard:
-              typeof prompt === 'string' ? prompt : prompt.dashboard || '',
-            chatbot: typeof prompt === 'string' ? '' : prompt.chatbot || '',
-            analysis: typeof prompt === 'string' ? '' : prompt.analysis || '',
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('프롬프트 저장 실패');
-      }
-
-      // 로컬에도 저장
-      localStorage.setItem(
-        'aiPromptSettings',
-        typeof prompt === 'string' ? prompt : JSON.stringify(prompt)
-      );
-      setAiPromptSettings(prompt);
-      setShowPromptSettings(false);
-      alert('AI 프롬프트가 저장되었습니다.');
-
-      devLog('✅ AI 프롬프트 저장 완료');
-    } catch (error) {
-      devLog('❌ AI 프롬프트 저장 실패:', error);
-      alert('AI 프롬프트 저장에 실패했습니다.');
-    }
-  };
-
   // *[2_관리자 모드] 2.1_대시보드 - 공휴일 체크 함수 (scheduleEvents 기반)*
   const isHolidayDateWithData = useCallback(
     (year, month, day) => {
@@ -5445,40 +3401,6 @@ const HRManagementSystem = () => {
     },
     [isHoliday, scheduleEvents, holidayService]
   );
-
-  // *[2_관리자 모드] 2.1_대시보드 - 출근 상태 관리*
-  // (useDashboardAttendance hook으로 분리됨)
-  const {
-    showEmployeeListPopup,
-    setShowEmployeeListPopup,
-    selectedStatus,
-    setSelectedStatus,
-    selectedStatusEmployees,
-    setSelectedStatusEmployees,
-    selectedStatusDate,
-    setSelectedStatusDate,
-    attendanceListSortField,
-    setAttendanceListSortField,
-    attendanceListSortOrder,
-    setAttendanceListSortOrder,
-    getEmployeesByStatus,
-    getPopupList,
-    handleStatusClick,
-    handleNightStatusClick,
-    handleAttendanceListSort,
-    getSortedAttendanceEmployees,
-    handleDownloadAttendanceList,
-  } = useDashboardAttendance({
-    employees,
-    dashboardDateFilter,
-    dashboardSelectedDate,
-    getAttendanceForEmployee,
-    analyzeAttendanceStatusForDashboard,
-    attendanceRecords,
-    attendanceSheetData,
-    devLog,
-    isHolidayDate: isHolidayDateWithData,
-  });
 
   // *[2_관리자 모드] 2.1_안전관리 - 무사고 알림: 서버 스케줄러가 담당 (클라이언트 로직 제거)*
 
@@ -5553,8 +3475,49 @@ const HRManagementSystem = () => {
     currentUser && currentUser.id ? getUsedAnnualLeave(currentUser.id) : 0;
   const remainAnnualLeave = totalAnnualLeave - usedAnnualLeave;
 
-  // *[2_관리자 모드] 2.1_대시보드 계산 함수 훅*
+  // *[2_관리자 모드] 2.1_대시보드 통합 컨트롤러*
   const {
+    dashboardDateFilter, setDashboardDateFilter,
+    dashboardSelectedDate, setDashboardSelectedDate,
+    dashboardStatsReal,
+    goalStats,
+    workLifeBalanceStats,
+    selectedYear, setSelectedYear,
+    availableYears,
+    showGoalDetailsPopup, setShowGoalDetailsPopup,
+    showWorkLifeBalancePopup, setShowWorkLifeBalancePopup,
+    showWorkLifeDetailPopup, setShowWorkLifeDetailPopup,
+    workLifeDetailMetric, setWorkLifeDetailMetric,
+    workLifeDetailMonth, setWorkLifeDetailMonth,
+    selectedViolationMonth, setSelectedViolationMonth,
+    showGoalDetailDataPopup, setShowGoalDetailDataPopup,
+    goalDetailMetric, setGoalDetailMetric,
+    goalDetailMonth, setGoalDetailMonth,
+    stressSortColumn, setStressSortColumn,
+    stressSortDirection, setStressSortDirection,
+    isStressCalculationExpanded, setIsStressCalculationExpanded,
+    overtimeSortConfig, setOvertimeSortConfig,
+    leaveSortConfig, setLeaveSortConfig,
+    violationSortConfig, setViolationSortConfig,
+    aiPromptSettings, setAiPromptSettings,
+    isAnalyzing,
+    aiRecommendations,
+    showAiHistoryPopup, setShowAiHistoryPopup,
+    showPromptSettings, setShowPromptSettings,
+    aiRecommendationHistory,
+    showSafetyAccidentInput, setShowSafetyAccidentInput,
+    safetyAccidentPage, setSafetyAccidentPage,
+    safetyAccidentSearch, setSafetyAccidentSearch,
+    showEmployeeListPopup, setShowEmployeeListPopup,
+    selectedStatus, setSelectedStatus,
+    selectedStatusEmployees, setSelectedStatusEmployees,
+    selectedStatusDate, setSelectedStatusDate,
+    attendanceListSortField, setAttendanceListSortField,
+    attendanceListSortOrder, setAttendanceListSortOrder,
+    getEmployeesByStatus, getPopupList,
+    handleStatusClick, handleNightStatusClick,
+    handleAttendanceListSort, getSortedAttendanceEmployees,
+    handleDownloadAttendanceList,
     getFilteredEmployees,
     calculateAttendanceRate,
     calculateLateRate,
@@ -5565,47 +3528,6 @@ const HRManagementSystem = () => {
     calculateMonthlyLeaveUsageRate,
     calculateWeekly52HoursViolation,
     calculateStressIndex,
-  } = useDashboardCalculations({
-    employees,
-    isHolidayDate: isHolidayDateWithData,
-    getAttendanceForEmployee,
-    analyzeAttendanceStatusForDashboard,
-    calculateMonthlyStats,
-    leaveRequests,
-    getMonthlyAnnualLeave,
-    calcDailyWage,
-    getUsedAnnualLeave,
-    calculateAnnualLeave,
-    safetyAccidents,
-    suggestions,
-    evaluations,
-    notices,
-  });
-
-  // *[2_관리자 모드] 2.1_대시보드 - 통계 관리 훅*
-  const { dashboardStatsReal, goalStats, workLifeBalanceStats } =
-    useDashboardStats({
-      employees,
-      dashboardDateFilter,
-      dashboardSelectedDate,
-      attendanceSheetData,
-      getAttendanceForEmployee,
-      analyzeAttendanceStatusForDashboard,
-      devLog,
-      calculateAttendanceRate,
-      calculateLateRate,
-      calculateAbsentRate,
-      calculateTurnoverRate,
-      calculateAverageOvertimeHours,
-      calculateLeaveUsageRate,
-      calculateWeekly52HoursViolation,
-      calculateStressIndex,
-      leaveRequests,
-      isHolidayDate: isHolidayDateWithData,
-    });
-
-  // *[2_관리자 모드] 2.1_대시보드 - 액션 관리 훅*
-  const {
     generateAiRecommendations,
     downloadAiHistory,
     getWorkLifeBalanceDataByYear,
@@ -5614,37 +3536,50 @@ const HRManagementSystem = () => {
     getWorkLifeDetailData,
     getGoalDataByYear,
     getGoalDetailData,
-  } = useDashboardActions({
-    employees,
-    aiRecommendations,
-    setAiRecommendations,
-    setIsAnalyzing,
-    isAnalyzing,
-    aiRecommendationHistory,
-    setAiRecommendationHistory,
-    getAttendanceForEmployee,
-    calcDailyWage,
-    leaveRequests,
-    send자동알림,
-    devLog,
-    getFilteredEmployees,
-    analyzeAttendanceStatusForDashboard,
-    getDaysInMonth,
-    calculateMonthlyLeaveUsageRate,
-    getUsedAnnualLeave,
-    calculateAnnualLeave,
-    categorizeWorkTime,
-    isHolidayDate: isHolidayDateWithData,
-    getWorkTypeForDate,
+    refreshDashboardData,
+    handleAiPromptSave,
+  } = useDashboardController({
+    currentUser,
+    activeTab,
     API_BASE_URL,
-    aiPromptSettings,
-    dashboardStats: dashboardStatsReal,
+    devLog,
+    employees,
+    leaveRequests,
+    safetyAccidents,
+    setSafetyAccidents,
     suggestions,
+    evaluations,
     notices,
     admins,
-    safetyAccidents,
-    evaluations,
+    attendanceSheetData,
+    setAttendanceSheetData,
+    attendanceSheetYear,
+    attendanceSheetMonth,
+    setAttendanceSheetYear,
+    setAttendanceSheetMonth,
+    setEmployees,
+    setLeaveRequests,
+    analyzeAttendanceStatusForDashboard,
+    getAttendanceForEmployee,
+    isHolidayDate: isHolidayDateWithData,
+    calculateMonthlyStats,
+    getMonthlyAnnualLeave,
+    getUsedAnnualLeave,
+    calculateAnnualLeave,
+    calcDailyWage,
+    getDaysInMonth,
+    categorizeWorkTime,
+    getWorkTypeForDate,
+    send자동알림,
+    unifiedApiKey,
+    geminiApiKey,
+    chatgptApiKey,
+    claudeApiKey,
+    getActiveAiKey,
   });
+
+  dashboardDateFilterSetterRef.current = setDashboardDateFilter;
+  dashboardSelectedDateSetterRef.current = setDashboardSelectedDate;
 
   // *[1_공통] AI 챗봇 쿼리 처리 훅*
   const { handleAiQuery } = useAiChat({
@@ -5799,13 +3734,10 @@ const HRManagementSystem = () => {
 
   // *[1_공통] 로그아웃 처리*
   const handleLogout = () => {
-    setCurrentUser(null);
+    // Auth 관련 정리 (setCurrentUser(null) + sessionStorage 처리) → AuthContext.logout()
+    authLogout();
 
-    sessionStorage.removeItem('currentUser');
-
-    // 수동 로그아웃 시 자동 로그인 재실행 방지 (탭 닫으면 풀림)
-    sessionStorage.setItem('skipAutoLogin', 'true');
-
+    // 비Auth 상태 정리
     localStorage.removeItem('activeTab');
 
     // 아이디 저장 처리 (loginForm은 CommonLogin 로컬 state로 이동됨)
@@ -5994,7 +3926,6 @@ const HRManagementSystem = () => {
   /* 코드 위치: components/common/CommonLogin.js */
   const loginLanguageComponent = (
     <CommonLogin
-      currentUser={currentUser}
       showLanguageSelection={showLanguageSelection}
       loginError={loginError}
       showPassword={showPassword}
@@ -6039,533 +3970,370 @@ const HRManagementSystem = () => {
     return list.filter(item => allowed.includes(item.department));
   };
 
-  /* ========== RENDER CONTENT - 메뉴별 화면 렌더링 ========== */
-  const renderContent = () => {
-    switch (activeTab) {
-      //---2.1_관리자 모드_대시보드---//
-      case 'dashboard':
-        return (
-          <AdminDashboard
-            currentUser={currentUser}
-            dashboardDateFilter={dashboardDateFilter}
-            setDashboardDateFilter={setDashboardDateFilter}
-            dashboardSelectedDate={dashboardSelectedDate}
-            setDashboardSelectedDate={setDashboardSelectedDate}
-            getTodayDateWithDay={getTodayDateWithDay}
-            getYesterdayDateWithDay={getYesterdayDateWithDay}
-            dashboardStats={dashboardStatsReal}
-            handleStatusClick={handleStatusClick}
-            handleNightStatusClick={handleNightStatusClick}
-            getStatusTextColor={getStatusTextColor}
-            leaveRequests={leaveRequests}
-            suggestions={suggestions}
-            setActiveTab={setActiveTab}
-            setLeaveManagementTab={setLeaveManagementTab}
-            goalStats={goalStats}
-            selectedYear={selectedYear}
-            setSelectedYear={setSelectedYear}
-            showGoalDetailsPopup={showGoalDetailsPopup}
-            setShowGoalDetailsPopup={setShowGoalDetailsPopup}
-            workLifeBalanceStats={workLifeBalanceStats}
-            showWorkLifeBalancePopup={showWorkLifeBalancePopup}
-            setShowWorkLifeBalancePopup={setShowWorkLifeBalancePopup}
-            getTodaySafetyAccidents={getTodaySafetyAccidents}
-            getThisMonthSafetyAccidents={getThisMonthSafetyAccidents}
-            getThisYearSafetyAccidents={getThisYearSafetyAccidents}
-            getAccidentFreeDays={getAccidentFreeDays}
-            showSafetyAccidentInput={showSafetyAccidentInput}
-            setShowSafetyAccidentInput={setShowSafetyAccidentInput}
-            aiRecommendations={aiRecommendations}
-            isAnalyzing={isAnalyzing}
-            generateAiRecommendations={generateAiRecommendations}
-            refreshDashboardData={refreshDashboardData}
-            showAiHistoryPopup={showAiHistoryPopup}
-            setShowAiHistoryPopup={setShowAiHistoryPopup}
-            showPromptSettings={showPromptSettings}
-            setShowPromptSettings={setShowPromptSettings}
-            activeTab={activeTab}
-            availableYears={availableYears}
-            attendanceSheetData={attendanceSheetData}
-            showWorkLifeDetailPopup={showWorkLifeDetailPopup}
-            setShowWorkLifeDetailPopup={setShowWorkLifeDetailPopup}
-            workLifeDetailMetric={workLifeDetailMetric}
-            setWorkLifeDetailMetric={setWorkLifeDetailMetric}
-            workLifeDetailMonth={workLifeDetailMonth}
-            setWorkLifeDetailMonth={setWorkLifeDetailMonth}
-            selectedViolationMonth={selectedViolationMonth}
-            setSelectedViolationMonth={setSelectedViolationMonth}
-            stressSortColumn={stressSortColumn}
-            setStressSortColumn={setStressSortColumn}
-            stressSortDirection={stressSortDirection}
-            setStressSortDirection={setStressSortDirection}
-            isStressCalculationExpanded={isStressCalculationExpanded}
-            setIsStressCalculationExpanded={setIsStressCalculationExpanded}
-            overtimeSortConfig={overtimeSortConfig}
-            setOvertimeSortConfig={setOvertimeSortConfig}
-            leaveSortConfig={leaveSortConfig}
-            setLeaveSortConfig={setLeaveSortConfig}
-            violationSortConfig={violationSortConfig}
-            setViolationSortConfig={setViolationSortConfig}
-            getWorkLifeBalanceDataByYear={getWorkLifeBalanceDataByYear}
-            getViolationDetails={getViolationDetails}
-            send52HourViolationAlert={send52HourViolationAlert}
-            getWorkLifeDetailData={getWorkLifeDetailData}
-            showGoalDetailDataPopup={showGoalDetailDataPopup}
-            setShowGoalDetailDataPopup={setShowGoalDetailDataPopup}
-            goalDetailMetric={goalDetailMetric}
-            setGoalDetailMetric={setGoalDetailMetric}
-            goalDetailMonth={goalDetailMonth}
-            setGoalDetailMonth={setGoalDetailMonth}
-            employees={employees}
-            getGoalDataByYear={getGoalDataByYear}
-            getGoalDetailData={getGoalDetailData}
-            getFilteredEmployees={getFilteredEmployees}
-            analyzeAttendanceStatusForDashboard={
-              analyzeAttendanceStatusForDashboard
-            }
-            isHolidayDate={isHolidayDateWithData}
-            getWorkTypeForDate={getWorkTypeForDate}
-            calcDailyWage={calcDailyWage}
-            calculateMonthlyLeaveUsageRate={calculateMonthlyLeaveUsageRate}
-            getUsedAnnualLeave={getUsedAnnualLeave}
-            calculateAnnualLeave={calculateAnnualLeave}
-            getDaysInMonth={getDaysInMonth}
-            evaluations={evaluations}
-            notices={notices}
-            safetyAccidents={safetyAccidents}
-            setSafetyAccidents={setSafetyAccidents}
-            safetyAccidentPage={safetyAccidentPage}
-            setSafetyAccidentPage={setSafetyAccidentPage}
-            safetyAccidentSearch={safetyAccidentSearch}
-            setSafetyAccidentSearch={setSafetyAccidentSearch}
-            aiPromptSettings={aiPromptSettings}
-            setAiPromptSettings={setAiPromptSettings}
-            handleSafetyAccidentInput={handleSafetyAccidentInput}
-            handleEditSafety={handleEditSafety}
-            handleDeleteSafety={handleDeleteSafety}
-            handleSaveAccidentEdit={handleSaveAccidentEdit}
-            handleCancelAccidentEdit={handleCancelAccidentEdit}
-            downloadAiHistory={downloadAiHistory}
-            handleAiPromptSave={handleAiPromptSave}
-            aiRecommendationHistory={aiRecommendationHistory}
-            showEmployeeListPopup={showEmployeeListPopup}
-            setShowEmployeeListPopup={setShowEmployeeListPopup}
-            selectedStatusDate={selectedStatusDate}
-            selectedStatus={selectedStatus}
-            selectedStatusEmployees={selectedStatusEmployees}
-            attendanceListSortField={attendanceListSortField}
-            attendanceListSortOrder={attendanceListSortOrder}
-            formatDateWithDay={formatDateWithDay}
-            handleDownloadAttendanceList={handleDownloadAttendanceList}
-            handleAttendanceListSort={handleAttendanceListSort}
-            getSortedAttendanceEmployees={getSortedAttendanceEmployees}
-          />
-        );
-
-      //---2.2_관리자 모드_직원 관리---//
-      case 'employee-management':
-        return (
-          <AdminEmployeeManagement
-            employees={employees}
-            setEmployees={setEmployees}
-            employeeSearchFilter={employeeSearchFilter}
-            setEmployeeSearchFilter={setEmployeeSearchFilter}
-            employeeSortField={employeeSortField}
-            employeeSortOrder={employeeSortOrder}
-            handleSort={handleSort}
-            handleUpdateEmployee={handleUpdateEmployee}
-            handleDeleteEmployee={handleDeleteEmployee}
-            showNewEmployeeModal={showNewEmployeeModal}
-            setShowNewEmployeeModal={setShowNewEmployeeModal}
-            COMPANY_STANDARDS={COMPANY_STANDARDS}
-            getSortedEmployees={getSortedEmployees}
-            attendanceSheetData={attendanceSheetData}
-            attendanceSheetYear={attendanceSheetYear}
-            attendanceSheetMonth={attendanceSheetMonth}
-          />
-        );
-
-      //---2.3_관리자 모드_공지 관리---//
-      case 'notice-management':
-        return (
-          <AdminNoticeManagement
-            notices={notices}
-            setNotices={setNotices}
-            noticeSearch={noticeSearch}
-            setNoticeSearch={setNoticeSearch}
-            adminNoticePage={adminNoticePage}
-            setAdminNoticePage={setAdminNoticePage}
-            noticeFiles={noticeFiles}
-            setNoticeFiles={setNoticeFiles}
-            noticeFilesRef={noticeFilesRef}
-            getFilteredNotices={getFilteredNotices}
-            currentUser={currentUser}
-          />
-        );
-        break;
-      //---2.4_관리자 모드_알림 관리---//
-      case 'notification-management':
-        return (
-          <AdminNotificationManagement
-            currentUser={currentUser}
-            regularNotificationForm={regularNotificationForm}
-            setRegularNotificationForm={setRegularNotificationForm}
-            realtimeNotificationForm={realtimeNotificationForm}
-            setRealtimeNotificationForm={setRealtimeNotificationForm}
-            알림유형={알림유형}
-            set알림유형={set알림유형}
-            setShowAddNotificationPopup={setShowAddNotificationPopup}
-            get관리자알림목록={get관리자알림목록Wrapper}
-            getRecipientText={getRecipientText}
-            handleEditRegularNotification={handleEditRegularNotification}
-            handleDeleteRegularNotification={handleDeleteRegularNotification}
-            activeTab={activeTab}
-            notificationLogSearch={notificationLogSearch}
-            setNotificationLogSearch={setNotificationLogSearch}
-            visibleLogCount={visibleLogCount}
-            handleLoadMoreLogs={handleLoadMoreLogs}
-            handleCollapseLogs={handleCollapseLogs}
-            getFilteredNotificationLogs={getFilteredNotificationLogsWrapper}
-            calculateRecipientCount={calculateRecipientCountWrapper}
-            showAddRegularNotificationPopup={showAddRegularNotificationPopup}
-            setShowAddRegularNotificationPopup={
-              setShowAddRegularNotificationPopup
-            }
-            showAddRealtimeNotificationPopup={showAddRealtimeNotificationPopup}
-            setShowAddRealtimeNotificationPopup={
-              setShowAddRealtimeNotificationPopup
-            }
-            showAddNotificationPopup={showAddNotificationPopup}
-            showEditRegularNotificationPopup={showEditRegularNotificationPopup}
-            setShowEditRegularNotificationPopup={
-              setShowEditRegularNotificationPopup
-            }
-            showEditRealtimeNotificationPopup={
-              showEditRealtimeNotificationPopup
-            }
-            setShowEditRealtimeNotificationPopup={
-              setShowEditRealtimeNotificationPopup
-            }
-            showRecurringSettingsModal={showRecurringSettingsModal}
-            setShowRecurringSettingsModal={setShowRecurringSettingsModal}
-            handleAddRegularNotification={handleAddRegularNotification}
-            handleAddRealtimeNotification={handleAddRealtimeNotification}
-            openRecurringSettingsModal={openRecurringSettingsModal}
-            closeRecurringSettingsModal={closeRecurringSettingsModal}
-            handleRecurringSettingsComplete={handleRecurringSettingsComplete}
-            handleEmployeeSearch={handleEmployeeSearch}
-            addEmployeeToRecipients={addEmployeeToRecipients}
-            removeEmployeeFromRecipients={removeEmployeeFromRecipients}
-            handleEmployeeToggle={handleEmployeeToggle}
-            handleSaveRegularNotificationEdit={
-              handleSaveRegularNotificationEdit
-            }
-            handleSaveRealtimeNotificationEdit={
-              handleSaveRealtimeNotificationEdit
-            }
-            handleWeekdayToggle={handleWeekdayToggle}
-            recurringSettings={recurringSettings}
-            setRecurringSettings={setRecurringSettings}
-            employeeSearchTerm={employeeSearchTerm}
-            setEmployeeSearchTerm={setEmployeeSearchTerm}
-            searchResults={searchResults}
-            setSearchResults={setSearchResults}
-            editingRegularNotification={editingRegularNotification}
-            setEditingRegularNotification={setEditingRegularNotification}
-            editingRealtimeNotification={editingRealtimeNotification}
-            setEditingRealtimeNotification={setEditingRealtimeNotification}
-            currentFormType={currentFormType}
-            setCurrentFormType={setCurrentFormType}
-            repeatCycleOptions={repeatCycleOptions}
-            recipientOptions={recipientOptions}
-            요일목록={요일목록}
-            employees={employees}
-          />
-        );
-      //---2.5_관리자 모드_일정 관리---//
-      case 'schedule-management':
-        return (
-          <AdminScheduleManagement
-            currentYear={currentYear}
-            setCurrentYear={setCurrentYear}
-            currentMonth={currentMonth}
-            setCurrentMonth={setCurrentMonth}
-            scheduleEvents={scheduleEvents}
-            selectedEventDate={selectedEventDate}
-            setSelectedEventDate={setSelectedEventDate}
-            selectedEvent={selectedEvent}
-            setSelectedEvent={setSelectedEvent}
-            showEventDetail={showEventDetail}
-            setShowEventDetail={setShowEventDetail}
-            scheduleSearch={scheduleSearch}
-            setScheduleSearch={setScheduleSearch}
-            scheduleSearchTerm={scheduleSearchTerm}
-            scheduleCurrentPage={scheduleCurrentPage}
-            setScheduleCurrentPage={setScheduleCurrentPage}
-            SCHEDULE_PAGE_SIZE={SCHEDULE_PAGE_SIZE}
-            EVENT_TYPE_COLORS={EVENT_TYPE_COLORS}
-            holidayData={holidayData}
-            customHolidays={customHolidays}
-            selectedLanguage={selectedLanguage}
-            handleUnifiedAdd={handleUnifiedAdd}
-            handleAddEvent={handleAddEvent}
-            handleEditEvent={handleEditEvent}
-            handleDeleteEvent={handleDeleteEvent}
-            handleEditHoliday={handleEditHoliday}
-            handleDeleteHoliday={handleDeleteHoliday}
-            getFilteredScheduleEvents={getFilteredScheduleEventsWrapper}
-            loadHolidayData={loadHolidayData}
-            forceRefreshHolidays={forceRefreshHolidays}
-            getKoreanHolidays={getKoreanHolidays}
-            showAddEventPopup={showAddEventPopup}
-            setShowAddEventPopup={setShowAddEventPopup}
-            showEditEventPopup={showEditEventPopup}
-            setShowEditEventPopup={setShowEditEventPopup}
-            showHolidayPopup={showHolidayPopup}
-            setShowHolidayPopup={setShowHolidayPopup}
-            showUnifiedAddPopup={showUnifiedAddPopup}
-            setShowUnifiedAddPopup={setShowUnifiedAddPopup}
-            eventForm={eventForm}
-            setEventForm={setEventForm}
-            editingEvent={editingEvent}
-            holidayForm={holidayForm}
-            setHolidayForm={setHolidayForm}
-            unifiedForm={unifiedForm}
-            setUnifiedForm={setUnifiedForm}
-            unifiedAddType={unifiedAddType}
-            setUnifiedAddType={setUnifiedAddType}
-            handleSaveEvent={handleSaveEvent}
-            handleCancelEvent={handleCancelEvent}
-            handleSaveHoliday={handleSaveHoliday}
-            handleCancelHoliday={handleCancelHoliday}
-            handleSaveUnified={handleSaveUnified}
-            EVENT_TYPES={EVENT_TYPES}
-            deletedSystemHolidays={deletedSystemHolidays}
-            restoreSystemHoliday={restoreSystemHoliday}
-            permanentlyDeleteSystemHoliday={permanentlyDeleteSystemHoliday}
-            showDeletedHolidaysModal={showDeletedHolidaysModal}
-            setShowDeletedHolidaysModal={setShowDeletedHolidaysModal}
-          />
-        );
-
-      //---2.6_관리자 모드_연차 관리---//
-      case 'leave-management':
-        return (
-          <AdminLeaveManagement
-            leaveManagementTab={leaveManagementTab}
-            setLeaveManagementTab={setLeaveManagementTab}
-            employees={deptFilter(employees)}
-            setEmployees={setEmployees}
-            leaveSearch={leaveSearch}
-            setLeaveSearch={setLeaveSearch}
-            COMPANY_STANDARDS={COMPANY_STANDARDS}
-            calculateEmployeeAnnualLeave={calculateEmployeeAnnualLeave}
-            annualLeaveSortField={annualLeaveSortField}
-            annualLeaveSortOrder={annualLeaveSortOrder}
-            handleAnnualLeaveSort={handleAnnualLeaveSort}
-            leaveRequests={deptFilter(leaveRequests)}
-            setLeaveRequests={setLeaveRequests}
-            getSortedLeaveRequests={getSortedLeaveRequests}
-            getFilteredLeaveRequests={getFilteredLeaveRequests}
-            formatDateByLang={formatDateByLang}
-            devLog={devLog}
-            handleLeaveSort={handleLeaveSort}
-            getLeaveDays={getLeaveDays}
-            STATUS_COLORS={STATUS_COLORS}
-            handleApproveLeave={handleApproveLeave}
-            handleRejectLeave={handleRejectLeave}
-            showLeaveApprovalPopup={showLeaveApprovalPopup}
-            setShowLeaveApprovalPopup={setShowLeaveApprovalPopup}
-            leaveApprovalData={leaveApprovalData}
-            setLeaveApprovalData={setLeaveApprovalData}
-            handleLeaveApprovalConfirm={handleLeaveApprovalConfirm}
-            currentUser={currentUser}
-            handleConfirmLeave={handleConfirmLeave}
-          />
-        );
-
-      //---2.7_관리자 모드_건의 관리---//
-      case 'suggestion-management':
-        return (
-          <AdminSuggestionManagement
-            suggestions={deptFilter(suggestions)}
-            setSuggestions={setSuggestions}
-            suggestionSearch={suggestionSearch}
-            setSuggestionSearch={setSuggestionSearch}
-            showSuggestionApprovalPopup={showSuggestionApprovalPopup}
-            setShowSuggestionApprovalPopup={setShowSuggestionApprovalPopup}
-            suggestionApprovalData={suggestionApprovalData}
-            setSuggestionApprovalData={setSuggestionApprovalData}
-            COMPANY_STANDARDS={COMPANY_STANDARDS}
-            STATUS_COLORS={STATUS_COLORS}
-            formatDateByLang={formatDateByLang}
-            getFilteredSuggestions={getFilteredSuggestions}
-            getSortedSuggestions={getSortedSuggestions}
-            handleSuggestionSort={handleSuggestionSort}
-            handleApproveSuggestion={handleApproveSuggestion}
-            handleRejectSuggestion={handleRejectSuggestion}
-            handleSuggestionApprovalConfirm={handleSuggestionApprovalConfirm}
-            suggestionPage={suggestionPage}
-            setSuggestionPage={setSuggestionPage}
-            currentUser={currentUser}
-            handleConfirmSuggestion={handleConfirmSuggestion}
-          />
-        );
-
-      //---2.8_관리자 모드_근태 관리---//
-      case 'attendance-management':
-        return (
-          <AdminAttendanceManagement
-            attendanceSheetYear={attendanceSheetYear}
-            setAttendanceSheetYear={setAttendanceSheetYear}
-            attendanceSheetMonth={attendanceSheetMonth}
-            setAttendanceSheetMonth={setAttendanceSheetMonth}
-            attendanceSearchFilter={attendanceSearchFilter}
-            setAttendanceSearchFilter={setAttendanceSearchFilter}
-            isEditingAttendance={isEditingAttendance}
-            attendanceStats={filteredAttendanceStats}
-            filteredAttendanceEmployees={filteredAttendanceEmployees}
-            selectedCells={selectedCells}
-            isDragging={isDragging}
-            dayMetadata={dayMetadata}
-            COMPANY_STANDARDS={COMPANY_STANDARDS}
-            toggleEditingMode={toggleEditingMode}
-            uploadAttendanceXLSX={uploadAttendanceXLSX}
-            exportAttendanceXLSX={exportAttendanceXLSX}
-            handleAttendancePaste={handleAttendancePaste}
-            handleAttendanceKeyDown={handleAttendanceKeyDown}
-            getDaysInMonth={getDaysInMonth}
-            attendanceSheetData={attendanceSheetData}
-            getDayOfWeek={getDayOfWeek}
-            getWorkTypeForDate={getWorkTypeForDate}
-            setWorkTypeForDate={setWorkTypeForDate}
-            setAttendanceForEmployee={setAttendanceForEmployee}
-            handleCellClick={handleCellClick}
-            handleCellMouseDown={handleCellMouseDown}
-            handleCellMouseEnter={handleCellMouseEnter}
-            handleCellMouseUp={handleCellMouseUp}
-            getAttendanceForEmployee={getAttendanceForEmployee}
-            calculateMonthlyStats={calculateMonthlyStats}
-            preCalculatedStats={preCalculatedStats}
-            loadHolidayData={loadHolidayData}
-            holidayData={holidayData}
-            customHolidays={customHolidays}
-            getKoreanHolidays={getKoreanHolidays}
-            parseAttendanceFromExcel={parseAttendanceFromExcel}
-            clearAttendanceData={clearAttendanceData}
-          />
-        );
-
-      //---2.9_관리자 모드_급여 관리---//
-      case 'payroll-management':
-        return (
-          <AdminPayrollManagement
-            payrollTableData={payrollTableData}
-            payrollSearchFilter={payrollSearchFilter}
-            setPayrollSearchFilter={setPayrollSearchFilter}
-            isPayrollEditMode={isPayrollEditMode}
-            setIsPayrollEditMode={setIsPayrollEditMode}
-            editingPayrollCell={editingPayrollCell}
-            setEditingPayrollCell={setEditingPayrollCell}
-            COMPANY_STANDARDS={COMPANY_STANDARDS}
-            initializePayrollTable={initializePayrollTable}
-            handlePayrollFileUpload={handlePayrollFileUpload}
-            exportPayrollXLSX={() =>
-              exportPayrollXLSX(
-                payrollTableData,
-                payrollSearchFilter,
-                safeFormatNumber
-              )
-            }
-            getFilteredPayrollData={() => filteredPayrollData}
-            updatePayrollCell={updatePayrollCell}
-            safeFormatNumber={safeFormatNumber}
-            defaultHours={defaultHours}
-            handleEditHours={handleEditHours}
-            applyDefaultHoursToTable={applyDefaultHoursToTable}
-            setPayrollByMonth={setPayrollByMonth}
-            setPayrollHashes={setPayrollHashes}
-          />
-        );
-
-      //---2.10_관리자 모드_평가 관리---//
-      case 'evaluation-management':
-        return (
-          <AdminEvaluationManagement
-            evaluationData={evaluationData}
-            setEvaluationData={setEvaluationData}
-            evaluationSearch={evaluationSearch}
-            setEvaluationSearch={setEvaluationSearch}
-            employees={employees}
-            COMPANY_STANDARDS={COMPANY_STANDARDS}
-            STATUS_COLORS={STATUS_COLORS}
-            getEvaluationWithPosition={getEvaluationWithPosition}
-            getFilteredEvaluation={getFilteredEvaluation}
-            getSortedEvaluations={getSortedEvaluations}
-            handleEvaluationSort={handleEvaluationSort}
-            send자동알림={send자동알림}
-            currentUser={currentUser}
-          />
-        );
-
-      //---2.11_관리자 모드_AI 챗봇---//
-      case 'ai-chat':
-        return (
-          <AdminAIChatbot
-            modelUsageStatus={modelUsageStatus}
-            chatgptApiKey={chatgptApiKey}
-            claudeApiKey={claudeApiKey}
-            geminiApiKey={geminiApiKey}
-            chatbotPermissions={chatbotPermissions}
-            chatMessages={aiMessages}
-            chatContainerRef={chatContainerRef}
-            setActiveTab={setActiveTab}
-            handleSendMessage={handleAiQuery}
-            generateDownloadFile={generateDownloadFile}
-          />
-        );
-
-      //---2.12_관리자 모드_시스템 관리---//
-      case 'system':
-        return (
-          <AdminSystemManagement
-            currentUser={currentUser}
-            unifiedApiKey={unifiedApiKey}
-            setUnifiedApiKey={setUnifiedApiKey}
-            showUnifiedApiKey={showUnifiedApiKey}
-            setShowUnifiedApiKey={setShowUnifiedApiKey}
-            detectedProvider={detectedProvider}
-            availableModels={availableModels}
-            selectedUnifiedModel={selectedUnifiedModel}
-            setSelectedUnifiedModel={setSelectedUnifiedModel}
-            unifiedSaveMessage={unifiedSaveMessage}
-            chatbotPermissions={chatbotPermissions}
-            changePasswordForm={changePasswordForm}
-            setChangePasswordForm={setChangePasswordForm}
-            changePasswordError={changePasswordError}
-            changePasswordSuccess={changePasswordSuccess}
-            showCurrentPassword={showCurrentPassword}
-            setShowCurrentPassword={setShowCurrentPassword}
-            showNewPassword={showNewPassword}
-            setShowNewPassword={setShowNewPassword}
-            showConfirmPassword={showConfirmPassword}
-            setShowConfirmPassword={setShowConfirmPassword}
-            handleUnifiedAiSave={handleUnifiedAiSave}
-            handlePermissionChange={handlePermissionChange}
-            handleChangePassword={handleChangePassword}
-          />
-        );
-
-      default:
-        return (
-          <div className="text-center text-gray-500 mt-8">
-            준비중인 기능입니다.
-          </div>
-        );
-    }
-  };
+  /* ========== RENDER CONTENT - AdminContentRenderer로 분리됨 ========== */
+  const renderContent = () => (
+    <AdminContentRenderer
+      // ─── Dashboard ───
+      dashboardDateFilter={dashboardDateFilter}
+      setDashboardDateFilter={setDashboardDateFilter}
+      dashboardSelectedDate={dashboardSelectedDate}
+      setDashboardSelectedDate={setDashboardSelectedDate}
+      dashboardStats={dashboardStatsReal}
+      handleStatusClick={handleStatusClick}
+      handleNightStatusClick={handleNightStatusClick}
+      leaveRequests={leaveRequests}
+      suggestions={suggestions}
+      setLeaveManagementTab={setLeaveManagementTab}
+      goalStats={goalStats}
+      selectedYear={selectedYear}
+      setSelectedYear={setSelectedYear}
+      showGoalDetailsPopup={showGoalDetailsPopup}
+      setShowGoalDetailsPopup={setShowGoalDetailsPopup}
+      workLifeBalanceStats={workLifeBalanceStats}
+      showWorkLifeBalancePopup={showWorkLifeBalancePopup}
+      setShowWorkLifeBalancePopup={setShowWorkLifeBalancePopup}
+      getTodaySafetyAccidents={getTodaySafetyAccidents}
+      getThisMonthSafetyAccidents={getThisMonthSafetyAccidents}
+      getThisYearSafetyAccidents={getThisYearSafetyAccidents}
+      getAccidentFreeDays={getAccidentFreeDays}
+      showSafetyAccidentInput={showSafetyAccidentInput}
+      setShowSafetyAccidentInput={setShowSafetyAccidentInput}
+      aiRecommendations={aiRecommendations}
+      isAnalyzing={isAnalyzing}
+      generateAiRecommendations={generateAiRecommendations}
+      refreshDashboardData={refreshDashboardData}
+      showAiHistoryPopup={showAiHistoryPopup}
+      setShowAiHistoryPopup={setShowAiHistoryPopup}
+      showPromptSettings={showPromptSettings}
+      setShowPromptSettings={setShowPromptSettings}
+      availableYears={availableYears}
+      attendanceSheetData={attendanceSheetData}
+      showWorkLifeDetailPopup={showWorkLifeDetailPopup}
+      setShowWorkLifeDetailPopup={setShowWorkLifeDetailPopup}
+      workLifeDetailMetric={workLifeDetailMetric}
+      setWorkLifeDetailMetric={setWorkLifeDetailMetric}
+      workLifeDetailMonth={workLifeDetailMonth}
+      setWorkLifeDetailMonth={setWorkLifeDetailMonth}
+      selectedViolationMonth={selectedViolationMonth}
+      setSelectedViolationMonth={setSelectedViolationMonth}
+      stressSortColumn={stressSortColumn}
+      setStressSortColumn={setStressSortColumn}
+      stressSortDirection={stressSortDirection}
+      setStressSortDirection={setStressSortDirection}
+      isStressCalculationExpanded={isStressCalculationExpanded}
+      setIsStressCalculationExpanded={setIsStressCalculationExpanded}
+      overtimeSortConfig={overtimeSortConfig}
+      setOvertimeSortConfig={setOvertimeSortConfig}
+      leaveSortConfig={leaveSortConfig}
+      setLeaveSortConfig={setLeaveSortConfig}
+      violationSortConfig={violationSortConfig}
+      setViolationSortConfig={setViolationSortConfig}
+      getWorkLifeBalanceDataByYear={getWorkLifeBalanceDataByYear}
+      getViolationDetails={getViolationDetails}
+      send52HourViolationAlert={send52HourViolationAlert}
+      getWorkLifeDetailData={getWorkLifeDetailData}
+      showGoalDetailDataPopup={showGoalDetailDataPopup}
+      setShowGoalDetailDataPopup={setShowGoalDetailDataPopup}
+      goalDetailMetric={goalDetailMetric}
+      setGoalDetailMetric={setGoalDetailMetric}
+      goalDetailMonth={goalDetailMonth}
+      setGoalDetailMonth={setGoalDetailMonth}
+      getGoalDataByYear={getGoalDataByYear}
+      getGoalDetailData={getGoalDetailData}
+      getFilteredEmployees={getFilteredEmployees}
+      analyzeAttendanceStatusForDashboard={analyzeAttendanceStatusForDashboard}
+      isHolidayDate={isHolidayDateWithData}
+      getWorkTypeForDate={getWorkTypeForDate}
+      calcDailyWage={calcDailyWage}
+      calculateMonthlyLeaveUsageRate={calculateMonthlyLeaveUsageRate}
+      evaluations={evaluations}
+      notices={notices}
+      safetyAccidents={safetyAccidents}
+      setSafetyAccidents={setSafetyAccidents}
+      safetyAccidentPage={safetyAccidentPage}
+      setSafetyAccidentPage={setSafetyAccidentPage}
+      safetyAccidentSearch={safetyAccidentSearch}
+      setSafetyAccidentSearch={setSafetyAccidentSearch}
+      aiPromptSettings={aiPromptSettings}
+      setAiPromptSettings={setAiPromptSettings}
+      handleSafetyAccidentInput={handleSafetyAccidentInput}
+      handleEditSafety={handleEditSafety}
+      handleDeleteSafety={handleDeleteSafety}
+      handleSaveAccidentEdit={handleSaveAccidentEdit}
+      handleCancelAccidentEdit={handleCancelAccidentEdit}
+      downloadAiHistory={downloadAiHistory}
+      handleAiPromptSave={handleAiPromptSave}
+      aiRecommendationHistory={aiRecommendationHistory}
+      showEmployeeListPopup={showEmployeeListPopup}
+      setShowEmployeeListPopup={setShowEmployeeListPopup}
+      selectedStatusDate={selectedStatusDate}
+      selectedStatus={selectedStatus}
+      selectedStatusEmployees={selectedStatusEmployees}
+      attendanceListSortField={attendanceListSortField}
+      attendanceListSortOrder={attendanceListSortOrder}
+      handleDownloadAttendanceList={handleDownloadAttendanceList}
+      handleAttendanceListSort={handleAttendanceListSort}
+      getSortedAttendanceEmployees={getSortedAttendanceEmployees}
+      // ─── Employee Management ───
+      setEmployees={setEmployees}
+      employeeSearchFilter={employeeSearchFilter}
+      setEmployeeSearchFilter={setEmployeeSearchFilter}
+      employeeSortField={employeeSortField}
+      employeeSortOrder={employeeSortOrder}
+      handleSort={handleSort}
+      handleUpdateEmployee={handleUpdateEmployee}
+      handleDeleteEmployee={handleDeleteEmployee}
+      showNewEmployeeModal={showNewEmployeeModal}
+      setShowNewEmployeeModal={setShowNewEmployeeModal}
+      getSortedEmployees={getSortedEmployees}
+      attendanceSheetYear={attendanceSheetYear}
+      attendanceSheetMonth={attendanceSheetMonth}
+      // ─── Notice Management ───
+      setNotices={setNotices}
+      noticeSearch={noticeSearch}
+      setNoticeSearch={setNoticeSearch}
+      adminNoticePage={adminNoticePage}
+      setAdminNoticePage={setAdminNoticePage}
+      noticeFiles={noticeFiles}
+      setNoticeFiles={setNoticeFiles}
+      noticeFilesRef={noticeFilesRef}
+      getFilteredNotices={getFilteredNotices}
+      // ─── Notification Management ───
+      regularNotificationForm={regularNotificationForm}
+      setRegularNotificationForm={setRegularNotificationForm}
+      realtimeNotificationForm={realtimeNotificationForm}
+      setRealtimeNotificationForm={setRealtimeNotificationForm}
+      알림유형={알림유형}
+      set알림유형={set알림유형}
+      setShowAddNotificationPopup={setShowAddNotificationPopup}
+      get관리자알림목록={get관리자알림목록Wrapper}
+      handleEditRegularNotification={handleEditRegularNotification}
+      handleDeleteRegularNotification={handleDeleteRegularNotification}
+      notificationLogSearch={notificationLogSearch}
+      setNotificationLogSearch={setNotificationLogSearch}
+      visibleLogCount={visibleLogCount}
+      handleLoadMoreLogs={handleLoadMoreLogs}
+      handleCollapseLogs={handleCollapseLogs}
+      getFilteredNotificationLogs={getFilteredNotificationLogsWrapper}
+      calculateRecipientCount={calculateRecipientCountWrapper}
+      showAddRegularNotificationPopup={showAddRegularNotificationPopup}
+      setShowAddRegularNotificationPopup={setShowAddRegularNotificationPopup}
+      showAddRealtimeNotificationPopup={showAddRealtimeNotificationPopup}
+      setShowAddRealtimeNotificationPopup={setShowAddRealtimeNotificationPopup}
+      showAddNotificationPopup={showAddNotificationPopup}
+      showEditRegularNotificationPopup={showEditRegularNotificationPopup}
+      setShowEditRegularNotificationPopup={setShowEditRegularNotificationPopup}
+      showEditRealtimeNotificationPopup={showEditRealtimeNotificationPopup}
+      setShowEditRealtimeNotificationPopup={setShowEditRealtimeNotificationPopup}
+      showRecurringSettingsModal={showRecurringSettingsModal}
+      setShowRecurringSettingsModal={setShowRecurringSettingsModal}
+      handleAddRegularNotification={handleAddRegularNotification}
+      handleAddRealtimeNotification={handleAddRealtimeNotification}
+      openRecurringSettingsModal={openRecurringSettingsModal}
+      closeRecurringSettingsModal={closeRecurringSettingsModal}
+      handleRecurringSettingsComplete={handleRecurringSettingsComplete}
+      handleEmployeeSearch={handleEmployeeSearch}
+      addEmployeeToRecipients={addEmployeeToRecipients}
+      removeEmployeeFromRecipients={removeEmployeeFromRecipients}
+      handleEmployeeToggle={handleEmployeeToggle}
+      handleSaveRegularNotificationEdit={handleSaveRegularNotificationEdit}
+      handleSaveRealtimeNotificationEdit={handleSaveRealtimeNotificationEdit}
+      handleWeekdayToggle={handleWeekdayToggle}
+      recurringSettings={recurringSettings}
+      setRecurringSettings={setRecurringSettings}
+      employeeSearchTerm={employeeSearchTerm}
+      setEmployeeSearchTerm={setEmployeeSearchTerm}
+      searchResults={searchResults}
+      setSearchResults={setSearchResults}
+      editingRegularNotification={editingRegularNotification}
+      setEditingRegularNotification={setEditingRegularNotification}
+      editingRealtimeNotification={editingRealtimeNotification}
+      setEditingRealtimeNotification={setEditingRealtimeNotification}
+      currentFormType={currentFormType}
+      setCurrentFormType={setCurrentFormType}
+      // ─── Schedule Management ───
+      currentYear={currentYear}
+      setCurrentYear={setCurrentYear}
+      currentMonth={currentMonth}
+      setCurrentMonth={setCurrentMonth}
+      scheduleEvents={scheduleEvents}
+      selectedEventDate={selectedEventDate}
+      setSelectedEventDate={setSelectedEventDate}
+      selectedEvent={selectedEvent}
+      setSelectedEvent={setSelectedEvent}
+      showEventDetail={showEventDetail}
+      setShowEventDetail={setShowEventDetail}
+      scheduleSearch={scheduleSearch}
+      setScheduleSearch={setScheduleSearch}
+      scheduleSearchTerm={scheduleSearchTerm}
+      scheduleCurrentPage={scheduleCurrentPage}
+      setScheduleCurrentPage={setScheduleCurrentPage}
+      holidayData={holidayData}
+      customHolidays={customHolidays}
+      selectedLanguage={selectedLanguage}
+      handleUnifiedAdd={handleUnifiedAdd}
+      handleAddEvent={handleAddEvent}
+      handleEditEvent={handleEditEvent}
+      handleDeleteEvent={handleDeleteEvent}
+      handleEditHoliday={handleEditHoliday}
+      handleDeleteHoliday={handleDeleteHoliday}
+      getFilteredScheduleEvents={getFilteredScheduleEventsWrapper}
+      loadHolidayData={loadHolidayData}
+      forceRefreshHolidays={forceRefreshHolidays}
+      getKoreanHolidays={getKoreanHolidays}
+      showAddEventPopup={showAddEventPopup}
+      setShowAddEventPopup={setShowAddEventPopup}
+      showEditEventPopup={showEditEventPopup}
+      setShowEditEventPopup={setShowEditEventPopup}
+      showHolidayPopup={showHolidayPopup}
+      setShowHolidayPopup={setShowHolidayPopup}
+      showUnifiedAddPopup={showUnifiedAddPopup}
+      setShowUnifiedAddPopup={setShowUnifiedAddPopup}
+      eventForm={eventForm}
+      setEventForm={setEventForm}
+      editingEvent={editingEvent}
+      holidayForm={holidayForm}
+      setHolidayForm={setHolidayForm}
+      unifiedForm={unifiedForm}
+      setUnifiedForm={setUnifiedForm}
+      unifiedAddType={unifiedAddType}
+      setUnifiedAddType={setUnifiedAddType}
+      handleSaveEvent={handleSaveEvent}
+      handleCancelEvent={handleCancelEvent}
+      handleSaveHoliday={handleSaveHoliday}
+      handleCancelHoliday={handleCancelHoliday}
+      handleSaveUnified={handleSaveUnified}
+      deletedSystemHolidays={deletedSystemHolidays}
+      restoreSystemHoliday={restoreSystemHoliday}
+      permanentlyDeleteSystemHoliday={permanentlyDeleteSystemHoliday}
+      showDeletedHolidaysModal={showDeletedHolidaysModal}
+      setShowDeletedHolidaysModal={setShowDeletedHolidaysModal}
+      // ─── Leave Management ───
+      leaveManagementTab={leaveManagementTab}
+      leaveSearch={leaveSearch}
+      setLeaveSearch={setLeaveSearch}
+      calculateEmployeeAnnualLeave={calculateEmployeeAnnualLeave}
+      annualLeaveSortField={annualLeaveSortField}
+      annualLeaveSortOrder={annualLeaveSortOrder}
+      handleAnnualLeaveSort={handleAnnualLeaveSort}
+      setLeaveRequests={setLeaveRequests}
+      getSortedLeaveRequests={getSortedLeaveRequests}
+      getFilteredLeaveRequests={getFilteredLeaveRequests}
+      handleLeaveSort={handleLeaveSort}
+      handleApproveLeave={handleApproveLeave}
+      handleRejectLeave={handleRejectLeave}
+      showLeaveApprovalPopup={showLeaveApprovalPopup}
+      setShowLeaveApprovalPopup={setShowLeaveApprovalPopup}
+      leaveApprovalData={leaveApprovalData}
+      setLeaveApprovalData={setLeaveApprovalData}
+      handleLeaveApprovalConfirm={handleLeaveApprovalConfirm}
+      handleConfirmLeave={handleConfirmLeave}
+      // ─── Suggestion Management ───
+      setSuggestions={setSuggestions}
+      suggestionSearch={suggestionSearch}
+      setSuggestionSearch={setSuggestionSearch}
+      showSuggestionApprovalPopup={showSuggestionApprovalPopup}
+      setShowSuggestionApprovalPopup={setShowSuggestionApprovalPopup}
+      suggestionApprovalData={suggestionApprovalData}
+      setSuggestionApprovalData={setSuggestionApprovalData}
+      getFilteredSuggestions={getFilteredSuggestions}
+      getSortedSuggestions={getSortedSuggestions}
+      handleSuggestionSort={handleSuggestionSort}
+      handleApproveSuggestion={handleApproveSuggestion}
+      handleRejectSuggestion={handleRejectSuggestion}
+      handleSuggestionApprovalConfirm={handleSuggestionApprovalConfirm}
+      suggestionPage={suggestionPage}
+      setSuggestionPage={setSuggestionPage}
+      handleConfirmSuggestion={handleConfirmSuggestion}
+      // ─── Attendance Management ───
+      setAttendanceSheetYear={setAttendanceSheetYear}
+      setAttendanceSheetMonth={setAttendanceSheetMonth}
+      attendanceSearchFilter={attendanceSearchFilter}
+      setAttendanceSearchFilter={setAttendanceSearchFilter}
+      isEditingAttendance={isEditingAttendance}
+      attendanceStats={filteredAttendanceStats}
+      filteredAttendanceEmployees={filteredAttendanceEmployees}
+      selectedCells={selectedCells}
+      isDragging={isDragging}
+      dayMetadata={dayMetadata}
+      toggleEditingMode={toggleEditingMode}
+      uploadAttendanceXLSX={uploadAttendanceXLSX}
+      exportAttendanceXLSX={exportAttendanceXLSX}
+      handleAttendancePaste={handleAttendancePaste}
+      handleAttendanceKeyDown={handleAttendanceKeyDown}
+      getDayOfWeek={getDayOfWeek}
+      setWorkTypeForDate={setWorkTypeForDate}
+      setAttendanceForEmployee={setAttendanceForEmployee}
+      handleCellClick={handleCellClick}
+      handleCellMouseDown={handleCellMouseDown}
+      handleCellMouseEnter={handleCellMouseEnter}
+      handleCellMouseUp={handleCellMouseUp}
+      getAttendanceForEmployee={getAttendanceForEmployee}
+      calculateMonthlyStats={calculateMonthlyStats}
+      preCalculatedStats={preCalculatedStats}
+      parseAttendanceFromExcel={parseAttendanceFromExcel}
+      clearAttendanceData={clearAttendanceData}
+      // ─── Payroll Management ───
+      payrollTableData={payrollTableData}
+      payrollSearchFilter={payrollSearchFilter}
+      setPayrollSearchFilter={setPayrollSearchFilter}
+      isPayrollEditMode={isPayrollEditMode}
+      setIsPayrollEditMode={setIsPayrollEditMode}
+      editingPayrollCell={editingPayrollCell}
+      setEditingPayrollCell={setEditingPayrollCell}
+      initializePayrollTable={initializePayrollTable}
+      handlePayrollFileUpload={handlePayrollFileUpload}
+      filteredPayrollData={filteredPayrollData}
+      updatePayrollCell={updatePayrollCell}
+      safeFormatNumber={safeFormatNumber}
+      defaultHours={defaultHours}
+      handleEditHours={handleEditHours}
+      applyDefaultHoursToTable={applyDefaultHoursToTable}
+      setPayrollByMonth={setPayrollByMonth}
+      setPayrollHashes={setPayrollHashes}
+      // ─── Evaluation Management ───
+      evaluationData={evaluationData}
+      setEvaluationData={setEvaluationData}
+      evaluationSearch={evaluationSearch}
+      setEvaluationSearch={setEvaluationSearch}
+      getEvaluationWithPosition={getEvaluationWithPosition}
+      getFilteredEvaluation={getFilteredEvaluation}
+      getSortedEvaluations={getSortedEvaluations}
+      handleEvaluationSort={handleEvaluationSort}
+      send자동알림={send자동알림}
+      // ─── AI Chatbot ───
+      modelUsageStatus={modelUsageStatus}
+      chatgptApiKey={chatgptApiKey}
+      claudeApiKey={claudeApiKey}
+      geminiApiKey={geminiApiKey}
+      chatbotPermissions={chatbotPermissions}
+      chatMessages={aiMessages}
+      chatContainerRef={chatContainerRef}
+      handleSendMessage={handleAiQuery}
+      generateDownloadFile={generateDownloadFile}
+      // ─── System Management ───
+      unifiedApiKey={unifiedApiKey}
+      setUnifiedApiKey={setUnifiedApiKey}
+      showUnifiedApiKey={showUnifiedApiKey}
+      setShowUnifiedApiKey={setShowUnifiedApiKey}
+      detectedProvider={detectedProvider}
+      availableModels={availableModels}
+      selectedUnifiedModel={selectedUnifiedModel}
+      setSelectedUnifiedModel={setSelectedUnifiedModel}
+      unifiedSaveMessage={unifiedSaveMessage}
+      changePasswordForm={changePasswordForm}
+      setChangePasswordForm={setChangePasswordForm}
+      changePasswordError={changePasswordError}
+      changePasswordSuccess={changePasswordSuccess}
+      handleUnifiedAiSave={handleUnifiedAiSave}
+      handlePermissionChange={handlePermissionChange}
+      handleChangePassword={handleChangePassword}
+    />
+  );
 
   return (
+    <NavigationProvider activeTab={activeTab} setActiveTab={setActiveTab}>
+    <EmployeeProvider employees={employees}>
     <div className="min-h-screen bg-gray-50">
       <UpdateNotification />
       {currentUser && currentUser?.isAdmin ? (
@@ -6577,9 +4345,7 @@ const HRManagementSystem = () => {
         /* 코드 위치: components/admin/AdminMain.
         js */
         <AdminMain
-          currentUser={currentUser}
           menuItems={filteredMenuItems}
-          activeTab={activeTab}
           handleTabChange={handleTabChange}
           setCurrentMonth={setCurrentMonth}
           setCurrentYear={setCurrentYear}
@@ -6601,7 +4367,6 @@ const HRManagementSystem = () => {
 ================================ */
         <div className="min-h-screen h-screen overflow-y-auto bg-gray-50 employee-mode-content">
           <StaffMain
-            currentUser={currentUser}
             fontSize={fontSize}
             handleFontSizeChange={handleFontSizeChange}
             getText={getText}
@@ -6613,10 +4378,9 @@ const HRManagementSystem = () => {
 
           <div className="p-4 space-y-4">
             {/* //---3.1_일반직원 모드_사원정보 (UI)---// */}
-            <StaffEmployeeInfo currentUser={currentUser} getText={getText} />
+            <StaffEmployeeInfo getText={getText} />
             {/* //---3.2_일반직원 모드_공지사항 (UI)---// */}
             <StaffNotice
-              currentUser={currentUser}
               notices={notices}
               setNotices={setNotices}
               getText={getText}
@@ -6629,7 +4393,6 @@ const HRManagementSystem = () => {
             />
             {/* //---3.3_일반직원 모드_알림 사항 (UI)---// */}
             <StaffNotification
-              currentUser={currentUser}
               getText={getText}
               selectedLanguage={selectedLanguage}
               regularNotifications={regularNotifications}
@@ -6646,7 +4409,6 @@ const HRManagementSystem = () => {
               holidayData={holidayData}
               customHolidays={customHolidays}
               getKoreanHolidays={getKoreanHolidays}
-              currentUser={currentUser}
               getAttendanceForEmployee={getAttendanceForEmployee}
               analyzeAttendanceStatus={analyzeAttendanceStatus}
               getAttendanceDotColor={getAttendanceDotColor}
@@ -6661,7 +4423,6 @@ const HRManagementSystem = () => {
             {/* //---3.5_일반직원 모드_연차 신청/건의 사항 (UI)---// */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <StaffAnnualLeave
-                currentUser={currentUser}
                 leaveRequests={leaveRequests}
                 setLeaveRequests={setLeaveRequests}
                 isHolidayDate={isHolidayDateWithData}
@@ -6681,7 +4442,6 @@ const HRManagementSystem = () => {
               <StaffSuggestion
                 suggestions={suggestions}
                 setSuggestions={setSuggestions}
-                currentUser={currentUser}
                 getText={getText}
                 selectedLanguage={selectedLanguage}
                 send자동알림={send자동알림}
@@ -6695,7 +4455,6 @@ const HRManagementSystem = () => {
             {/* //---3.6_일반직원 모드_급여 내역/직원 평가 (UI)---// */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <StaffSalary
-                currentUser={currentUser}
                 generateSalaryHistory={generateSalaryHistory}
                 getText={getText}
                 selectedLanguage={selectedLanguage}
@@ -6705,7 +4464,6 @@ const HRManagementSystem = () => {
 
               {/* //---3.8_일반직원 모드_직원 평가 (UI)---// */}
               <StaffEvaluation
-                currentUser={currentUser}
                 evaluationData={evaluationData}
                 getText={getText}
                 selectedLanguage={selectedLanguage}
@@ -6714,145 +4472,30 @@ const HRManagementSystem = () => {
 
               {/* 비밀번호 변경 팝업 */}
               {showChangePasswordPopup && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white rounded-2xl shadow-xl max-w-xs w-full mx-4 flex flex-col">
-                    <div className="p-6 pb-4 border-b border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-ㅠㅁㄴㄷ font-semibold text-gray-800">
-                          {getText('비밀번호 변경', 'Change Password')}
-                        </h3>
-                        <button
-                          onClick={() => {
-                            setShowChangePasswordPopup(false);
-                            setChangePasswordForm({
-                              current: '',
-                              new: '',
-                              confirm: '',
-                            });
-                            setChangePasswordError('');
-                            setChangePasswordSuccess('');
-                            setShowCurrentPassword(false);
-                            setShowNewPassword(false);
-                            setShowConfirmPassword(false);
-                          }}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <div className="relative">
-                        <input
-                          type={showCurrentPassword ? 'text' : 'password'}
-                          placeholder={getText(
-                            '현재 비밀번호',
-                            'Current Password'
-                          )}
-                          value={changePasswordForm.current}
-                          onChange={(e) =>
-                            setChangePasswordForm((f) => ({
-                              ...f,
-                              current: e.target.value,
-                            }))
-                          }
-                          className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowCurrentPassword(!showCurrentPassword)
-                          }
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          {showCurrentPassword ? (
-                            <EyeOff className="w-5 h-5" />
-                          ) : (
-                            <Eye className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type={showNewPassword ? 'text' : 'password'}
-                          placeholder={getText('새 비밀번호', 'New Password')}
-                          value={changePasswordForm.new}
-                          onChange={(e) =>
-                            setChangePasswordForm((f) => ({
-                              ...f,
-                              new: e.target.value,
-                            }))
-                          }
-                          className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          {showNewPassword ? (
-                            <EyeOff className="w-5 h-5" />
-                          ) : (
-                            <Eye className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          placeholder={getText(
-                            '새 비밀번호 확인',
-                            'Confirm New Password'
-                          )}
-                          value={changePasswordForm.confirm}
-                          onChange={(e) =>
-                            setChangePasswordForm((f) => ({
-                              ...f,
-                              confirm: e.target.value,
-                            }))
-                          }
-                          className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className="w-5 h-5" />
-                          ) : (
-                            <Eye className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
-                      {changePasswordError && (
-                        <div className="text-red-500 text-xs">
-                          {changePasswordError}
-                        </div>
-                      )}
-                      {changePasswordSuccess && (
-                        <div className="text-green-600 text-m font-medium">
-                          {changePasswordSuccess}
-                        </div>
-                      )}
-                      <button
-                        onClick={handleChangePassword}
-                        className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium"
-                      >
-                        {getText('변경하기', 'Change')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <StaffChangePasswordPopup
+                  getText={getText}
+                  onClose={() => {
+                    setShowChangePasswordPopup(false);
+                    setChangePasswordForm({ current: '', new: '', confirm: '' });
+                    setChangePasswordError('');
+                    setChangePasswordSuccess('');
+                  }}
+                  changePasswordForm={changePasswordForm}
+                  setChangePasswordForm={setChangePasswordForm}
+                  changePasswordError={changePasswordError}
+                  changePasswordSuccess={changePasswordSuccess}
+                  handleChangePassword={handleChangePassword}
+                />
               )}
             </div>
           </div>
         </div>
       ) : null}
     </div>
+    </EmployeeProvider>
+    </NavigationProvider>
   );
 };
 
 export default HRManagementSystem;
+

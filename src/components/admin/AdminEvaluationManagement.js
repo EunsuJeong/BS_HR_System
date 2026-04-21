@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
 import { exportEvaluationToXLSX, useEvaluationManagement } from '../common/common_admin_evaluation';
 import { useDebounce } from '../common/common_common';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { useEmployeeContext } from '../../contexts/EmployeeContext';
 
 const AdminEvaluationManagement = ({
   evaluationData,
   setEvaluationData,
   evaluationSearch,
   setEvaluationSearch,
-  employees,
   COMPANY_STANDARDS,
   STATUS_COLORS,
   getEvaluationWithPosition,
@@ -16,8 +17,9 @@ const AdminEvaluationManagement = ({
   getSortedEvaluations,
   handleEvaluationSort,
   send자동알림,
-  currentUser,
 }) => {
+  const { currentUser } = useAuthContext();
+  const employees = useEmployeeContext();
   const [evaluationForm, setEvaluationForm] = useState({
     year: new Date().getFullYear(),
     employeeId: '',

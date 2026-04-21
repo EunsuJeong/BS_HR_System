@@ -7,6 +7,9 @@ import {
   getWorkLifeBalanceDataByYearUtil,
   getWorkLifeDetailDataUtil,
 } from '../common/common_admin_dashboard';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { useEmployeeContext } from '../../contexts/EmployeeContext';
+import { useNavigationContext } from '../../contexts/NavigationContext';
 
 /**
  * ADMIN ① 대시보드 컴포넌트
@@ -14,7 +17,6 @@ import {
  * UI만 담당하며 모든 로직과 상태는 props로 받음
  */
 const AdminDashboard = ({
-  currentUser,
   // 상태값
   dashboardDateFilter,
   setDashboardDateFilter,
@@ -39,8 +41,6 @@ const AdminDashboard = ({
   setShowPromptSettings,
   goalStats,
   workLifeBalanceStats,
-  activeTab,
-  setActiveTab,
   setLeaveManagementTab,
   // 워라밸 팝업 관련
   availableYears,
@@ -72,7 +72,6 @@ const AdminDashboard = ({
   setGoalDetailMetric,
   goalDetailMonth,
   setGoalDetailMonth,
-  employees,
   analyzeAttendanceStatusForDashboard,
   isHolidayDate,
   getWorkTypeForDate,
@@ -132,6 +131,9 @@ const AdminDashboard = ({
   handleAttendanceListSort,
   getSortedAttendanceEmployees,
 }) => {
+  const { currentUser } = useAuthContext();
+  const employees = useEmployeeContext();
+  const { activeTab, setActiveTab } = useNavigationContext();
   // 연도별 목표 데이터 state
   const [yearlyGoalData, setYearlyGoalData] = useState({
     attendance: [],

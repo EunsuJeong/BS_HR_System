@@ -7,6 +7,7 @@ import {
   getFirstDayOfWeek,
 } from '../common/common_staff_attendance';
 import { AttendanceAPI } from '../../api/attendance';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 /**
  * STAFF ④ 회사 일정 및 근태 컴포넌트
@@ -22,7 +23,6 @@ const StaffScheduleAttendance = ({
   holidayData,
   customHolidays,
   getKoreanHolidays,
-  currentUser,
   getAttendanceForEmployee,
   analyzeAttendanceStatus,
   getAttendanceDotColor,
@@ -34,6 +34,7 @@ const StaffScheduleAttendance = ({
   leaveRequests = [],
   getDateKey, // ✅ 날짜 키 생성 함수
 }) => {
+  const { currentUser } = useAuthContext();
   const [selectedDate, setSelectedDate] = useState(new Date().getDate());
   const [selectedDateAttendance, setSelectedDateAttendance] = useState(null);
   const [selectedDateLeave, setSelectedDateLeave] = useState(null);

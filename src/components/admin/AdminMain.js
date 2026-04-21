@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { LogOut, Menu, X } from 'lucide-react';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { useNavigationContext } from '../../contexts/NavigationContext';
 
 /**
  * ADMIN 관리자 모드 - 메인 레이아웃 컴포넌트
@@ -7,9 +9,7 @@ import { LogOut, Menu, X } from 'lucide-react';
  * 시스템 상태 표시바, 사용자 알림, 권한 거부 모달 포함
  */
 const AdminMain = ({
-  currentUser,
   menuItems,
-  activeTab,
   handleTabChange,
   setCurrentMonth,
   setCurrentYear,
@@ -25,6 +25,8 @@ const AdminMain = ({
   setShowPermissionModal,
   permissionModalData,
 }) => {
+  const { currentUser } = useAuthContext();
+  const { activeTab } = useNavigationContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleMenuClick = (itemId) => {
