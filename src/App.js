@@ -35,8 +35,8 @@ import * as XLSX from 'xlsx';
 import { io } from 'socket.io-client';
 import apiClient from './api/client';
 import {
-  AttendanceAPI,
-  AttendanceStatsAPI,
+  // AttendanceAPI → useAttendanceController 내부로 이동
+  // AttendanceStatsAPI → useAttendanceController 내부로 이동
   AttendanceSheetAPI,
   AttendanceSummaryAPI,
 } from './api/attendance';
@@ -115,6 +115,7 @@ import CommonLogin from './components/common/CommonLogin';
 import { formatDateToString } from './utils/dateUtils';
 import useSocketSync from './hooks/useSocketSync';
 import useDashboardController from './hooks/useDashboardController';
+import useAttendanceController from './hooks/useAttendanceController';
 import AdminMain from './components/admin/AdminMain';
 import AdminContentRenderer from './components/admin/AdminContentRenderer';
 import StaffMain from './components/staff/StaffMain';
@@ -166,14 +167,9 @@ import {
   usePayrollFilter,
 } from './components/common/common_admin_payroll';
 // import { logSystemEvent, getActiveAiKey, getActiveProvider } from './utils/utils_admin_system'; // 병합됨: common_admin_system
-import {
-  useAttendanceFilter,
-  useAttendanceManagement,
-  useAttendanceCellSelection,
-  useAttendanceClipboard,
-  useFilteredAttendanceStats,
-  AttendanceExcelParser,
-} from './components/common/common_admin_attendance';
+// useAttendanceFilter, useAttendanceManagement, useAttendanceCellSelection,
+// useAttendanceClipboard, useFilteredAttendanceStats, AttendanceExcelParser
+// → useAttendanceController 내부로 이동됨 (App.js에서 직접 사용 안 함)
 // import { useSystemManagement, useModelSelection } from './hooks/hooks_admin_system'; // 병합됨: common_admin_system
 import {
   useEmployeeNotifications,
@@ -210,10 +206,6 @@ import {
 // import { useAttendanceCellSelection, useAttendanceClipboard } from './hooks/hooks_admin_attendance.js'; // 병합됨: common_admin_attendance
 import {
   useSafetyManagement,
-  useDashboardAttendance,
-  useDashboardCalculations,
-  useDashboardActions,
-  useDashboardStats,
   send52HourViolationAlert as send52HourViolationAlertUtil,
 } from './components/common/common_admin_dashboard.js';
 // import { useSystemStatus } from './hooks/hooks_admin_system.js'; // 병합됨: common_admin_system
@@ -389,6 +381,7 @@ const HRManagementSystem = () => {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth() + 1);
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const workTypeSettingsRef = useRef({});
 
   // *[1_공통] 1.3.6.1_근태 상태 분석 함수* (CommonWorkTimeStandards.js로 이동됨)
   // Wrapper 함수: year, month 파라미터 추가하여 월별 조회 지원
@@ -431,7 +424,7 @@ const HRManagementSystem = () => {
 
     // 수동 휴일 선택 체크 (근태관리 평일/휴일 셀렉트)
     const dateKey = getDateKey(year, month, day);
-    if (workTypeSettings[dateKey] === 'holiday') {
+    if (workTypeSettingsRef.current?.[dateKey] === 'holiday') {
       return true;
     }
 
@@ -730,6 +723,177 @@ const HRManagementSystem = () => {
   //---[3_일반직원 모드] 3.5_연차 신청 STATE---//
   const [leaveRequests, setLeaveRequests] = useState([]);
   // leaveForm/leaveFormError/leaveFormPreview → StaffAnnualLeave 로컬 state로 이동
+
+  // *[1_공통] 출근 상태 분석 (대시보드 + 근태 공용) — leaveRequests/holidayData/customHolidays 의존*
+  const analyzeAttendanceStatusForDashboard = useCallback(
+    (
+      attendance,
+      year,
+      month,
+      day,
+      employeeWorkType = '주간',
+      employeeLeaveType = null,
+      employeeId = null
+    ) => {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const nextDate = new Date(year, month - 1, day);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+      const leaveCheckDates = employeeWorkType === '야간' ? [dateStr, nextDateStr] : [dateStr];
+
+      const dayOfWeek = new Date(year, month - 1, day).getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isPublicHoliday = isHolidayDate(year, month, day, customHolidays, holidayData);
+
+      const approvedLeaveRecord = employeeId
+        ? leaveRequests.find((leave) => {
+            if (leave.status !== '승인') return false;
+            if (leave.employeeId !== employeeId) return false;
+            const startDate = leave.startDate.split('T')[0];
+            const endDate = leave.endDate.split('T')[0];
+            return leaveCheckDates.some(
+              (checkDate) => checkDate >= startDate && checkDate <= endDate
+            );
+          })
+        : null;
+
+      const effectiveLeaveType =
+        employeeLeaveType || attendance?.leaveType || approvedLeaveRecord?.type;
+
+      if (employeeLeaveType === '휴직') return null;
+
+      if (isWeekend || isPublicHoliday) {
+        if (attendance?.checkIn) return '출근';
+        return null;
+      }
+
+      if (effectiveLeaveType) {
+        if (effectiveLeaveType === '결근') return '결근';
+        if (effectiveLeaveType !== '휴직') return '연차';
+      }
+
+      if (attendance?.checkIn || attendance?.checkOut) {
+        if (attendance?.type === '외출' || attendance?.type === '조퇴') return '출근';
+        if (attendance.checkIn && !attendance.checkOut) return '근무중';
+
+        if (attendance.checkIn && attendance.checkOut) {
+          const checkInTime = timeToMinutes(attendance.checkIn);
+          const checkOutTime = timeToMinutes(attendance.checkOut);
+          let status = '출근';
+          let lateStart, lateEnd, earlyLeaveThreshold;
+
+          if (employeeWorkType === '야간') {
+            lateStart = timeToMinutes('19:00') + 1;
+            lateEnd = timeToMinutes('03:00');
+            earlyLeaveThreshold = timeToMinutes('03:50');
+          } else {
+            lateStart = timeToMinutes('08:30') + 1;
+            lateEnd = timeToMinutes('15:00');
+            earlyLeaveThreshold = timeToMinutes('17:20');
+          }
+
+          const isHalfDayMorning =
+            employeeLeaveType === '반차(오전)' ||
+            (employeeId &&
+              leaveRequests.find((leave) => {
+                if (leave.status !== '승인') return false;
+                if (leave.employeeId !== employeeId) return false;
+                if (leave.type !== '반차(오전)') return false;
+                const startDate = leave.startDate.split('T')[0];
+                const endDate = leave.endDate.split('T')[0];
+                return dateStr >= startDate && dateStr <= endDate;
+              }));
+
+          if (!isHalfDayMorning) {
+            if (employeeWorkType === '야간') {
+              if (checkInTime >= lateStart || (checkInTime > 0 && checkInTime <= lateEnd)) {
+                status = '지각';
+              }
+            } else {
+              if (checkInTime >= lateStart && checkInTime < lateEnd) {
+                status = '지각';
+              }
+            }
+          }
+
+          if (checkOutTime < earlyLeaveThreshold) {
+            status = status === '지각' ? '지각/조퇴' : '조퇴';
+          }
+
+          return status;
+        }
+
+        return '출근';
+      }
+
+      if (employeeLeaveType === '반차(오전)' || employeeLeaveType === '반차(오후)') {
+        return '연차';
+      }
+
+      return '결근';
+    },
+    [leaveRequests, customHolidays, holidayData]
+  );
+
+  // *[2_관리자 모드] 2.8_근태 관리 축 집약*
+  const {
+    attendanceSheetYear, setAttendanceSheetYear,
+    attendanceSheetMonth, setAttendanceSheetMonth,
+    attendanceSheetData, setAttendanceSheetData,
+    attendanceSheetStatsCache, setAttendanceSheetStatsCache,
+    attendanceData, setAttendanceData,
+    attendanceSearchFilter, setAttendanceSearchFilter,
+    isEditingAttendance, setIsEditingAttendance,
+    workTypeSettings, setWorkTypeSettings,
+    attendanceSheetYearRef,
+    attendanceSheetMonthRef,
+    normalizeAttendanceTime,
+    getAttendanceForEmployee,
+    setAttendanceForEmployee,
+    clearAttendanceData,
+    calculateMonthlyStats,
+    filteredAttendanceEmployees,
+    getFilteredAttendanceEmployees,
+    parseAttendanceFromExcel,
+    dayMetadata,
+    uploadAttendanceXLSX,
+    exportAttendanceXLSX,
+    handleAttendanceKeyDown,
+    getWorkTypeForDate,
+    setWorkTypeForDate,
+    setCheckInTime,
+    setCheckOutTime,
+    saveCalculatedStatsToSheet,
+    preCalculatedStats,
+    saveAttendanceToDb,
+    filteredAttendanceStats,
+    selectedCells, setSelectedCells,
+    isDragging, dragStartCell,
+    handleCellClick, handleCellMouseDown, handleCellMouseEnter, handleCellMouseUp,
+    toggleEditingMode,
+    getCellId, isCellSelected, getCellRange,
+    handleAttendanceCopy, handleAttendancePaste,
+  } = useAttendanceController({
+    currentUser,
+    currentYear,
+    currentMonth,
+    API_BASE_URL,
+    devLog,
+    employees,
+    leaveRequests,
+    holidayData,
+    customHolidays,
+    loadHolidayData,
+    getKoreanHolidays,
+    categorizeWorkTime,
+    analyzeAttendanceStatusForDashboard,
+    send52HourViolationAlertUtil,
+    setRegularNotifications,
+    setNotificationLogs,
+    saveStatsRef,
+  });
+
+  workTypeSettingsRef.current = workTypeSettings || {};
 
   //---[3_일반직원 모드] 3.7_건의 사항 STATE---//
   // editingSuggestion/Remark/Row/Data → AdminSuggestionManagement 로컬 state로 이동
@@ -1262,833 +1426,11 @@ const HRManagementSystem = () => {
     }
   });
 
-  //---[2_관리자 모드] 2.8_근태 관리 STATE---//
-  const [attendanceSheetYear, setAttendanceSheetYear] = useState(
-    new Date().getFullYear()
-  );
-  const [attendanceSheetMonth, setAttendanceSheetMonth] = useState(
-    new Date().getMonth() + 1
-  );
-  const [attendanceSheetData, setAttendanceSheetData] = useState({});
-  const [attendanceSheetStatsCache, setAttendanceSheetStatsCache] = useState(
-    {}
-  ); // AttendanceSheet DB 통계 캐시
-  const [attendanceData, setAttendanceData] = useState([]);
-  const attendanceStatsCache = useRef(new Map());
-  const prevYearMonthRef = useRef({
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1,
-  });
+  // *[2_관리자 모드] 2.8_근태 관리 state/effects → useAttendanceController 로 이동됨*
 
-  // attendanceSheetData의 실제 변경을 감지하기 위한 키 목록
-  const attendanceDataKeysCount = useMemo(
-    () => Object.keys(attendanceSheetData).length,
-    [attendanceSheetData]
-  );
+  // calculateMonthlyStats → useAttendanceController 로 이동됨
 
-  // 컴포넌트 마운트 시 최근 근태 데이터가 있는 월로 자동 설정
-  useEffect(() => {
-    const findAndSetLatestMonth = async () => {
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-
-      // 현재 월부터 거꾸로 12개월 확인
-      for (let i = 0; i < 12; i++) {
-        const checkDate = new Date(currentYear, currentDate.getMonth() - i, 1);
-        const year = checkDate.getFullYear();
-        const month = checkDate.getMonth() + 1;
-
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/attendance/monthly/${year}/${month}`
-          );
-          if (response.ok) {
-            const result = await response.json();
-            const data = result.success
-              ? result.data
-              : Array.isArray(result)
-              ? result
-              : [];
-
-            if (data.length > 0) {
-              devLog(
-                `✅ [초기 로드] 최근 근태 데이터 발견: ${year}년 ${month}월 (${data.length}건)`
-              );
-              setAttendanceSheetYear(year);
-              setAttendanceSheetMonth(month);
-              return;
-            }
-          }
-        } catch (err) {
-          // 에러 무시하고 다음 월 확인
-          continue;
-        }
-      }
-
-      devLog('⚠️ [초기 로드] 최근 근태 데이터를 찾을 수 없어 현재 월 유지');
-    };
-
-    findAndSetLatestMonth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 컴포넌트 마운트 시 한 번만 실행
-
-  // attendanceSheetData 변경 시 캐시 무효화 (실제 데이터 변경 시만)
-  useEffect(() => {
-    attendanceStatsCache.current.clear();
-    devLog('📊 근태 합계 캐시 무효화 (데이터 변경됨)');
-  }, [attendanceDataKeysCount, attendanceSheetYear, attendanceSheetMonth]);
-
-  // 월/년 변경 시 이전 데이터 통계 저장
-  useEffect(() => {
-    const prev = prevYearMonthRef.current;
-    const changed =
-      prev.year !== attendanceSheetYear || prev.month !== attendanceSheetMonth;
-
-    if (
-      changed &&
-      saveStatsRef.current &&
-      Object.keys(attendanceSheetData).length > 0
-    ) {
-      saveStatsRef.current();
-    }
-
-    prevYearMonthRef.current = {
-      year: attendanceSheetYear,
-      month: attendanceSheetMonth,
-    };
-  }, [attendanceSheetYear, attendanceSheetMonth, attendanceSheetData]);
-
-  // AttendanceStats DB에서 월별 통계 로드 (연도/월 변경 시 즉시 로드)
-  useEffect(() => {
-    const loadMonthlyStats = async () => {
-      if (!attendanceSheetYear || !attendanceSheetMonth) {
-        return;
-      }
-
-      try {
-        const response = await AttendanceStatsAPI.getMonthlyStats(
-          attendanceSheetYear,
-          attendanceSheetMonth
-        );
-
-        if (response.success && response.data && response.data.length > 0) {
-          // 통계 데이터를 캐시에 저장
-          attendanceStatsCache.current.clear();
-          response.data.forEach((stat) => {
-            const key = stat.employeeId;
-            attendanceStatsCache.current.set(key, {
-              totalWorkDays: stat.workDays || 0,
-              annualLeave: stat.annualLeaveDays || 0,
-              absence: stat.absentDays || 0,
-              late: stat.lateDays || 0,
-              earlyLeave: stat.earlyLeaveDays || 0,
-              outing: 0,
-              totalHours: stat.totalWorkMinutes
-                ? stat.totalWorkMinutes / 60
-                : 0,
-              regularHours: stat.regularHours || 0,
-              earlyHours: stat.earlyHours || 0,
-              overtimeHours: stat.overtimeHours || 0,
-              holidayHours: stat.holidayHours || 0,
-              nightHours: stat.nightHours || 0,
-              overtimeNightHours: 0,
-              earlyHolidayHours: 0,
-              holidayOvertimeHours: 0,
-            });
-          });
-        }
-      } catch (error) {
-        console.error('[AttendanceStats] ❌ 통계 로드 실패:', error);
-      }
-    };
-
-    loadMonthlyStats();
-  }, [attendanceSheetYear, attendanceSheetMonth]);
-
-  // 월/년 변경 시 서버에서 근태 데이터 자동 로드
-  useEffect(() => {
-    const loadMonthlyAttendanceData = async () => {
-      if (!attendanceSheetYear || !attendanceSheetMonth) {
-        return;
-      }
-
-      // 앱 시작 시 자동 로드 (activeTab 체크 제거)
-      // 이유: 대시보드의 주간/야간 출근현황이 초기 로드 시 데이터가 필요함
-
-      try {
-        // 📌 야간 근무자 월 경계 문제 해결: 이전 달 + 현재 달 + 다음 달 총 3개월 데이터 로드
-        const months = [];
-
-        // 이전 달 계산
-        let prevYear = attendanceSheetYear;
-        let prevMonth = attendanceSheetMonth - 1;
-        if (prevMonth < 1) {
-          prevMonth = 12;
-          prevYear -= 1;
-        }
-        months.push({ year: prevYear, month: prevMonth });
-
-        // 현재 달
-        months.push({ year: attendanceSheetYear, month: attendanceSheetMonth });
-
-        // 다음 달 계산
-        let nextYear = attendanceSheetYear;
-        let nextMonth = attendanceSheetMonth + 1;
-        if (nextMonth > 12) {
-          nextMonth = 1;
-          nextYear += 1;
-        }
-        months.push({ year: nextYear, month: nextMonth });
-
-        // 3개월 데이터를 병렬로 로드
-        const responses = await Promise.all(
-          months.map(({ year, month }) =>
-            AttendanceAPI.getMonthlyData(year, month)
-          )
-        );
-
-        // 모든 월의 데이터를 하나로 병합
-        const newAttendanceData = {};
-        let totalRecords = 0;
-
-        responses.forEach((response, idx) => {
-          const { year, month } = months[idx];
-
-          if (response.success && response.data) {
-            totalRecords += response.data.length;
-
-            response.data.forEach((record, index) => {
-              const key = `${record.employeeId}_${record.date}`;
-
-              // 백엔드에서 이미 checkIn/checkOut을 문자열로 변환해서 보내줌
-              const checkInTime = record.checkIn || '';
-              const checkOutTime = record.checkOut || '';
-
-              // 1순위: 출근 시간으로 자동 판정
-              let shiftType = null;
-              if (checkInTime && checkInTime.includes(':')) {
-                const [hours, minutes] = checkInTime.split(':').map(Number);
-                if (!isNaN(hours) && !isNaN(minutes)) {
-                  const totalMinutes = hours * 60 + minutes;
-                  shiftType =
-                    totalMinutes >= 240 && totalMinutes <= 1050
-                      ? '주간'
-                      : '야간';
-                }
-              }
-
-              // 2순위: 출근 시간이 없거나 판정 실패한 경우 서버의 shiftType 사용
-              if (!shiftType) {
-                shiftType = record.shiftType;
-              }
-
-              newAttendanceData[key] = {
-                checkIn: checkInTime,
-                checkOut: checkOutTime,
-                shiftType: shiftType || null,
-                leaveType: record.note || null, // note 필드가 leaveType으로 사용됨
-              };
-            });
-          }
-        });
-
-        // ✅ 기존 데이터와 병합 (이미 로드된 데이터는 유지, 새 데이터만 추가/업데이트)
-        setAttendanceSheetData((prevData) => {
-          const mergedData = {
-            ...prevData,
-            ...newAttendanceData,
-          };
-
-          return mergedData;
-        });
-      } catch (error) {
-        console.error('[근태 데이터 로드] ❌ 데이터 로드 실패:', error);
-      }
-    };
-
-    loadMonthlyAttendanceData();
-  }, [attendanceSheetYear, attendanceSheetMonth]);
-
-  // *[3_일반직원 모드] 회사 일정/근태 탭 월 변경 시 근태 데이터 로드*
-  useEffect(() => {
-    // 일반 직원이고 로그인 상태일 때만 (activeTab 체크 제거 - 백그라운드 로드 허용)
-    if (currentUser && !currentUser.isAdmin && currentUser.role !== 'admin') {
-      // currentYear/currentMonth와 attendanceSheetYear/Month가 다르면 업데이트
-      if (
-        currentYear !== attendanceSheetYear ||
-        currentMonth !== attendanceSheetMonth
-      ) {
-        setAttendanceSheetYear(currentYear);
-        setAttendanceSheetMonth(currentMonth);
-      }
-    }
-  }, [currentUser, currentYear, currentMonth]); // attendanceSheetYear/Month 제거 - 무한루프 방지
-
-  const normalizeAttendanceTime = useCallback((value) => {
-    if (!value || typeof value !== 'string') {
-      return '';
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed || trimmed === '-' || trimmed === '--') {
-      return '';
-    }
-
-    return trimmed;
-  }, []);
-
-  // *[2_관리자 모드] 2.8_근태 데이터 관리 함수들*
-  const getAttendanceForEmployee = useCallback(
-    (employeeId, year, month, day) => {
-      const dateKey = getDateKey(year, month, day);
-      const employeeKey = `${employeeId}_${dateKey}`;
-
-      const rawAttendanceData = attendanceSheetData[employeeKey] || {
-        checkIn: '',
-        checkOut: '',
-      };
-
-      const attendanceData = {
-        ...rawAttendanceData,
-        checkIn: normalizeAttendanceTime(rawAttendanceData.checkIn),
-        checkOut: normalizeAttendanceTime(rawAttendanceData.checkOut),
-      };
-
-      // 해당 날짜의 승인된 연차 정보 찾기
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(
-        day
-      ).padStart(2, '0')}`;
-      const leaveRecord = leaveRequests.find(
-        (leave) =>
-          leave.employeeId === employeeId &&
-          leave.startDate <= dateStr &&
-          leave.endDate >= dateStr &&
-          leave.status === '승인'
-      );
-
-      // 연차 정보가 있으면 추가
-      if (leaveRecord) {
-        return {
-          ...attendanceData,
-          leaveType: leaveRecord.type, // 연차 유형 추가
-        };
-      }
-
-      return attendanceData;
-    },
-    [attendanceSheetData, leaveRequests, normalizeAttendanceTime]
-  );
-
-  const setAttendanceForEmployee = useCallback(
-    (employeeId, year, month, day, data) => {
-      const dateKey = getDateKey(year, month, day);
-      const employeeKey = `${employeeId}_${dateKey}`;
-      setAttendanceSheetData((prev) => {
-        // Determine shift type based on checkIn time
-        const employee = employees.find((emp) => emp.id === employeeId);
-        let autoShiftType = null;
-
-        // Use the new checkIn from data, or fall back to existing checkIn
-        const checkInTime =
-          data.checkIn !== undefined
-            ? data.checkIn
-            : prev[employeeKey]?.checkIn;
-
-        if (employee && checkInTime) {
-          const targetSubdepartments = [
-            '열',
-            '표면',
-            '구부',
-            '인발',
-            '교정·절단',
-            '검사',
-          ];
-          if (
-            employee.department === '생산' &&
-            targetSubdepartments.includes(employee.subDepartment) &&
-            employee.salaryType === '시급'
-          ) {
-            // Automatically determine shift type based on check-in time
-            const [hours, minutes] = checkInTime.split(':').map(Number);
-            if (!isNaN(hours) && !isNaN(minutes)) {
-              const totalMinutes = hours * 60 + minutes;
-              autoShiftType =
-                totalMinutes >= 240 && totalMinutes <= 1050 ? '주간' : '야간';
-            }
-          }
-        }
-
-        const newData = {
-          ...prev,
-          [employeeKey]: {
-            checkIn: '',
-            checkOut: '',
-            ...prev[employeeKey],
-            ...data,
-            ...(autoShiftType && { shiftType: autoShiftType }),
-          },
-        };
-        return newData;
-      });
-    },
-    [setAttendanceSheetData, employees]
-  );
-
-  // setCheckInTime과 setCheckOutTime은 useAttendanceManagement에서 가져옴 (주간/야간 자동 판정 포함)
-  // *[2_관리자 모드] 2.8_근태 데이터 초기화*
-  const clearAttendanceData = useCallback(() => {
-    if (
-      window.confirm(
-        '⚠️ 모든 근태 데이터를 초기화하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, localStorage와 메모리의 모든 근태 데이터가 삭제됩니다.\n\nDB의 데이터는 유지되며, 페이지를 새로고침하면 DB에서 다시 로드됩니다.'
-      )
-    ) {
-      // 근태 데이터는 state로만 관리 (localStorage 불필요)
-      setAttendanceSheetData({});
-      alert(
-        '✅ 근태 데이터 초기화가 완료되었습니다.\n\n페이지를 새로고침하면 DB에서 최신 데이터를 다시 불러옵니다.'
-      );
-    }
-  }, [setAttendanceSheetData]);
-
-  const analyzeAttendanceStatusForDashboard = useCallback(
-    (
-      attendance,
-      year,
-      month,
-      day,
-      employeeWorkType = '주간',
-      employeeLeaveType = null,
-      employeeId = null
-    ) => {
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(
-        day
-      ).padStart(2, '0')}`;
-      const nextDate = new Date(year, month - 1, day);
-      nextDate.setDate(nextDate.getDate() + 1);
-      const nextDateStr = `${nextDate.getFullYear()}-${String(
-        nextDate.getMonth() + 1
-      ).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
-      const leaveCheckDates =
-        employeeWorkType === '야간' ? [dateStr, nextDateStr] : [dateStr];
-
-      const dayOfWeek = new Date(year, month - 1, day).getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      // holidayData/customHolidays를 포함한 정확한 공휴일 판정 (대체공휴일 포함)
-      const isPublicHoliday = isHolidayDate(year, month, day, customHolidays, holidayData);
-
-      const approvedLeaveRecord = employeeId
-        ? leaveRequests.find((leave) => {
-            if (leave.status !== '승인') return false;
-            if (leave.employeeId !== employeeId) return false;
-
-            const startDate = leave.startDate.split('T')[0];
-            const endDate = leave.endDate.split('T')[0];
-            return leaveCheckDates.some(
-              (checkDate) => checkDate >= startDate && checkDate <= endDate
-            );
-          })
-        : null;
-
-      const effectiveLeaveType =
-        employeeLeaveType || attendance?.leaveType || approvedLeaveRecord?.type;
-
-      if (employeeLeaveType === '휴직') {
-        return null;
-      }
-
-      // 주말/공휴일 처리
-      if (isWeekend || isPublicHoliday) {
-        if (attendance?.checkIn) {
-          return '출근';
-        }
-        return null;
-      }
-
-      // 평일은 승인된 연차/결근을 출퇴근기록보다 우선 판정
-      if (effectiveLeaveType) {
-        if (effectiveLeaveType === '결근') {
-          return '결근';
-        }
-        if (effectiveLeaveType !== '휴직') {
-          return '연차';
-        }
-      }
-
-      // 1순위: 실제 출퇴근 기록이 있는 경우
-      if (attendance?.checkIn || attendance?.checkOut) {
-        // 외출/조퇴 타입은 출근으로 처리
-        if (attendance?.type === '외출' || attendance?.type === '조퇴') {
-          return '출근';
-        }
-
-        // 출근만 있고 퇴근 없으면 근무중
-        if (attendance.checkIn && !attendance.checkOut) {
-          return '근무중';
-        }
-
-        // 출퇴근 둘 다 있으면 시간 체크
-        if (attendance.checkIn && attendance.checkOut) {
-          const checkInTime = timeToMinutes(attendance.checkIn);
-          const checkOutTime = timeToMinutes(attendance.checkOut);
-
-          let status = '출근';
-          let lateStart, lateEnd, earlyLeaveThreshold;
-
-          if (employeeWorkType === '야간') {
-            lateStart = timeToMinutes('19:00') + 1; // 19:01
-            lateEnd = timeToMinutes('03:00'); // 03:00 (다음날)
-            earlyLeaveThreshold = timeToMinutes('03:50');
-          } else {
-            lateStart = timeToMinutes('08:30') + 1; // 08:31
-            lateEnd = timeToMinutes('15:00'); // 15:00
-            earlyLeaveThreshold = timeToMinutes('17:20');
-          }
-
-          // 📌 반차(오전) 확인: 반차(오전)이면 지각 판정 스킵
-          const isHalfDayMorning =
-            employeeLeaveType === '반차(오전)' ||
-            (employeeId &&
-              leaveRequests.find((leave) => {
-                if (leave.status !== '승인') return false;
-                if (leave.employeeId !== employeeId) return false;
-                if (leave.type !== '반차(오전)') return false;
-                const startDate = leave.startDate.split('T')[0];
-                const endDate = leave.endDate.split('T')[0];
-                return dateStr >= startDate && dateStr <= endDate;
-              }));
-
-          // 📌 지각 판단: 주간 08:31~15:00, 야간 19:01~03:00 (단, 반차(오전)은 제외)
-          if (!isHalfDayMorning) {
-            if (employeeWorkType === '야간') {
-              // 야간: 19:01 이후 또는 03:00 이전 출근 시 지각
-              if (
-                checkInTime >= lateStart ||
-                (checkInTime > 0 && checkInTime <= lateEnd)
-              ) {
-                status = '지각';
-              }
-            } else {
-              // 주간: 08:31~15:00 사이 출근 시 지각
-              if (checkInTime >= lateStart && checkInTime < lateEnd) {
-                status = '지각';
-              }
-            }
-          }
-
-          if (checkOutTime < earlyLeaveThreshold) {
-            status = status === '지각' ? '지각/조퇴' : '조퇴';
-          }
-
-          return status;
-        }
-
-        // 퇴근만 있는 경우 (체크인 없음)
-        return '출근';
-      }
-
-      // 2순위: 출퇴근 기록이 없는 경우 - 연차/반차 확인
-      if (
-        employeeLeaveType === '반차(오전)' ||
-        employeeLeaveType === '반차(오후)'
-      ) {
-        return '연차';
-      }
-
-      // 승인된 연차는 상단 우선순위에서 처리됨
-
-      // 3순위: 출퇴근 기록도 없고 연차도 없으면 결근
-      return '결근';
-    },
-    [leaveRequests, customHolidays, holidayData]
-  );
-
-  const calculateMonthlyStats = useCallback(
-    (employeeId) => {
-      // AttendanceSheet DB 통계가 있으면 우선 사용
-      if (attendanceSheetStatsCache[employeeId]) {
-        const dbStats = attendanceSheetStatsCache[employeeId];
-        return {
-          totalWorkDays: dbStats.totalWorkDays || 0,
-          totalHours: dbStats.totalWorkHours || 0,
-          totalOvertimeHours: dbStats.totalOvertimeHours || 0,
-          totalNightHours: dbStats.totalNightHours || 0,
-          totalHolidayHours: dbStats.totalHolidayHours || 0,
-          annualLeave: dbStats.leaveCount || 0,
-          absence: dbStats.absentCount || 0,
-          late: dbStats.lateCount || 0,
-          regularHours:
-            dbStats.totalWorkHours -
-            (dbStats.totalOvertimeHours || 0) -
-            (dbStats.totalHolidayHours || 0),
-          earlyHours: 0,
-          overtimeHours: dbStats.totalOvertimeHours || 0,
-          holidayHours: dbStats.totalHolidayHours || 0,
-          nightHours: dbStats.totalNightHours || 0,
-          overtimeNightHours: 0,
-          earlyHolidayHours: 0,
-          holidayOvertimeHours: 0,
-          earlyLeave: 0,
-          outing: 0,
-        };
-      }
-
-      // AttendanceSheet에 없으면 로컬 계산 (기존 로직)
-      const cacheKey = `${employeeId}-${attendanceSheetYear}-${attendanceSheetMonth}`;
-      if (attendanceStatsCache.current.has(cacheKey)) {
-        return attendanceStatsCache.current.get(cacheKey);
-      }
-
-      const daysInMonth = getDaysInMonth(
-        attendanceSheetYear,
-        attendanceSheetMonth
-      );
-      let totalWorkDays = 0;
-      let annualLeave = 0;
-      let absence = 0;
-      let late = 0;
-      let earlyLeave = 0;
-      let outing = 0;
-
-      let totalHours = 0;
-      let regularHours = 0;
-      let earlyHours = 0;
-      let overtimeHours = 0;
-      let holidayHours = 0;
-      let nightHours = 0;
-      let overtimeNightHours = 0;
-      let earlyHolidayHours = 0;
-      let holidayOvertimeHours = 0;
-
-      const employee = employees.find((emp) => emp.id === employeeId);
-
-      // employee를 찾지 못한 경우 빈 결과 반환
-      if (!employee) {
-        const emptyResult = {
-          totalWorkDays: 0,
-          annualLeave: 0,
-          absence: 0,
-          late: 0,
-          earlyLeave: 0,
-          outing: 0,
-          totalHours: 0,
-          regularHours: 0,
-          earlyHours: 0,
-          overtimeHours: 0,
-          holidayHours: 0,
-          nightHours: 0,
-          overtimeNightHours: 0,
-          earlyHolidayHours: 0,
-          holidayOvertimeHours: 0,
-        };
-        attendanceStatsCache.current.set(cacheKey, emptyResult);
-        return emptyResult;
-      }
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const attendance = getAttendanceForEmployee(
-          employeeId,
-          attendanceSheetYear,
-          attendanceSheetMonth,
-          day
-        );
-        const dateStr = `${attendanceSheetYear}-${String(
-          attendanceSheetMonth
-        ).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-        // ✅ 해당 날짜의 연차 신청 정보 확인
-        const dayLeaveRequest = leaveRequests.find((leave) => {
-          if (leave.employeeId !== employeeId) return false;
-          if (leave.status !== '승인') return false;
-          const leaveStartDate = leave.startDate?.split('T')[0] || leave.startDate;
-          const leaveEndDate = leave.endDate?.split('T')[0] || leave.endDate;
-          return dateStr >= leaveStartDate && dateStr <= leaveEndDate;
-        });
-
-        // 연차/경조/공가/휴직/결근 등은 근무시간 계산에서 제외 (반차 제외)
-        if (attendance.leaveType || dayLeaveRequest) {
-          const leaveType = dayLeaveRequest?.type || attendance.leaveType;
-          
-          // 반차(오전), 반차(오후)가 아닌 경우에만 근무시간 계산 건너뛰기
-          if (
-            leaveType !== '반차(오전)' &&
-            leaveType !== '반차(오후)' &&
-            (leaveType === 'annual' ||
-              leaveType === '연차' ||
-              leaveType === '경조' ||
-              leaveType === '공가' ||
-              leaveType === '휴직' ||
-              leaveType === '결근' ||
-              attendance.checkIn === '연차' ||
-              attendance.checkOut === '연차')
-          ) {
-            if (leaveType === 'annual' || leaveType === '연차') {
-              annualLeave++;
-            }
-            continue; // 근무시간 계산 건너뛰기
-          }
-          
-          // ⚠️ 반차인 경우: 출퇴근 시간이 있으면 아래에서 계산하되,
-          // 최대 4시간으로 제한 (또는 실제 출퇴근 시간 기준 계산)
-        }
-
-        if (attendance.checkIn && attendance.checkOut) {
-          totalWorkDays++;
-
-          // 1순위: 출근 시간으로 자동 판정
-          let shiftType = null;
-          if (attendance.checkIn && attendance.checkIn.includes(':')) {
-            const [hours, minutes] = attendance.checkIn.split(':').map(Number);
-            if (!isNaN(hours) && !isNaN(minutes)) {
-              const totalMinutes = hours * 60 + minutes;
-              shiftType =
-                totalMinutes >= 240 && totalMinutes <= 1050 ? '주간' : '야간';
-            }
-          }
-
-          // 2순위: 출근 시간이 없거나 판정 실패한 경우 저장된 shiftType 사용
-          if (!shiftType) {
-            shiftType =
-              attendance.shiftType ||
-              employee.workType ||
-              employee.workShift ||
-              employee.근무형태 ||
-              '주간';
-          }
-
-          // specialWorkHours가 있으면 특근으로 직접 처리
-          if (
-            attendance.specialWorkHours &&
-            parseFloat(attendance.specialWorkHours) > 0
-          ) {
-            const specialHours = parseFloat(attendance.specialWorkHours);
-            holidayHours += specialHours;
-            totalHours += specialHours;
-          } else {
-            // specialWorkHours가 없으면 일반 분류 로직 사용
-            const employeeForCalc = { ...employee, workType: shiftType };
-
-            const categorized = categorizeWorkTime(
-              attendance.checkIn,
-              attendance.checkOut,
-              employeeForCalc,
-              dateStr
-            );
-
-            // ✅ 반차인 경우 근무 시간 조정 (최대 4시간으로 제한)
-            let adjustedCategorized = categorized;
-            if (dayLeaveRequest && (dayLeaveRequest.type === '반차(오전)' || dayLeaveRequest.type === '반차(오후)')) {
-              const dailyTotal = Object.values(categorized).reduce(
-                (sum, hours) => sum + (hours || 0),
-                0
-              );
-              
-              // 반차는 최대 4시간까지만 인정
-              if (dailyTotal > 4) {
-                const ratio = 4 / dailyTotal;
-                adjustedCategorized = {};
-                Object.keys(categorized).forEach(key => {
-                  adjustedCategorized[key] = roundDownToHalfHour((categorized[key] || 0) * ratio);
-                });
-                
-                console.warn(`⚠️ [반차 조정] ${employee.name} ${dateStr}: ${dailyTotal}시간 → 4시간으로 제한`);
-              }
-            }
-
-            regularHours += adjustedCategorized.기본 || 0;
-            earlyHours += adjustedCategorized.조출 || 0;
-            overtimeHours += adjustedCategorized.연장 || 0;
-            nightHours += adjustedCategorized.심야 || 0;
-            overtimeNightHours += adjustedCategorized['연장+심야'] || 0;
-
-            // 특근 관련 (특근, 특근+심야를 합산)
-            holidayHours +=
-              (adjustedCategorized.특근 || 0) + (adjustedCategorized['특근+심야'] || 0);
-
-            // 조출+특근 관련 (조출+특근, 특근+조출을 합산)
-            earlyHolidayHours +=
-              (adjustedCategorized['조출+특근'] || 0) + (adjustedCategorized['특근+조출'] || 0);
-
-            // 특근+연장 관련 (특근+연장, 특근+연장+심야를 합산)
-            holidayOvertimeHours +=
-              (adjustedCategorized['특근+연장'] || 0) +
-              (adjustedCategorized['특근+연장+심야'] || 0);
-
-            const dailyTotal = Object.values(adjustedCategorized).reduce(
-              (sum, hours) => sum + (hours || 0),
-              0
-            );
-            totalHours += dailyTotal;
-          }
-
-          // 위에서 계산한 shiftType을 사용하여 지각/조퇴 판정
-          if (shiftType === '야간') {
-            // 야간 근무자: 19:01 이후 출근이 지각 (기본 근무 시작: 19:00)
-            if (attendance.checkIn > '19:00') {
-              late++;
-            }
-
-            const checkOutTime = attendance.checkOut;
-            if (checkOutTime >= '00:00' && checkOutTime < '04:00') {
-              earlyLeave++;
-            }
-          } else {
-            // 주간 근무자: 08:31 이후 출근이 지각 (기본 근무 시작: 08:30)
-            if (attendance.checkIn > '08:30') {
-              late++;
-            }
-            if (attendance.checkOut < '17:00') {
-              earlyLeave++;
-            }
-          }
-        } else if (attendance.type === 'annual') {
-          annualLeave++;
-        } else if (attendance.type === 'absence') {
-          absence++;
-        } else if (attendance.type === 'outing') {
-          outing++;
-        }
-      }
-
-      const result = {
-        totalWorkDays,
-        annualLeave,
-        absence,
-        late,
-        earlyLeave,
-        outing,
-        totalHours,
-        regularHours,
-        earlyHours,
-        overtimeHours,
-        holidayHours,
-        nightHours,
-        overtimeNightHours,
-        earlyHolidayHours,
-        holidayOvertimeHours,
-      };
-
-      attendanceStatsCache.current.set(cacheKey, result);
-      return result;
-    },
-    [
-      attendanceSheetYear,
-      attendanceSheetMonth,
-      employees,
-      getAttendanceForEmployee,
-      categorizeWorkTime,
-      attendanceSheetStatsCache,
-    ]
-  );
-
-  const [attendanceSearchFilter, setAttendanceSearchFilter] = useState({
-    department: '전체',
-    position: '전체',
-    name: '',
-    workType: '전체',
-    payType: '전체',
-  });
-  const [isEditingAttendance, setIsEditingAttendance] = useState(false);
-  const [workTypeSettings, setWorkTypeSettings] = useState({}); // 일별 근무구분 설정 (평일/휴일)
+  // attendanceSearchFilter, isEditingAttendance, workTypeSettings → useAttendanceController 로 이동됨
 
   //---[2_관리자 모드] 2.3_공지 관리 STATE---//
   // noticeForm/editingNoticeId → AdminNoticeManagement 로컬 state로 이동
@@ -2272,25 +1614,7 @@ const HRManagementSystem = () => {
     });
   };
 
-  // *[2_관리자 모드] 2.8.1_근태 필터링된 직원 목록*
-  // (src/hooks/useAttendanceFilter.js로 분리됨)
-  const filteredAttendanceEmployees = useAttendanceFilter(
-    employees,
-    attendanceSearchFilter,
-    attendanceData,
-    attendanceSheetYear,
-    attendanceSheetMonth,
-    holidayData,
-    customHolidays
-  );
-
-  // *[2_관리자 모드] 2.8.1.1_필터링된 직원 기준 근태 통계 계산*
-  // (getWorkTypeForDate가 필요하므로 useAttendanceManagement 이후로 이동됨)
-
-  // *[2_관리자 모드] 2.8.2_호환성 함수*
-  const getFilteredAttendanceEmployees = () => {
-    return filteredAttendanceEmployees;
-  };
+  // *[2_관리자 모드] 2.8_근태 관리 → useAttendanceController 로 이동됨 (filteredAttendanceEmployees, getFilteredAttendanceEmployees)*
 
   // *[2_관리자 모드] 2.9.13_급여대장 필터링된 데이터*
   // (src/hooks/usePayrollFilter.js로 분리됨)
@@ -2464,13 +1788,10 @@ const HRManagementSystem = () => {
 
   // *[1_공통] Socket.io stale-closure 방지용 refs*
   const leaveRequestsRef = useRef(leaveRequests);
-  const attendanceSheetYearRef = useRef(attendanceSheetYear);
-  const attendanceSheetMonthRef = useRef(attendanceSheetMonth);
   const currentYearRef = useRef(currentYear);
   useEffect(() => { leaveRequestsRef.current = leaveRequests; }, [leaveRequests]);
-  useEffect(() => { attendanceSheetYearRef.current = attendanceSheetYear; }, [attendanceSheetYear]);
-  useEffect(() => { attendanceSheetMonthRef.current = attendanceSheetMonth; }, [attendanceSheetMonth]);
   useEffect(() => { currentYearRef.current = currentYear; }, [currentYear]);
+  // attendanceSheetYearRef, attendanceSheetMonthRef → useAttendanceController 반환값 사용
 
   // *[1_공통] 전역 Socket.io 실시간 업데이트*
   useSocketSync({
@@ -2698,79 +2019,7 @@ const HRManagementSystem = () => {
     devLog,
   });
 
-  // *[2_관리자 모드] 2.8_근태 관리 - 엑셀 데이터 파싱*
-  const parseAttendanceFromExcel = (data, onComplete) => {
-    const parser = new AttendanceExcelParser({
-      attendanceSheetYear,
-      attendanceSheetMonth,
-      setAttendanceSheetYear,
-      setAttendanceSheetMonth,
-      employees,
-      setCheckInTime,
-      setCheckOutTime,
-      devLog,
-    });
-
-    parser.parse(data, onComplete);
-  };
-
-  // *[2_관리자 모드] 근태 데이터 관리*
-  const {
-    dayMetadata,
-    uploadAttendanceXLSX,
-    exportAttendanceXLSX,
-    handleAttendanceKeyDown,
-    getWorkTypeForDate,
-    setWorkTypeForDate,
-    setCheckInTime,
-    setCheckOutTime,
-    saveCalculatedStatsToSheet,
-    preCalculatedStats,
-    saveAttendanceToDb,
-  } = useAttendanceManagement({
-    attendanceSheetYear,
-    attendanceSheetMonth,
-    attendanceSheetData,
-    setAttendanceSheetData,
-    setAttendanceSheetYear,
-    setAttendanceSheetMonth,
-    loadHolidayData,
-    devLog,
-    workTypeSettings,
-    setWorkTypeSettings,
-    employees,
-    customHolidays,
-    holidayData,
-    getKoreanHolidays,
-    parseAttendanceFromExcel,
-    CommonDownloadService,
-    getAttendanceForEmployee,
-    calculateMonthlyStats,
-    filteredAttendanceEmployees,
-    categorizeWorkTime,
-    setAttendanceData,
-    analyzeAttendanceStatusForDashboard,
-    send52HourViolationAlert: send52HourViolationAlertUtil,
-    setRegularNotifications,
-    setNotificationLogs,
-  });
-
-  // saveCalculatedStatsToSheet를 ref에 할당
-  useEffect(() => {
-    saveStatsRef.current = saveCalculatedStatsToSheet;
-  }, [saveCalculatedStatsToSheet]);
-
-  // filteredAttendanceStats는 getWorkTypeForDate가 필요하므로 useAttendanceManagement 이후에 계산
-  const filteredAttendanceStats = useFilteredAttendanceStats(
-    filteredAttendanceEmployees,
-    calculateMonthlyStats,
-    attendanceSheetYear,
-    attendanceSheetMonth,
-    getDaysInMonth,
-    getAttendanceForEmployee,
-    getWorkTypeForDate,
-    preCalculatedStats
-  );
+  // *[2_관리자 모드] 2.8_근태 관리 → useAttendanceController 로 이동됨 (parseAttendanceFromExcel, useAttendanceManagement, filteredAttendanceStats)*
 
   // *[2_관리자 모드] 2.12_AI 모델 초기화*
   React.useEffect(() => {
@@ -3620,106 +2869,7 @@ const HRManagementSystem = () => {
 
   // *[2_관리자 모드] 2.3_공지 관리 - 파일 훅 → AdminNoticeManagement 로컬로 이동*
 
-  // *[2_관리자 모드] 2.8_근태 관리 - 셀 선택 관리 훅*
-  const {
-    selectedCells,
-    setSelectedCells,
-    isDragging,
-    dragStartCell,
-    handleCellClick,
-    handleCellMouseDown,
-    handleCellMouseEnter,
-    handleCellMouseUp,
-    toggleEditingMode: originalToggleEditingMode,
-    getCellId,
-    isCellSelected,
-    getCellRange,
-  } = useAttendanceCellSelection({
-    isEditingAttendance,
-    setIsEditingAttendance,
-    getFilteredAttendanceEmployees,
-    devLog,
-  });
-
-  // toggleEditingMode 래퍼 - 편집완료 시 DB에 저장
-  const toggleEditingMode = async () => {
-    const wasEditing = isEditingAttendance;
-    originalToggleEditingMode();
-
-    // 편집 모드를 끝낼 때 (편집완료 버튼 클릭 시) DB에 저장
-    if (wasEditing) {
-      setTimeout(async () => {
-        const result = await saveAttendanceToDb();
-        if (result.success) {
-          // DB 저장 성공
-        } else {
-          console.error('[편집완료] DB 저장 실패:', result.message);
-          alert(`DB 저장 중 오류가 발생했습니다: ${result.message}`);
-        }
-      }, 500);
-    }
-  };
-
-  // *[2_관리자 모드] 2.8_근태 관리 - 페이지 로드 시 DB에서 데이터 불러오기*
-  useEffect(() => {
-    const loadAttendanceFromDb = async () => {
-      try {
-        if (!attendanceSheetYear || !attendanceSheetMonth) {
-          return;
-        }
-
-        const response = await AttendanceAPI.getMonthlyData(
-          attendanceSheetYear,
-          attendanceSheetMonth
-        );
-
-        if (response.success && response.data) {
-          // API 응답을 attendanceSheetData 형식으로 변환
-          const loadedData = {};
-          response.data.forEach((record) => {
-            const key = `${record.employeeId}_${record.date}`;
-            loadedData[key] = {
-              checkIn: record.checkIn || '',
-              checkOut: record.checkOut || '',
-              shiftType: record.shiftType || null,
-              leaveType: record.leaveType || null,
-            };
-          });
-
-          // DB 데이터만 사용 (localStorage 불필요)
-          setAttendanceSheetData(loadedData);
-        } else {
-          setAttendanceSheetData({});
-        }
-      } catch (error) {
-        console.error('[loadAttendanceFromDb] 에러:', error);
-        setAttendanceSheetData({});
-      }
-    };
-
-    loadAttendanceFromDb();
-  }, [attendanceSheetYear, attendanceSheetMonth]);
-
-  // *[2_관리자 모드] 2.8_근태 관리 - 클립보드 관리 훅*
-  const { handleAttendanceCopy, handleAttendancePaste } =
-    useAttendanceClipboard({
-      selectedCells,
-      setSelectedCells,
-      employees,
-      attendanceSheetYear,
-      attendanceSheetMonth,
-      getFilteredAttendanceEmployees,
-      getAttendanceForEmployee,
-      setCheckInTime,
-      setCheckOutTime,
-      setAttendanceForEmployee,
-      getDaysInMonth,
-      getDayOfWeek,
-      isHolidayDate,
-      preCalculatedStats: attendanceStatsCache.current,
-      calculateMonthlyStats,
-      devLog,
-    });
+  // *[2_관리자 모드] 2.8_근태 관리 → useAttendanceController 로 이동됨*
 
   // *[1_공통] 월 네비게이션 훅*
   const { goToPrevMonth, goToNextMonth } = useMonthNavigation({
